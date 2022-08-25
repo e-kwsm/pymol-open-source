@@ -646,7 +646,7 @@ CHANGE LOG
 	* cell/symmetry: accept alpha=beta=gamma=0.0 as 90.0
 
 	* leave unknown protons as -1 instead of 0 (lonepair), fixes
-	  vdw assingment for unknown elements (1.8 instead of 0.5)
+	  vdw assignment for unknown elements (1.8 instead of 0.5)
 
 	* reimplement reading full sequence from mmCIF. Only with
 	  cif_use_auth=off and retain_order=off. Fill in missing
@@ -747,7 +747,7 @@ CHANGE LOG
 
 2015-05-20 Thomas Holder <thomas.holder@schrodinger.com>
 
-	* change default (!) of "ignore_case" setting to off. Case insensitve
+	* change default (!) of "ignore_case" setting to off. Case insensitive
 	  identifier matching is not practical anymore with large structures
 	  which use upper and lower case chain identifiers.
 
@@ -1071,7 +1071,7 @@ CHANGE LOG
 	* open file dialog in CWD until the first file was selected, then
 	  remember that directory
 
-	* with -J immediatly cd to $HOME (or $HOME/Documents on Windows).
+	* with -J immediately cd to $HOME (or $HOME/Documents on Windows).
 	  This allowes to put a "cd ..." in pymolrc
 
 	* fix stereo shader invalidation
@@ -1092,7 +1092,7 @@ CHANGE LOG
 
 2014-05-07 Thomas Holder, Blaine Bell
 
-	* volume improvments:
+	* volume improvements:
 	    - grid_mode support
 	    - adjust volume ramp alphas by number of layers
 	    - support TTT matrix
@@ -1343,7 +1343,7 @@ CHANGE LOG
 
 	* fix numpy/ndarrayobject.h import
 
-	* setup.py: add --osx-frameworks agument
+	* setup.py: add --osx-frameworks argument
 
 	* rpc server: use register_instance
 
@@ -1673,7 +1673,7 @@ CHANGE LOG
 
 	* real-time and ray-traceable ambient occlusion
 
-	* molecular weight calculuations; A > Compute > Molceular Weight
+	* molecular weight calculations; A > Compute > Molceular Weight
 
 	* selection generation A > Generate > Selection
 
@@ -2168,7 +2168,7 @@ CHANGE LOG
 	
 2009-02-08 Warren L. DeLano <warren@delsci.com>	
 
-	* refactored multisave commmand
+	* refactored multisave command
 
 	* improved read-in performance for concatenated PDB files
 	
@@ -2298,7 +2298,7 @@ CHANGE LOG
 	
 2008-09-12 Warren L. DeLano <warren@delsci.com>	
 
-	* added multipled FSAA to MacPyMOL
+	* added multiplied FSAA to MacPyMOL
 	
 	* added experimental defer_builds_mode 5 for trajectory viewing
 	
@@ -2348,7 +2348,7 @@ CHANGE LOG
 	
 	* fixed bug found in the previous implicit OR bug fix
 	
-	* fixed bug with unitialized memory in surfacing routines
+	* fixed bug with uninitialized memory in surfacing routines
 	
 2008-07-23 Warren L. DeLano <warren@delsci.com>
 
@@ -2530,7 +2530,7 @@ CHANGE LOG
 
 	* Cleaned up a launch issue under Centos 4.5
 
-	* Accomodating default Gnome Panel window positioning under Linux
+	* Accommodating default Gnome Panel window positioning under Linux
 	
 2008-03-27 Warren L. DeLano <warren@delsci.com>	
 
@@ -2700,7 +2700,7 @@ CHANGE LOG
 
 	* validated binary GRD reader (versus GVIEW with .kont files)
 	
-	* fixed crash bug with errorneous pseudoatom input
+	* fixed crash bug with erroneous pseudoatom input
 	
 2007-11-16  Warren L. DeLano <warren@delsci.com>
 
@@ -2772,7 +2772,7 @@ CHANGE LOG
 	
 2007-09-20  Warren L. DeLano <warren@delsci.com>
 
-	* fixed starup problem with "Documents" folder on Windows Vista
+	* fixed startup problem with "Documents" folder on Windows Vista
 	
 2007-09-06  Warren L. DeLano <warren@delsci.com>
 
@@ -2789,7 +2789,7 @@ CHANGE LOG
 	
 2007-08-29  Warren L. DeLano <warren@delsci.com>
 
-	* fixed mistake with new double-hypen argument parsing
+	* fixed mistake with new double-hyphen argument parsing
 	
 	* fixed problem with windows HOMEPATH ending in backslash
 	
@@ -2831,7 +2831,7 @@ CHANGE LOG
 	
 2007-08-14  Warren L. DeLano <warren@delsci.com>
 
-	* sys.argv if not definied, now set using __main__.pymol_argv
+	* sys.argv if not defined, now set using __main__.pymol_argv
 	
 	* added util.cnc keyword (formerly just an api function)
 	
@@ -3121,7 +3121,7 @@ Changes up to 1.00b13
 	* fixed geometry-based atom selection processing bug for last
 	small objects
 
-	* support for some Gaussian cube files (orthognal
+	* support for some Gaussian cube files (orthogonal
 	cartesian-aligned)
 
 	* pseudoatoms
@@ -3487,7 +3487,7 @@ Changes up to 0.99
 	* new workaround for amber-like PDB files.
 
 	* incorporated a sampled subset of the Dunbrack backbone-dependent
-	rotamers at 10, 20, and 60 degrees based on > 1% occurence
+	rotamers at 10, 20, and 60 degrees based on > 1% occurrence
 
 	* incorporated the Dunbrack backbone independent rotamers
     
@@ -3597,7 +3597,7 @@ Changes up to 0.99
 	* identified cause and temporary workaround for bad nVidia drivers
 	on linux
                                                                                             
-	* fixed performace issue with torsion update mechanism when
+	* fixed performance issue with torsion update mechanism when
 	rotating torsions
                                                                                             
 Changes up to 0.98
@@ -3608,9 +3608,9 @@ Changes up to 0.98
                                                                                             
     * matrix_transfer, matrix_reset commands (WHAT A PAIN)                                  
                                                                                             
-    * added support for row-major 4x4 homogenous transformation                             
+    * added support for row-major 4x4 homogeneous transformation                             
       matrices, and in resolving internal conflicts with TTT matrices,                      
-      made them more compatible with homogenous matrices                                    
+      made them more compatible with homogeneous matrices                                    
                                                                                             
     * internal matrix code cleaned up somewhat -- conventions used                          
       are now explicit in most cases.                                                       
@@ -3929,7 +3929,7 @@ Changes up to 0.98
     * fixed minor bug in fitting code (faster convergence?)                                 
                                                                                             
     * added surface_trim_factor and surface_trim_factor settings                            
-      in order to hard-to-tesselate peaks on the surface                                    
+      in order to hard-to-tessellate peaks on the surface                                    
                                                                                             
     * taught PyMOL bond valences for G,A,T,C,U residues                                     
                                                                                             
@@ -4234,7 +4234,7 @@ Changes up to 0.98
     * fixed separate cartoon rendering bugs with helices and strands                        
                                                                                             
     * added a fast C-based secondary structure assignment algorithm                         
-      acessible through the "dss" command                                                   
+      accessible through the "dss" command                                                   
                                                                                             
     * cartoon_transparency setting                                                          
                                                                                             
@@ -4596,7 +4596,7 @@ Changes up to 0.98
                                                                                             
     * fixed bug with dumping of dot surfaces...                                             
                                                                                             
-    * fixed bug reading element identifer from PDB files                                    
+    * fixed bug reading element identifier from PDB files                                    
                                                                                             
     * fixed bug with alternate conformations                                                
                                                                                             
@@ -4676,7 +4676,7 @@ Changes up to 0.98
                                                                                             
     * linear constraints in molecular sculpting engine                                      
                                                                                             
-    * acetylene buidling block                                                              
+    * acetylene building block                                                              
                                                                                             
  Changes up to 0.79                                                                         
                                                                                             
