@@ -86,7 +86,7 @@ Array2D<Real> Cholesky<Real>::getL() const
 	Constructs a lower triangular matrix L, such that L*L'= A.
 	If A is not symmetric positive-definite (SPD), only a
 	partial factorization is performed.  If is_spd()
-	evalutate true (1) then the factorizaiton was successful.
+	evaluate true (1) then the factorization was successful.
 */
 template <class Real>
 Cholesky<Real>::Cholesky(const Array2D<Real> &A)
@@ -139,7 +139,7 @@ Cholesky<Real>::Cholesky(const Array2D<Real> &A)
 
    @param  B   A Matrix with as many rows as A and any number of columns.
    @return     x so that L*L'*x = b.  If b is nonconformat, or if A
-   				was not symmetric posidtive definite, a null (0x0)
+   				was not symmetric positive definite, a null (0x0)
    						array is returned.
 */
 template <class Real>
@@ -181,7 +181,7 @@ Array1D<Real> Cholesky<Real>::solve(const Array1D<Real> &b)
 
    @param  B   A Matrix with as many rows as A and any number of columns.
    @return     X so that L*L'*X = B.  If B is nonconformat, or if A
-   				was not symmetric posidtive definite, a null (0x0)
+   				was not symmetric positive definite, a null (0x0)
    						array is returned.
 */
 template <class Real>

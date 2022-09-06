@@ -94,7 +94,7 @@ void main(void)
     radius /= uniformglscale;
 
     // clamp z on front clipping plane if impostor box would be clipped.
-    // (we ultimatly want to clip on the calculated depth in the fragment
+    // (we ultimately want to clip on the calculated depth in the fragment
     // shader, not the depth of the box face)
     if (gl_Position.z / gl_Position.w < -1.0) {
         // upper bound of possible cylinder z extend

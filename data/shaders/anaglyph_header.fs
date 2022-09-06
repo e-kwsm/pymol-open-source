@@ -19,7 +19,7 @@ float get_weight(float depth, float alpha){
 }
 
 /*
- * Set data for order independant transparency
+ * Set data for order independent transparency
  *
  * With multiple buffers:
  * gl_FragData[0]: weighted color

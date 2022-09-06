@@ -5,7 +5,7 @@ import time
 # this shows how you can efficiently update the coordinates
 # of an existing model for real-time viewing
 
-# for asychronous execution,  you want to run this using the "spawn"
+# for asynchronous execution,  you want to run this using the "spawn"
 # command from inside PyMOL or with the "-l" option from the unix shell
 
 # WARNING: if you do not run this using "spawn" or the "-l" option,

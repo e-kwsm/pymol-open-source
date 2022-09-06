@@ -10,7 +10,7 @@
 #     "python <script.py>"
 # 
 # However, If must invoke PyMOL from an external interpreter, then
-# you willl need to:
+# you will need to:
 #
 #  (1) prepare the environment first by sourcing "pymol.csh"
 #      or an equivalent shell script which defines PYMOL_PATH,

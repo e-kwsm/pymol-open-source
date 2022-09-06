@@ -11,7 +11,7 @@ namespace pymol
  * C++17's std::apply
  * requires pymol::(or std::)index_sequence
  * Takes a function and a tuple of lvalue/rvalue references to arguments
- * and applys them to a function
+ * and applies them to a function
  */
 
 namespace apply_detail

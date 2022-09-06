@@ -29,7 +29,7 @@ scene 003, store
 
 mset 1 x900
 
-# 3) Program scene matrices as movie views at appopriate frames
+# 3) Program scene matrices as movie views at appropriate frames
 #    and also add y-axis rocking between scenes.
 
 scene 001, animate=0

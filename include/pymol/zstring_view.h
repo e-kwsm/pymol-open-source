@@ -192,7 +192,7 @@ inline bool operator>=(zstring_view lhs, zstring_view rhs) noexcept
 
 /**
  * Describes a null-terminated read-only string which is never nullptr. If
- * constructred from a nullptr, it will point to an empty string instead.
+ * constructed from a nullptr, it will point to an empty string instead.
  */
 class null_safe_zstring_view : public zstring_view
 {

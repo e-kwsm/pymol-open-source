@@ -204,7 +204,7 @@ if __name__ == 'pymol':
 """
 
 okay, what we need now is a simple safe way to pass comands and
-arguments through the client brower, with escape characters, etc.
+arguments through the client browser, with escape characters, etc.
 
 ideally, we'd like a javascript object which responds to the same messages as PyMOL
 
