@@ -10,19 +10,19 @@ namespace JAMA
 
 /** 
 <p>
-	Classical QR Decompisition:
+	Classical QR Decomposition:
    for an m-by-n matrix A with m >= n, the QR decomposition is an m-by-n
    orthogonal matrix Q and an n-by-n upper triangular matrix R so that
    A = Q*R.
 <P>
-   The QR decompostion always exists, even if the matrix does not have
+   The QR decomposition always exists, even if the matrix does not have
    full rank, so the constructor will never fail.  The primary use of the
    QR decomposition is in the least squares solution of nonsquare systems
    of simultaneous linear equations.  This will fail if isFullRank()
    returns 0 (false).
 
 <p>
-	The Q and R factors can be retrived via the getQ() and getR()
+	The Q and R factors can be retrieved via the getQ() and getR()
 	methods. Furthermore, a solve() method is provided to find the
 	least squares solution of Ax=b using the QR factors.  
 
@@ -123,7 +123,7 @@ public:
 
    /** 
    
-   Retreive the Householder vectors from QR factorization
+   Retrieve the Householder vectors from QR factorization
    @returns lower trapezoidal matrix whose columns define the reflections
    */
 
@@ -132,7 +132,7 @@ public:
    	  TNT::Array2D<Real> H(m,n);
 
 	  /* note: H is completely filled in by algorithm, so
-	     initializaiton of H is not necessary.
+	     initialization of H is not necessary.
 	  */
       for (int i = 0; i < m; i++) 
 	  {

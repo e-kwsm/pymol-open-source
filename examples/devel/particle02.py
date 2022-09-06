@@ -67,7 +67,7 @@ def simulation():
         while state < n_states:
             state = state + 1
             for part in particle:
-                # simplistic Euler intergration
+                # simplistic Euler integration
 
                 # p = p + v
                 

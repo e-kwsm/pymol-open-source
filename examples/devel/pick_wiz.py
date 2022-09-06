@@ -64,7 +64,7 @@ class PickWizard(Wizard):
          [ 2, 'Done','cmd.set_wizard()'],
          ]
 
-# create an instane
+# create an instance
 
 wiz = PickWizard()
 

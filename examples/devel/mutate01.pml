@@ -25,7 +25,7 @@ cmd.get_wizard().do_pick(0)
 
 # apply the mutation
 # (this will delete the old residue, 
-# substitue the new one, and form
+# substitute the new one, and form
 # the peptide bonds) 
 
 cmd.get_wizard().apply()

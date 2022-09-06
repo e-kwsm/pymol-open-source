@@ -1,4 +1,4 @@
-# Demonstration code for a new external gui appliction, which could be
+# Demonstration code for a new external gui application, which could be
 # implemented using any cross-platform Python GUI (Tkinter, wxPython,
 #
 # To get started:
