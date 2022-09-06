@@ -59,7 +59,7 @@
  * be in binary, native endian, single precision IEEE-754 floating point format.
  *
  * Note: this plugin was written to read the OpenDX files created by the
- * APBS program, and thus supports only files that are writting in this style.
+ * APBS program, and thus supports only files that are writing in this style.
  * the full OpenDX data format is extremely powerful, complex, and flexible.
  *
  */

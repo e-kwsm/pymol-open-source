@@ -55,7 +55,7 @@ typedef struct {
   FILE *fd;
   int nsets;
   int swap;
-  int f, m, s, x, y, z; // indecies mapping fast-medium-slow to x-y-z
+  int f, m, s, x, y, z; // indices mapping fast-medium-slow to x-y-z
   float scale;
   molfile_volumetric_t *vol;
 } fs4_t;

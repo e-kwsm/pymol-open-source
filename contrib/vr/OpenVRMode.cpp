@@ -725,7 +725,7 @@ void  OpenVRGetPickingProjection(PyMOLGlobals * G, float near_plane, float far_p
 
   CheckNearFarPlaneSettings(G, near_plane, far_plane);
 
-  // take avarage projection params from eyes
+  // take average projection params from eyes
   float left, right, top, bottom;
   CEye &LEye = I->Left, &REye = I->Right;
   left = (LEye.Left + REye.Left) * 0.5f;
@@ -822,7 +822,7 @@ void CalculateScalingPivotToWorldMatrix(PyMOLGlobals * G, float *pivotToWorldMat
   identity44f(pivotToWorldMatrix);
   float *lPose = I->Hands[HLeft].GetPose();
   float *rPose = I->Hands[HRight].GetPose();
-  // get center traslation matrix
+  // get center translation matrix
   average3f(&lPose[12], &rPose[12], &pivotToWorldMatrix[12]); 
 }
 

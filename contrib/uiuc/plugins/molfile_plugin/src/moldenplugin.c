@@ -1023,7 +1023,7 @@ static int fill_basis_arrays(qmdata_t *data) {
   data->num_basis_funcs = primcount;
 
   /* reserve space for pointer to array containing basis
-   * info, i.e. contraction coeficients and expansion 
+   * info, i.e. contraction coefficients and expansion
    * coefficients; need 2 entries per basis function, i.e.
    * exponent and contraction coefficient; also,
    * allocate space for the array holding the orbital symmetry
@@ -1268,7 +1268,7 @@ static int read_wave_coeffs(FILE *file, qm_wavefunction_t *wave) {
     for (j=0; j<wave->num_coeffs; j++)
         wave_coeffs[i*wave->num_coeffs + j] = 0.0;
 
-  /* each molecular orbital must have at least 1 non-zero coeff in its represenation */
+  /* each molecular orbital must have at least 1 non-zero coeff in its representation */
   /* eat Ene= Spin= Occup=  lines */
   eatline(file, 3);
   for (i=0; i<wave->num_orbitals; i++) {

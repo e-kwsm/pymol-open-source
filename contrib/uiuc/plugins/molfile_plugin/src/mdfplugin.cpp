@@ -250,7 +250,7 @@ static int read_mdf_structure(void *v, int *optflags, molfile_atom_t *atoms) {
   return MOLFILE_SUCCESS;
 }
 
-// Create arrays of one-based bond indicies.
+// Create arrays of one-based bond indices.
 static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data, 
                           float **bondorderptr, int **bondtype, 
                           int *nbondtypes, char ***bondtypename) {
@@ -310,7 +310,7 @@ static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data,
   fromptr = mdf->from;
   toptr = mdf->to;
 
-  // Read the molecules, storing the bond-indicies in fromptr and toprt
+  // Read the molecules, storing the bond-indices in fromptr and toprt
   fseek(mdf->file, mdf->mol_data_location, SEEK_SET);
   line[0] = '\0';
   atom = 1;

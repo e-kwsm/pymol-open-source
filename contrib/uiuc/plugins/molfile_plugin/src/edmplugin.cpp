@@ -401,7 +401,7 @@ static int write_edm_data(void *v, molfile_volumetric_t *metadata, float *databl
   b = nb*ydelta[1];
   c = nc*zdelta[2];
 
-  // Assuming the cell is orthognal
+  // Assuming the cell is orthogonal
   alpha = beta = gamma = 90;
 
   // Write header

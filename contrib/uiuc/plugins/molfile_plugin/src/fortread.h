@@ -123,7 +123,7 @@ static int fortread_4(void *dest, int n, int swap, FILE *fd) {
  * copy at most 'len' characters from source to target. 
  *
  * leading white space is skipped over but counts towards 'len'.
- * the copy stops at first whitspace or a '\0'.
+ * the copy stops at first whitespace or a '\0'.
  * unlike strncpy(3) the result will always be \0 terminated.
  *
  * intended for copying (short) strings from formatted fortran  

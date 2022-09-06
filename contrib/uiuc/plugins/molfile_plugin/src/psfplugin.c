@@ -54,7 +54,7 @@ typedef struct {
  * copy at most 'maxlen' characters from source to target allowing overflow.
  *
  * leading white space up to 'len' is skipped over but counts towards 'maxlen'.
- * the copy stops at first whitspace or a '\0'.
+ * the copy stops at first whitespace or a '\0'.
  * unlike strncpy(3) the result will always be \0 terminated.
  *
  * intended for copying (short) strings from formatted fortran

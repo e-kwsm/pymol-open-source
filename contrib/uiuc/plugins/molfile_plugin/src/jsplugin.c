@@ -1215,7 +1215,7 @@ static int read_js_timestep(void *v, int natoms, molfile_timestep_t *ts) {
 #else
     /* Do all of the reads with a single syscall, for peak efficiency.   */
     /* On smart kernels, readv() causes only one context switch, and     */
-    /* can effeciently scatter the reads to the various buffers.         */
+    /* can efficiently scatter the reads to the various buffers.         */
     if (js->directio_enabled)
       readlen = fio_readv(js->directio_fd, &iov[0], 2); 
     else

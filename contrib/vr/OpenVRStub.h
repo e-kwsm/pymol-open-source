@@ -382,7 +382,7 @@ public:
   * start rendering.
   *
   * Return codes:
-  *	- IsNotSceneApplication (make sure to call VR_Init with VRApplicaiton_Scene)
+  *	- IsNotSceneApplication (make sure to call VR_Init with VRApplication_Scene)
   *	- DoNotHaveFocus (some other app has taken focus - this will throttle the call to 10hz to reduce the impact on that app)
   */
   virtual EVRCompositorError WaitGetPoses( VR_ARRAY_COUNT(unRenderPoseArrayCount) TrackedDevicePose_t* pRenderPoseArray, uint32_t unRenderPoseArrayCount,
@@ -404,7 +404,7 @@ public:
   *	glBindTexture
   *
   * Return codes:
-  *	- IsNotSceneApplication (make sure to call VR_Init with VRApplicaiton_Scene)
+  *	- IsNotSceneApplication (make sure to call VR_Init with VRApplication_Scene)
   *	- DoNotHaveFocus (some other app has taken focus)
   *	- TextureIsOnWrongDevice (application did not use proper AdapterIndex - see IVRSystem.GetDXGIOutputInfo)
   *	- SharedTexturesNotSupported (application needs to call CreateDXGIFactory1 or later before creating DX device)

@@ -176,7 +176,7 @@ static int read_mol2(void *v, int *optflags, molfile_atom_t *atoms) {
 
 
 
-// Create arrays of one-based bond indicies.
+// Create arrays of one-based bond indices.
 static int read_mol2_bonds_aux(void *v, int *nbonds, int **fromptr, int **toptr, 
                                float **bondorderptr) {
   mol2data *mol2 = (mol2data *)v;

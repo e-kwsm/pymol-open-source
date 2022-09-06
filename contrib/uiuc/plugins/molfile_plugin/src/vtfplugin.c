@@ -73,7 +73,7 @@ Tcl_Interp *tcl_interp;
 #define VTF_MOLFILE 0
 #define VTF_USERDATA 1
 
-/* Plugin data structure to communciate data between the functions. */
+/* Plugin data structure to communicate data between the functions. */
 typedef struct {
   /* opened file */
   VTFFILE file;
@@ -171,7 +171,7 @@ static void sfree(void* ptr) {
    The line may have arbitrary length and continuation lines ending
    with '\' are heeded.
    The function will return a pointer to a buffer or NULL if an
-   error occured or eof occurs while no characters have been read.
+   error occurred or eof occurs while no characters have been read.
    The function will set the global variable lineno.
 */
 static char *vtf_getline(VTFFILE file) {
@@ -288,8 +288,8 @@ static void vtf_create_atoms_as_needed(int max_aid, vtf_data *d) {
 }
 
 /* Parse the aid specifier.
-   Return an integer list of the aids that need to be modifed. The
-   list is terminated by -1. If the list is NULL, an error occured. If
+   Return an integer list of the aids that need to be modified. The
+   list is terminated by -1. If the list is NULL, an error occurred. If
    the list is empty (i.e. it only contains -1), the default atom is
    to be modified.
  */
@@ -366,8 +366,8 @@ static int *vtf_parse_aid_specifier(char *s, vtf_data *d) {
 }
 
 /* Parse atom data from line. 
-   Return MOLFILE_SUCCESS, if data was sucessfully parsed, 
-   MOLFILE_ERROR if an error occured. */
+   Return MOLFILE_SUCCESS, if data was successfully parsed,
+   MOLFILE_ERROR if an error occurred. */
 static int vtf_parse_atom(char *line, vtf_data *d) {
   static molfile_atom_t atom;
   static char keyword[255];
@@ -657,8 +657,8 @@ static int vtf_parse_atom(char *line, vtf_data *d) {
  * Parse BOND
  ***************************************************/
 /* Parse bond data from line.  Called by vtf_parse_structure(). Return
-   MOLFILE_SUCCESS, if data was sucessfully parsed, MOLFILE_ERROR if
-   an error occured. */
+   MOLFILE_SUCCESS, if data was successfully parsed, MOLFILE_ERROR if
+   an error occurred. */
 static int vtf_parse_bond(char *line, vtf_data *d) {
   char *s;
   int n;
@@ -720,7 +720,7 @@ static int vtf_parse_bond(char *line, vtf_data *d) {
  ***************************************************/
 /* Parse periodic boundary condition data from line. Called by
    vtf_parse_structure().  Return MOLFILE_SUCCESS, if data was
-   sucessfully parsed, MOLFILE_ERROR if an error occured. */
+   successfully parsed, MOLFILE_ERROR if an error occurred. */
 static int vtf_parse_pbc(char *line, vtf_data *d) {
   char *s;
   int n = 0;
@@ -741,8 +741,8 @@ static int vtf_parse_pbc(char *line, vtf_data *d) {
 } 
 
 /* Parse timestep command from line. Called by vtf_parse_structure().
-   Return MOLFILE_SUCCESS, if it was sucessfully parsed, MOLFILE_ERROR
-   if an error occured. */
+   Return MOLFILE_SUCCESS, if it was successfully parsed, MOLFILE_ERROR
+   if an error occurred. */
 static int vtf_parse_timestep(char *line, vtf_data *d) {
   while (strlen(line) > 0 && isspace(line[0])) line++;
   if (strlen(line) == 0) {
@@ -863,7 +863,7 @@ static void vtf_parse_structure(vtf_data *d) {
     d->return_code = MOLFILE_NOSTRUCTUREDATA;
   }
 
-  /* test whether another error has occured */
+  /* test whether another error has occurred */
   if (errno != 0) {
     perror("vtfplugin");
     d->return_code = MOLFILE_ERROR;
@@ -1322,7 +1322,7 @@ static int vtf_parse_userdata(ClientData clientData,
   
   d = _vtf_open_file_read(file, type, &natoms, VTF_USERDATA);
   if (d == NULL) {
-    sprintf(result, "%s: an error occured while reading the structure", argv[0]);
+    sprintf(result, "%s: an error occurred while reading the structure", argv[0]);
     Tcl_SetResult(interp, result, TCL_VOLATILE);
     return TCL_ERROR;
   }

@@ -172,7 +172,7 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **gdat
   float tricolors[9];
   float color[9];
 
-  // INFMT/INFMTS input specifiers; these can specifiy Fortran formatted
+  // INFMT/INFMTS input specifiers; these can specify Fortran formatted
   // input formats, but are usually "*" meaning free-format input. We
   // give a warning if it's not free-format.
   for (count = 0; count < 3; count++) {

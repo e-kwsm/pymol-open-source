@@ -58,7 +58,7 @@ for in_file in sorted(os.listdir(molfile_src_path)):
             if line.startswith(b'#define VMDPLUGIN_STATIC'):
                 continue
 
-            # included, don't compile separatly
+            # included, don't compile separately
             line = line.replace(b'"ply.c"', b'"ply_c.h"')
 
             g.write(line)
