@@ -303,7 +303,7 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
   }
 
   /* Allocate space for the coordinate and variable information 
-   * coord is deleted in this fuction, variable is deleted when the plugin
+   * coord is deleted in this function, variable is deleted when the plugin
    * is closed.
    */
   coord = new datasource_t[ndim];
