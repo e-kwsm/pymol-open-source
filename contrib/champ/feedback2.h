@@ -97,7 +97,7 @@ void feedback_Disable(unsigned int sysmod,unsigned char mask);
 void feedback_Enable(unsigned int sysmod,unsigned char mask);
 
 /* Mechanism: a high-speed bit test, with no range checking 
- * in order to avoid penalizing performance-senstive code
+ * in order to avoid penalizing performance-sensitive code
  * modules which may contain live debugging code.  
  */
 

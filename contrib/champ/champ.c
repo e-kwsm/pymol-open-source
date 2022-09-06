@@ -856,7 +856,7 @@ void ChampCountRings(CChamp *I,int index)
      * *=*-*=*
      * *=*-*-*=*
      * NOTE  this is not a chemically accurate definition of aromaticity, just one
-     * that is easy to program, and which covers most common occurences -- an 80-90% soln.
+     * that is easy to program, and which covers most common occurrences -- an 80-90% soln.
      *
      * I'll figure out something better later on...
      */
@@ -2221,7 +2221,7 @@ int ChampMatch2(CChamp *I,int template,int target,
     targ_ent->atom = start_targ;
     targ_ent->bond = 0; /* to get here */
 
-    /* initalize template stack */
+    /* initialize template stack */
 
     tmpl_stack = ListElemPush(&I->Tmpl,tmpl_stack);
     tmpl_ent = I->Tmpl + tmpl_stack;
@@ -4129,7 +4129,7 @@ static void ChampStereoFromInternal(CChamp *I, int index)
 void ChampOrientBonds(CChamp *I,int index) 
      /* This destroys stereo information...right? */
 {
-  /* do a prepatory walk through the molecule to figure out how to minimize 
+  /* do a preparatory walk through the molecule to figure out how to minimize
      explicit connections */
 
   int n_atom;
@@ -4801,7 +4801,7 @@ int ChampSmiToPat(CChamp *I, const char *c)
       case 'C':
         switch(*(c+1)) {
         case 'l':
-        case 'L': /* be tolerate at the root level, but not withing blocks...*/
+        case 'L': /* be tolerate at the root level, but not within blocks...*/
           c = ChampParseAliphaticAtom(I,c,cur_atom,cH_Cl,2,false);
           sym = cSym_Atom;
           break;

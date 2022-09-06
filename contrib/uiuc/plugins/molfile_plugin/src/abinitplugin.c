@@ -1457,7 +1457,7 @@ VMDPLUGIN_API int VMDPLUGIN_fini() {
 /* Do a binary read of 'size' bytes from stream.
  * Store the bytes into the pointer according to the match
  * between the endianness of the file and the system reading it.
- * Return the number of bytes succesfully read.
+ * Return the number of bytes successfully read.
  */
 static int binread(void *ptr, size_t size, FILE *stream, binary_t bintype)
 {

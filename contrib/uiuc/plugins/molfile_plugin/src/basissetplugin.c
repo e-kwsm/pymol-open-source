@@ -121,7 +121,7 @@ static void print_input_data(qmdata_t *);
  * coefficients. For Pople/Huzinga style basis sets
  * this numbers are in principle fixed, and could hence
  * be provided by the the plugin itself; however, the user might
- * define his own basis/contraction coeffients and hence reading
+ * define his own basis/contraction coefficients and hence reading
  * them from the input file seem to be somewhat more general. */
 static int get_basis (qmdata_t *);
 
@@ -425,7 +425,7 @@ int get_basis(qmdata_t *data) {
           numprim = read_shell_primitives(data, &prim, &shelltype, icoeff);
 
           if (numprim>0) {
-            /* make sure we have eiter S, L, P, D, F or G shells */
+            /* make sure we have either S, L, P, D, F or G shells */
             if ( (shelltype!='S' && shelltype!='L' && shelltype!='P' && 
                   shelltype!='D' && shelltype!='F' && shelltype!='G') ) {
               printf("basissetplugin) WARNING ... %c shells are not supported \n", shelltype);
@@ -549,7 +549,7 @@ static int fill_basis_arrays(qmdata_t *data) {
   }
 
   /* reserve space for pointer to array containing basis
-   * info, i.e. contraction coeficients and expansion 
+   * info, i.e. contraction coefficients and expansion
    * coefficients; need 2 entries per basis function, i.e.
    * exponent and contraction coefficient; also,
    * allocate space for the array holding the orbital symmetry

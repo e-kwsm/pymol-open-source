@@ -59,8 +59,8 @@ index 272d31a..31a7d5f 100644
  "int8", "int16", "int32", "uint8", "uint16", "uint32", "float32", "float64",
  };
  
--char *old_type_names[] = {  /* old names of types for backward compatability */
-+const char *old_type_names[] = {  /* old names of types for backward compatability */
+-char *old_type_names[] = {  /* old names of types for backward compatibility */
++const char *old_type_names[] = {  /* old names of types for backward compatibility */
  "invalid",
  "char", "short", "int", "uchar", "ushort", "uint", "float", "double",
  };

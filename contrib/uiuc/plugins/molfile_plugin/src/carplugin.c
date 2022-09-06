@@ -100,7 +100,7 @@ typedef struct {
   molfile_atom_t *atomlist;
 } cardata;
 
-/* Parse a line contianing atom data from a car file and store it in the
+/* Parse a line containing atom data from a car file and store it in the
  * atom structure. Returns 1 on success, 0 on failure.
  */
 static int read_car_structure_line(molfile_atom_t *atom, char *line) {
@@ -136,7 +136,7 @@ static int read_car_structure_line(molfile_atom_t *atom, char *line) {
   return 1;
 }
 
-/* Parse a line contianing atom coordinates from a car file and store them
+/* Parse a line containing atom coordinates from a car file and store them
  * in the array 'coords' in XYZ order. Returns 1 on success, 0 on failure.
  */
 static int read_car_coordinates(float *coords, char *line) {
@@ -373,7 +373,7 @@ static int read_car_timestep(void *mydata, int natoms, molfile_timestep_t *ts) {
     fgets(line, LINESIZE, data->file);
   }
 
-  /* set eof since this file contians only one "timestep" */
+  /* set eof since this file contains only one "timestep" */
   data->eof = 1;
 
   return MOLFILE_SUCCESS;
