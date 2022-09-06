@@ -760,7 +760,7 @@ static int read_xsf_timestep(void *v, int natoms, molfile_timestep_t *ts) {
 
               // In order to make the periodic display work, we need to
               // rotate the coordinates around the origin by the stored
-              // rotation matrix. for xsf files the origin is not explicitely
+              // rotation matrix. for xsf files the origin is not explicitly
               // so far, but since it is already initialized to (0,0,0) it
               // does no harm, to leave it in here.
               x -= xsf->origin[0];

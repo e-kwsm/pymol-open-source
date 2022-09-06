@@ -919,7 +919,7 @@ static bool readAngleBonds(molfile_atom_t * atoms, pdbxParser* parser) {
 
     /* find the atoms in the hash table */
     if ( ((uid1 = inthash_lookup(&parser->bondHash, uid1)) != -1) && ((uid2 = inthash_lookup(&parser->bondHash, uid2)) != -1) ) {
-      // because the hashtable is residue specifc, loop through 
+      // because the hashtable is residue specific, loop through
       // all atoms in the residue to find the correct one
       // Find atom 1 
       do {
@@ -1096,7 +1096,7 @@ static bool readRMSDBonds(molfile_atom_t * atoms, pdbxParser* parser) {
 
     /* find the atoms in the hash table */
     if ( ((uid1 = inthash_lookup(&parser->bondHash, uid1)) != -1) && ((uid2 = inthash_lookup(&parser->bondHash, uid2)) != -1) ) {
-      /* because the hashtable is residue specifc, loop through all atoms in the residue to find the correct one */
+      /* because the hashtable is residue specific, loop through all atoms in the residue to find the correct one */
       /* Find atom 1 */
       do {
         aIdx1 = parser->hashMem[uid1].index;

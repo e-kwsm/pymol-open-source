@@ -258,7 +258,7 @@ typedef struct
    * E.g. S={0 0 0}, Px={1 0 0}, Dxy={1 1 0}, or Fyyz={0 2 1}. */
   int *angular_momentum;
 
-  /* Highest shell occuring in basis set */
+  /* Highest shell occurring in basis set */
   int max_shell;
 
 

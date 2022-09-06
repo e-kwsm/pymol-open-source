@@ -42,7 +42,7 @@ const char *type_names[] = {  /* names of scalar types */
 "int8", "int16", "int32", "uint8", "uint16", "uint32", "float32", "float64",
 };
 
-const char *old_type_names[] = {  /* old names of types for backward compatability */
+const char *old_type_names[] = {  /* old names of types for backward compatibility */
 "invalid",
 "char", "short", "int", "uchar", "ushort", "uint", "float", "double",
 };
@@ -1709,7 +1709,7 @@ char **get_words(FILE *fp, int *nwords, char **orig_line)
   }
 
   /* convert line-feed and tabs into spaces */
-  /* (this guarentees that there will be a space before the */
+  /* (this guarantees that there will be a space before the */
   /*  null character at the end of the string) */
 
   str[BIG_STRING-2] = ' ';

@@ -651,9 +651,9 @@ namespace {
                  am(-1), an(-1), ao(-1), ap(-1), moiety(-1) {}
     //!@}
   };
-  /*! Represnts a single table in fepio_fep */
+  /*! Represents a single table in fepio_fep */
   typedef std::vector<fep_elem> FepList;
-  /*! Represnts the entire fepio_fep section */
+  /*! Represents the entire fepio_fep section */
   typedef std::map<std::string, FepList > FepioMapping;
 
   double dotprod(const double *x, const double *y) {

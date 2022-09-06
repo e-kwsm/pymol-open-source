@@ -173,7 +173,7 @@ extern void ply_get_property(PlyFile *, char *, PlyProperty *);
 extern void ply_get_element(PlyFile *, void *);
 
 
-/*** delcaration of routines ***/
+/*** declaration of routines ***/
 
 PlyOtherElems *get_other_element_ply (PlyFile *);
 
