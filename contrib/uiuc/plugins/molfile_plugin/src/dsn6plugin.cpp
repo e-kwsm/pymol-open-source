@@ -82,7 +82,7 @@ static void *open_dsn6_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   // Read the header into a 19-element int array. The integers are stored
@@ -95,7 +95,7 @@ static void *open_dsn6_read(const char *filepath, const char *filetype,
     swap2_aligned(fileHeader, 19);
   else if (fileHeader[18] != 100) {
     fprintf(stderr, "Error reading file header.\n");
-    return NULL;
+    return nullptr;
   }
   // else fileHeader[18] is 100, byte-order is fine 
   // (this value is hard-coded into the file format)
@@ -126,7 +126,7 @@ static void *open_dsn6_read(const char *filepath, const char *filetype,
   // Allocate and initialize the dsn6 structure
   dsn6 = new dsn6_t;
   dsn6->fd = fd;
-  dsn6->vol = NULL;
+  dsn6->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   dsn6->nsets = 1; // this file contains only one data set
 
@@ -194,7 +194,7 @@ static int read_dsn6_data(void *v, int set, float *datablock,
   dsn6_t *dsn6 = (dsn6_t *)v;
   float * cell = datablock;
   unsigned char brick[512];
-  unsigned char* brickPtr = NULL;
+  unsigned char* brickPtr = nullptr;
   int xsize, ysize, zsize, xysize, xbrix, ybrix, zbrix, cellIndex;
   int x, y, z, xbrik, ybrik, zbrik;
   FILE * fd = dsn6->fd;
@@ -284,7 +284,7 @@ static void close_dsn6_read(void *v) {
   dsn6_t *dsn6 = (dsn6_t *)v;
 
   fclose(dsn6->fd);
-  if (dsn6->vol != NULL)
+  if (dsn6->vol != nullptr)
     delete [] dsn6->vol; 
   delete dsn6;
 }
