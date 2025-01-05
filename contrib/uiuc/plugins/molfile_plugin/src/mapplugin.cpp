@@ -20,19 +20,19 @@
  *
  ***************************************************************************/
 
-/* 
+/*
  * Autodock Grid Map File format plugin
  *
  * More info for this format can be found at
  * <http://www.scripps.edu/pub/olson-web/gmm/autodock/ad305/
  *  Using_AutoDock_305.21.html#pgfId=75765>
- * 
+ *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "molfile_plugin.h"
@@ -40,25 +40,23 @@
 #define LINESIZE 85
 
 typedef struct {
-  FILE *fd;
+  FILE* fd;
   int nsets;
-  molfile_volumetric_t *vol;
+  molfile_volumetric_t* vol;
 } gridmap_t;
 
-
 // Get a string from a stream, printing any errors that occur
-static char *mapgets(char *s, int n, FILE *stream) {
-  char *returnVal;
+static char* mapgets(char* s, int n, FILE* stream)
+{
+  char* returnVal;
 
   if (feof(stream)) {
     fprintf(stderr, "mapplugin) Unexpected end-of-file.\n");
     returnVal = NULL;
-  }
-  else if (ferror(stream)) {
+  } else if (ferror(stream)) {
     fprintf(stderr, "mapplugin) Error reading file.\n");
     return NULL;
-  }
-  else {
+  } else {
     returnVal = fgets(s, n, stream);
     if (returnVal == NULL) {
       fprintf(stderr, "mapplugin) Error reading line.\n");
@@ -68,16 +66,16 @@ static char *mapgets(char *s, int n, FILE *stream) {
   return returnVal;
 }
 
-
-static void *open_map_read(const char *filepath, const char *filetype,
-    int *natoms) {
-  FILE *fd;
-  gridmap_t *map;
+static void* open_map_read(
+    const char* filepath, const char* filetype, int* natoms)
+{
+  FILE* fd;
+  gridmap_t* map;
   char inbuf[LINESIZE];
 
   float spacing, midX, midY, midZ;
   int xsize, ysize, zsize;
-  
+
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "mapplugin) Error opening file.\n");
@@ -85,21 +83,21 @@ static void *open_map_read(const char *filepath, const char *filetype,
   }
 
   /* Skip the header */
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
+  if (mapgets(inbuf, LINESIZE, fd) == NULL)
     return NULL;
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
+  if (mapgets(inbuf, LINESIZE, fd) == NULL)
     return NULL;
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
+  if (mapgets(inbuf, LINESIZE, fd) == NULL)
     return NULL;
 
   /* Space between grid points */
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
+  if (mapgets(inbuf, LINESIZE, fd) == NULL)
     return NULL;
   if (sscanf(inbuf, "SPACING %f", &spacing) != 1)
     return NULL;
 
   /* Grid size in grid units */
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
+  if (mapgets(inbuf, LINESIZE, fd) == NULL)
     return NULL;
   if (sscanf(inbuf, "NELEMENTS %d %d %d", &xsize, &ysize, &zsize) != 3) {
     fprintf(stderr, "mapplugin) Cannot read NELEMENTS.\n");
@@ -112,7 +110,7 @@ static void *open_map_read(const char *filepath, const char *filetype,
   zsize++;
 
   /* Center of the cell */
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
+  if (mapgets(inbuf, LINESIZE, fd) == NULL)
     return NULL;
   if (sscanf(inbuf, "CENTER %f %f %f", &midX, &midY, &midZ) != 3)
     return NULL;
@@ -128,9 +126,9 @@ static void *open_map_read(const char *filepath, const char *filetype,
   strcpy(map->vol[0].dataname, "Grid Map File");
 
   /* <midX, midY, midZ> is the middle point of the grid. */
-  map->vol[0].origin[0] = -0.5*(xsize+1.0)* spacing  + midX;
-  map->vol[0].origin[1] = -0.5*(ysize+1.0)* spacing  + midY;
-  map->vol[0].origin[2] = -0.5*(zsize+1.0)* spacing  + midZ;
+  map->vol[0].origin[0] = -0.5 * (xsize + 1.0) * spacing + midX;
+  map->vol[0].origin[1] = -0.5 * (ysize + 1.0) * spacing + midY;
+  map->vol[0].origin[2] = -0.5 * (zsize + 1.0) * spacing + midZ;
 
   map->vol[0].xaxis[0] = xsize * spacing;
   map->vol[0].xaxis[1] = 0;
@@ -139,7 +137,7 @@ static void *open_map_read(const char *filepath, const char *filetype,
   map->vol[0].yaxis[0] = 0;
   map->vol[0].yaxis[1] = ysize * spacing;
   map->vol[0].yaxis[2] = 0;
-  
+
   map->vol[0].zaxis[0] = 0;
   map->vol[0].zaxis[1] = 0;
   map->vol[0].zaxis[2] = zsize * spacing;
@@ -153,20 +151,21 @@ static void *open_map_read(const char *filepath, const char *filetype,
   return map;
 }
 
-static int read_map_metadata(void *v, int *nsets, 
-  molfile_volumetric_t **metadata) {
-  gridmap_t *map = (gridmap_t *)v;
-  *nsets = map->nsets; 
-  *metadata = map->vol;  
+static int read_map_metadata(
+    void* v, int* nsets, molfile_volumetric_t** metadata)
+{
+  gridmap_t* map = (gridmap_t*) v;
+  *nsets = map->nsets;
+  *metadata = map->vol;
 
   return MOLFILE_SUCCESS;
 }
 
-static int read_map_data(void *v, int set, float *datablock,
-                         float *colorblock) {
-  gridmap_t *map = (gridmap_t *)v;
-  FILE *fd = map->fd;
-  float *cellIndex;
+static int read_map_data(void* v, int set, float* datablock, float* colorblock)
+{
+  gridmap_t* map = (gridmap_t*) v;
+  FILE* fd = map->fd;
+  float* cellIndex;
   char inbuf[LINESIZE];
   int count, ndata;
 
@@ -189,12 +188,13 @@ static int read_map_data(void *v, int set, float *datablock,
   return MOLFILE_SUCCESS;
 }
 
-static void close_map_read(void *v) {
-  gridmap_t *map = (gridmap_t *)v;
+static void close_map_read(void* v)
+{
+  gridmap_t* map = (gridmap_t*) v;
 
   fclose(map->fd);
   if (map->vol != NULL)
-    delete [] map->vol; 
+    delete[] map->vol;
   delete map;
 }
 
@@ -203,7 +203,8 @@ static void close_map_read(void *v) {
  */
 static molfile_plugin_t plugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) {
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -218,13 +219,16 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   plugin.read_volumetric_metadata = read_map_metadata;
   plugin.read_volumetric_data = read_map_data;
   plugin.close_file_read = close_map_read;
-  return VMDPLUGIN_SUCCESS; 
-}
-
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
+  return VMDPLUGIN_SUCCESS;
+}
 
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}

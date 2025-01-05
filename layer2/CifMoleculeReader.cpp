@@ -5,42 +5,42 @@
  */
 
 #include <algorithm>
-#include <string>
-#include <map>
-#include <set>
-#include <vector>
-#include <memory>
 #include <array>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
 #include "os_predef.h"
 #include "os_std.h"
 
-#include "MemoryDebug.h"
 #include "Err.h"
+#include "MemoryDebug.h"
 
 #include "AssemblyHelpers.h"
 #include "AtomInfo.h"
 #include "Base.h"
-#include "Executive.h"
-#include "P.h"
-#include "Util.h"
-#include "Scene.h"
-#include "Rep.h"
-#include "ObjectMolecule.h"
-#include "CifFile.h"
 #include "CifBondDict.h"
+#include "CifFile.h"
+#include "Executive.h"
+#include "Feedback.h"
+#include "Lex.h"
+#include "ObjectMolecule.h"
+#include "P.h"
+#include "Rep.h"
+#include "Scene.h"
+#include "Util.h"
 #include "Util2.h"
 #include "Vector.h"
-#include "Lex.h"
-#include "strcasecmp.h"
 #include "pymol/zstring_view.h"
-#include "Feedback.h"
+#include "strcasecmp.h"
 
 #ifdef _PYMOL_IP_PROPERTIES
 #endif
 
-using pymol::cif_data;
 using pymol::cif_array;
+using pymol::cif_data;
 
 /**
  * CIF parser which captures the last error message.
@@ -53,55 +53,58 @@ public:
 };
 
 // canonical amino acid three letter codes
-const char * aa_three_letter[] = {
-  "ALA", // A
-  "ASX", // B  for ambiguous asparagine/aspartic-acid
-  "CYS", // C
-  "ASP", // D
-  "GLU", // E
-  "PHE", // F
-  "GLY", // G
-  "HIS", // H
-  "ILE", // I
-  nullptr,  // J
-  "LYS", // K
-  "LEU", // L
-  "MET", // M
-  "ASN", // N
-  "HOH", // O  for water
-  "PRO", // P
-  "GLN", // Q
-  "ARG", // R
-  "SER", // S
-  "THR", // T
-  nullptr,  // U
-  "VAL", // V
-  "TRP", // W
-  nullptr,  // X  for other
-  "TYR", // Y
-  "GLX", // Z  for ambiguous glutamine/glutamic acid
+const char* aa_three_letter[] = {
+    "ALA",   // A
+    "ASX",   // B  for ambiguous asparagine/aspartic-acid
+    "CYS",   // C
+    "ASP",   // D
+    "GLU",   // E
+    "PHE",   // F
+    "GLY",   // G
+    "HIS",   // H
+    "ILE",   // I
+    nullptr, // J
+    "LYS",   // K
+    "LEU",   // L
+    "MET",   // M
+    "ASN",   // N
+    "HOH",   // O  for water
+    "PRO",   // P
+    "GLN",   // Q
+    "ARG",   // R
+    "SER",   // S
+    "THR",   // T
+    nullptr, // U
+    "VAL",   // V
+    "TRP",   // W
+    nullptr, // X  for other
+    "TYR",   // Y
+    "GLX",   // Z  for ambiguous glutamine/glutamic acid
 };
 
 // amino acid one-to-three letter code translation
-static const char * aa_get_three_letter(char aa) {
+static const char* aa_get_three_letter(char aa)
+{
   if (aa < 'A' || aa > 'Z')
     return "UNK";
-  const char * three = aa_three_letter[aa - 'A'];
+  const char* three = aa_three_letter[aa - 'A'];
   return (three) ? three : "UNK";
 }
 
 // dictionary content types
 enum CifDataType {
   CIF_UNKNOWN,
-  CIF_CORE,       // small molecule
-  CIF_MMCIF,      // macromolecular structure
-  CIF_CHEM_COMP   // chemical component
+  CIF_CORE,     // small molecule
+  CIF_MMCIF,    // macromolecular structure
+  CIF_CHEM_COMP // chemical component
 };
 
 // simple 1-indexed string storage
-class seqvec_t : public std::vector<std::string> {
+class seqvec_t : public std::vector<std::string>
+{
 public:
-  void set(int i, const char * mon_id) {
+  void set(int i, const char* mon_id)
+  {
     if (i < 1) {
       printf("error: i(%d) < 1\n", i);
       return;
@@ -111,7 +114,8 @@ public:
     (*this)[i - 1] = mon_id;
   }
 
-  const char * get(int i) const {
+  const char* get(int i) const
+  {
     if (i < 1 || i > size())
       return nullptr;
     return (*this)[i - 1].c_str();
@@ -120,15 +124,16 @@ public:
 
 // structure to collect information about a data block
 struct CifContentInfo {
-  PyMOLGlobals * G;
+  PyMOLGlobals* G;
   CifDataType type;
   bool fractional;
   bool use_auth;
   std::set<lexidx_t> chains_filter;
   std::set<std::string> polypeptide_entities; // entity ids
-  std::map<std::string, seqvec_t> sequences;  // entity_id -> [resn1, resn2, ...]
+  std::map<std::string, seqvec_t> sequences; // entity_id -> [resn1, resn2, ...]
 
-  bool is_excluded_chain(const char * chain) const {
+  bool is_excluded_chain(const char* chain) const
+  {
     if (chains_filter.empty())
       return false;
 
@@ -139,20 +144,24 @@ struct CifContentInfo {
     return false;
   }
 
-  bool is_excluded_chain(const lexborrow_t& chain) const {
+  bool is_excluded_chain(const lexborrow_t& chain) const
+  {
     return (!chains_filter.empty() &&
-        chains_filter.count(reinterpret_cast<const lexidx_t&>(chain)) == 0);
+            chains_filter.count(reinterpret_cast<const lexidx_t&>(chain)) == 0);
   }
 
-  bool is_polypeptide(const char * entity_id) const {
+  bool is_polypeptide(const char* entity_id) const
+  {
     return polypeptide_entities.count(entity_id);
   }
 
-  CifContentInfo(PyMOLGlobals * G, bool use_auth=true) :
-    G(G),
-    type(CIF_UNKNOWN),
-    fractional(false),
-    use_auth(use_auth) {}
+  CifContentInfo(PyMOLGlobals* G, bool use_auth = true)
+      : G(G)
+      , type(CIF_UNKNOWN)
+      , fractional(false)
+      , use_auth(use_auth)
+  {
+  }
 };
 
 /**
@@ -160,7 +169,9 @@ struct CifContentInfo {
  * atom id, comp id and seq id components of the label for a macromolecular
  * atom site.
  */
-static std::string make_mm_atom_site_label(PyMOLGlobals * G, const AtomInfoType * a) {
+static std::string make_mm_atom_site_label(
+    PyMOLGlobals* G, const AtomInfoType* a)
+{
   char resi[8];
   AtomResiFromResv(resi, sizeof(resi), a);
 
@@ -175,9 +186,10 @@ static std::string make_mm_atom_site_label(PyMOLGlobals * G, const AtomInfoType 
   key += a->alt;
   return key;
 }
-static std::string make_mm_atom_site_label(PyMOLGlobals * G, const char * asym_id,
-    const char * comp_id, const char * seq_id, const char * ins_code,
-    const char * atom_id, const char * alt_id) {
+static std::string make_mm_atom_site_label(PyMOLGlobals* G, const char* asym_id,
+    const char* comp_id, const char* seq_id, const char* ins_code,
+    const char* atom_id, const char* alt_id)
+{
   std::string key(asym_id);
   key += '/';
   key += comp_id;
@@ -208,8 +220,8 @@ static void strncpy_alpha(char* dest, const char* src, size_t n)
 /**
  * Get first non-NULL element
  */
-template <typename T>
-static T VLAGetFirstNonNULL(T * vla) {
+template <typename T> static T VLAGetFirstNonNULL(T* vla)
+{
   int n = VLAGetSize(vla);
   for (int i = 0; i < n; ++i)
     if (vla[i])
@@ -222,7 +234,8 @@ static T VLAGetFirstNonNULL(T * vla) {
  * assign output reference `value1`
  */
 template <typename Map, typename Key, typename T>
-inline bool find1(Map& dict, T& value1, const Key& key1) {
+inline bool find1(Map& dict, T& value1, const Key& key1)
+{
   auto it = dict.find(key1);
   if (it == dict.end())
     return false;
@@ -235,9 +248,9 @@ inline bool find1(Map& dict, T& value1, const Key& key1) {
  * assign output references `value1` and `value2`.
  */
 template <typename Map, typename Key, typename T>
-inline bool find2(Map& dict,
-    T& value1, const Key& key1,
-    T& value2, const Key& key2) {
+inline bool find2(
+    Map& dict, T& value1, const Key& key1, T& value2, const Key& key2)
+{
   if (!find1(dict, value1, key1))
     return false;
   if (!find1(dict, value2, key2))
@@ -245,7 +258,9 @@ inline bool find2(Map& dict,
   return true;
 }
 
-static void AtomInfoSetEntityId(PyMOLGlobals * G, AtomInfoType * ai, const char * entity_id) {
+static void AtomInfoSetEntityId(
+    PyMOLGlobals* G, AtomInfoType* ai, const char* entity_id)
+{
   ai->custom = LexIdx(G, entity_id);
 
 #ifdef _PYMOL_IP_PROPERTIES
@@ -284,7 +299,8 @@ static bool BondTypeInit3(PyMOLGlobals* G, BondType* bond, unsigned i1,
 /**
  * Add one bond without checking if it already exists
  */
-static void ObjectMoleculeAddBond2(ObjectMolecule * I, int i1, int i2, int order) {
+static void ObjectMoleculeAddBond2(ObjectMolecule* I, int i1, int i2, int order)
+{
   VLACheck(I->Bond, BondType, I->NBond);
   BondTypeInit2(I->Bond + I->NBond, i1, i2, order);
   I->NBond++;
@@ -293,8 +309,9 @@ static void ObjectMoleculeAddBond2(ObjectMolecule * I, int i1, int i2, int order
 /**
  * Get the distance between two atoms in ObjectMolecule
  */
-static float GetDistance(ObjectMolecule * I, int i1, int i2) {
-  const CoordSet *cset;
+static float GetDistance(ObjectMolecule* I, int i1, int i2)
+{
+  const CoordSet* cset;
   int idx1 = -1, idx2 = -1;
 
   // find first coordset which contains both atoms
@@ -319,16 +336,15 @@ static float GetDistance(ObjectMolecule * I, int i1, int i2) {
     return 999.f;
 
   float v[3];
-  subtract3f(
-      cset->coordPtr(idx1),
-      cset->coordPtr(idx2), v);
+  subtract3f(cset->coordPtr(idx1), cset->coordPtr(idx2), v);
   return length3f(v);
 }
 
 /**
  * Bond order string to int
  */
-static int bondOrderLookup(const char * order) {
+static int bondOrderLookup(const char* order)
+{
   if (p_strcasestartswith(order, "doub"))
     return 2;
   if (p_strcasestartswith(order, "trip"))
@@ -344,11 +360,13 @@ static int bondOrderLookup(const char * order) {
 /**
  * Read bonds from CHEM_COMP_BOND in `bond_dict` dictionary
  */
-static bool read_chem_comp_bond_dict(const cif_data * data, bond_dict_t &bond_dict) {
+static bool read_chem_comp_bond_dict(
+    const cif_data* data, bond_dict_t& bond_dict)
+{
   const cif_array *arr_id_1, *arr_id_2, *arr_order, *arr_comp_id;
 
-  if( !(arr_id_1  = data->get_arr("_chem_comp_bond.atom_id_1")) ||
-      !(arr_id_2  = data->get_arr("_chem_comp_bond.atom_id_2")) ||
+  if (!(arr_id_1 = data->get_arr("_chem_comp_bond.atom_id_1")) ||
+      !(arr_id_2 = data->get_arr("_chem_comp_bond.atom_id_2")) ||
       !(arr_order = data->get_arr("_chem_comp_bond.value_order")) ||
       !(arr_comp_id = data->get_arr("_chem_comp_bond.comp_id"))) {
 
@@ -370,7 +388,7 @@ static bool read_chem_comp_bond_dict(const cif_data * data, bond_dict_t &bond_di
     name1 = arr_id_1->as_s(i);
     name2 = arr_id_2->as_s(i);
 
-    const char *order = arr_order->as_s(i);
+    const char* order = arr_order->as_s(i);
     order_value = bondOrderLookup(order);
 
     bond_dict[resn].set(name1, name2, order_value);
@@ -417,11 +435,12 @@ static bool read_chem_comp_bond_dict(const cif_data * data, bond_dict_t &bond_di
  * parse $PYMOL_DATA/chem_comp_bond-top100.cif (subset of components.cif) into
  * a static (global) dictionary.
  */
-static bond_dict_t * get_global_components_bond_dict(PyMOLGlobals * G) {
+static bond_dict_t* get_global_components_bond_dict(PyMOLGlobals* G)
+{
   static bond_dict_t bond_dict;
 
   if (bond_dict.empty()) {
-    const char * pymol_data = getenv("PYMOL_DATA");
+    const char* pymol_data = getenv("PYMOL_DATA");
     if (!pymol_data || !pymol_data[0])
       return nullptr;
 
@@ -430,8 +449,8 @@ static bond_dict_t * get_global_components_bond_dict(PyMOLGlobals * G) {
     cif_file_with_error_capture cif;
     if (!cif.parse_file(path.c_str())) {
       PRINTFB(G, FB_Executive, FB_Warnings)
-        " Warning: Loading '%s' failed: %s\n", path.c_str(),
-        cif.m_error_msg.c_str() ENDFB(G);
+      " Warning: Loading '%s' failed: %s\n", path.c_str(),
+          cif.m_error_msg.c_str() ENDFB(G);
       return nullptr;
     }
 
@@ -446,9 +465,9 @@ static bond_dict_t * get_global_components_bond_dict(PyMOLGlobals * G) {
 /**
  * True for N-H1 and N-H3, those are not in the chemical components dictionary.
  */
-static bool is_N_H1_or_H3(PyMOLGlobals * G,
-    const AtomInfoType * a1,
-    const AtomInfoType * a2) {
+static bool is_N_H1_or_H3(
+    PyMOLGlobals* G, const AtomInfoType* a1, const AtomInfoType* a2)
+{
   if (a2->name == G->lex_const.N) {
     a2 = a1;
   } else if (a1->name != G->lex_const.N) {
@@ -462,8 +481,9 @@ static bool is_N_H1_or_H3(PyMOLGlobals * G,
  * Add bonds for one residue, with atoms spanning from i_start to i_end-1,
  * based on components.cif
  */
-static void ConnectComponent(ObjectMolecule * I, int i_start, int i_end,
-    bond_dict_t * bond_dict) {
+static void ConnectComponent(
+    ObjectMolecule* I, int i_start, int i_end, bond_dict_t* bond_dict)
+{
 
   if (i_end - i_start < 2)
     return;
@@ -515,10 +535,11 @@ static void ConnectComponent(ObjectMolecule * I, int i_start, int i_end,
  * Add intra residue bonds based on components.cif, and common polymer
  * connecting bonds (C->N, O3*->P)
  */
-static int ObjectMoleculeConnectComponents(ObjectMolecule * I,
-    bond_dict_t * bond_dict=nullptr) {
+static int ObjectMoleculeConnectComponents(
+    ObjectMolecule* I, bond_dict_t* bond_dict = nullptr)
+{
 
-  PyMOLGlobals * G = I->G;
+  PyMOLGlobals* G = I->G;
   int i_start = 0;
   std::vector<int> i_prev_c[2], i_prev_o3[2];
 
@@ -538,7 +559,7 @@ static int ObjectMoleculeConnectComponents(ObjectMolecule * I,
     auto const& atom = I->AtomInfo[i];
 
     // intra-residue
-    if(!AtomInfoSameResidue(G, I->AtomInfo + i_start, I->AtomInfo + i)) {
+    if (!AtomInfoSameResidue(G, I->AtomInfo + i_start, I->AtomInfo + i)) {
       ConnectComponent(I, i_start, i, bond_dict);
       i_start = i;
       i_prev_c[0] = std::move(i_prev_c[1]);
@@ -553,9 +574,9 @@ static int ObjectMoleculeConnectComponents(ObjectMolecule * I,
     } else if (atom.name == lex_O3s || atom.name == lex_O3p) {
       i_prev_o3[1].push_back(i);
     } else {
-      auto const* i_prev_ptr =
-        (atom.name == G->lex_const.N) ? i_prev_c :
-        (atom.name == G->lex_const.P) ? i_prev_o3 : nullptr;
+      auto const* i_prev_ptr = (atom.name == G->lex_const.N)   ? i_prev_c
+                               : (atom.name == G->lex_const.P) ? i_prev_o3
+                                                               : nullptr;
 
       if (i_prev_ptr && !i_prev_ptr->empty()) {
         for (int i_prev : *i_prev_ptr) {
@@ -582,20 +603,23 @@ static int ObjectMoleculeConnectComponents(ObjectMolecule * I,
 /**
  * secondary structure hash
  */
-class sshashkey {
+class sshashkey
+{
 public:
   lexborrow_t chain; // borrowed ref
   int resv;
   char inscode;
 
-  void assign(const lexborrow_t& asym_id_, int resv_, char ins_code_ = '\0') {
+  void assign(const lexborrow_t& asym_id_, int resv_, char ins_code_ = '\0')
+  {
     chain = asym_id_;
     resv = resv_;
     inscode = ins_code_;
   }
 
   // comparable to sshashkey and AtomInfoType
-  template <typename T> int compare(const T &other) const {
+  template <typename T> int compare(const T& other) const
+  {
     int test = resv - other.resv;
     if (test == 0) {
       test = (chain - other.chain);
@@ -604,10 +628,11 @@ public:
     }
     return test;
   }
-  bool operator<(const sshashkey &other) const { return compare(other) < 0; }
-  bool operator>(const sshashkey &other) const { return compare(other) > 0; }
+  bool operator<(const sshashkey& other) const { return compare(other) < 0; }
+  bool operator>(const sshashkey& other) const { return compare(other) > 0; }
 };
-class sshashvalue {
+class sshashvalue
+{
 public:
   char ss;
   sshashkey end;
@@ -615,15 +640,16 @@ public:
 typedef std::map<sshashkey, sshashvalue> sshashmap;
 
 // PDBX_STRUCT_OPER_LIST type
-typedef std::map<std::string, std::array<float, 16> > oper_list_t;
+typedef std::map<std::string, std::array<float, 16>> oper_list_t;
 
 // type for parsed PDBX_STRUCT_OPER_LIST
-typedef std::vector<std::vector<std::string> > oper_collection_t;
+typedef std::vector<std::vector<std::string>> oper_collection_t;
 
 /**
  * Parse operation expressions like (1,2)(3-6)
  */
-static oper_collection_t parse_oper_expression(const std::string &expr) {
+static oper_collection_t parse_oper_expression(const std::string& expr)
+{
   oper_collection_t collection;
 
   // first step to split parenthesized chunks
@@ -631,7 +657,7 @@ static oper_collection_t parse_oper_expression(const std::string &expr) {
 
   // loop over chunks (still include leading '(')
   for (auto& a_item : a_vec) {
-    const char * a_chunk = a_item.c_str();
+    const char* a_chunk = a_item.c_str();
 
     // finish chunk
     while (*a_chunk == '(')
@@ -655,9 +681,8 @@ static oper_collection_t parse_oper_expression(const std::string &expr) {
       ids.push_back(c_d[0]);
 
       if (c_d.size() == 2)
-        for (int i = atoi(c_d[0].c_str()) + 1,
-                 j = atoi(c_d[1].c_str()) + 1; i < j; ++i)
-        {
+        for (int i = atoi(c_d[0].c_str()) + 1, j = atoi(c_d[1].c_str()) + 1;
+             i < j; ++i) {
           char i_str[16];
           snprintf(i_str, sizeof(i_str), "%d", i);
           ids.push_back(i_str);
@@ -674,22 +699,23 @@ static oper_collection_t parse_oper_expression(const std::string &expr) {
  * assembly_chains: output set
  * assembly_id: ID of the assembly or nullptr to use first assembly
  */
-static bool get_assembly_chains(PyMOLGlobals * G,
-    const cif_data * data,
-    std::set<lexidx_t> &assembly_chains,
-    const char * assembly_id) {
+static bool get_assembly_chains(PyMOLGlobals* G, const cif_data* data,
+    std::set<lexidx_t>& assembly_chains, const char* assembly_id)
+{
 
   const cif_array *arr_id, *arr_asym_id_list;
 
-  if ((arr_id           = data->get_arr("_pdbx_struct_assembly_gen.assembly_id")) == nullptr ||
-      (arr_asym_id_list = data->get_arr("_pdbx_struct_assembly_gen.asym_id_list")) == nullptr)
+  if ((arr_id = data->get_arr("_pdbx_struct_assembly_gen.assembly_id")) ==
+          nullptr ||
+      (arr_asym_id_list = data->get_arr(
+           "_pdbx_struct_assembly_gen.asym_id_list")) == nullptr)
     return false;
 
   for (unsigned i = 0, nrows = arr_id->size(); i < nrows; ++i) {
     if (strcmp(assembly_id, arr_id->as_s(i)))
       continue;
 
-    const char * asym_id_list = arr_asym_id_list->as_s(i);
+    const char* asym_id_list = arr_asym_id_list->as_s(i);
     std::vector<std::string> chains = strsplit(asym_id_list, ',');
     for (auto& chain : chains) {
       assembly_chains.insert(LexIdx(G, chain.c_str()));
@@ -708,43 +734,42 @@ static bool get_assembly_chains(PyMOLGlobals * G,
  *
  * return: assembly coordinates as VLA of coordinate sets
  */
-static
-CoordSet ** read_pdbx_struct_assembly(PyMOLGlobals * G,
-    const cif_data * data,
-    const AtomInfoType * atInfo,
-    const CoordSet * cset,
-    const char * assembly_id) {
+static CoordSet** read_pdbx_struct_assembly(PyMOLGlobals* G,
+    const cif_data* data, const AtomInfoType* atInfo, const CoordSet* cset,
+    const char* assembly_id)
+{
 
   const cif_array *arr_id, *arr_assembly_id, *arr_oper_expr, *arr_asym_id_list;
 
-
-  if ((arr_id           = data->get_arr("_pdbx_struct_oper_list.id")) == nullptr ||
-      (arr_assembly_id  = data->get_arr("_pdbx_struct_assembly_gen.assembly_id")) == nullptr ||
-      (arr_oper_expr    = data->get_arr("_pdbx_struct_assembly_gen.oper_expression")) == nullptr ||
-      (arr_asym_id_list = data->get_arr("_pdbx_struct_assembly_gen.asym_id_list")) == nullptr)
+  if ((arr_id = data->get_arr("_pdbx_struct_oper_list.id")) == nullptr ||
+      (arr_assembly_id = data->get_arr(
+           "_pdbx_struct_assembly_gen.assembly_id")) == nullptr ||
+      (arr_oper_expr = data->get_arr(
+           "_pdbx_struct_assembly_gen.oper_expression")) == nullptr ||
+      (arr_asym_id_list = data->get_arr(
+           "_pdbx_struct_assembly_gen.asym_id_list")) == nullptr)
     return nullptr;
 
-  const cif_array * arr_matrix[] = {
-    data->get_opt("_pdbx_struct_oper_list.matrix[1][1]"),
-    data->get_opt("_pdbx_struct_oper_list.matrix[1][2]"),
-    data->get_opt("_pdbx_struct_oper_list.matrix[1][3]"),
-    data->get_opt("_pdbx_struct_oper_list.vector[1]"),
-    data->get_opt("_pdbx_struct_oper_list.matrix[2][1]"),
-    data->get_opt("_pdbx_struct_oper_list.matrix[2][2]"),
-    data->get_opt("_pdbx_struct_oper_list.matrix[2][3]"),
-    data->get_opt("_pdbx_struct_oper_list.vector[2]"),
-    data->get_opt("_pdbx_struct_oper_list.matrix[3][1]"),
-    data->get_opt("_pdbx_struct_oper_list.matrix[3][2]"),
-    data->get_opt("_pdbx_struct_oper_list.matrix[3][3]"),
-    data->get_opt("_pdbx_struct_oper_list.vector[3]")
-  };
+  const cif_array* arr_matrix[] = {
+      data->get_opt("_pdbx_struct_oper_list.matrix[1][1]"),
+      data->get_opt("_pdbx_struct_oper_list.matrix[1][2]"),
+      data->get_opt("_pdbx_struct_oper_list.matrix[1][3]"),
+      data->get_opt("_pdbx_struct_oper_list.vector[1]"),
+      data->get_opt("_pdbx_struct_oper_list.matrix[2][1]"),
+      data->get_opt("_pdbx_struct_oper_list.matrix[2][2]"),
+      data->get_opt("_pdbx_struct_oper_list.matrix[2][3]"),
+      data->get_opt("_pdbx_struct_oper_list.vector[2]"),
+      data->get_opt("_pdbx_struct_oper_list.matrix[3][1]"),
+      data->get_opt("_pdbx_struct_oper_list.matrix[3][2]"),
+      data->get_opt("_pdbx_struct_oper_list.matrix[3][3]"),
+      data->get_opt("_pdbx_struct_oper_list.vector[3]")};
 
   // build oper_list from _pdbx_struct_oper_list
 
   oper_list_t oper_list;
 
   for (unsigned i = 0, nrows = arr_id->size(); i < nrows; ++i) {
-    float * matrix = oper_list[arr_id->as_s(i)].data();
+    float* matrix = oper_list[arr_id->as_s(i)].data();
 
     identity44f(matrix);
 
@@ -753,7 +778,7 @@ CoordSet ** read_pdbx_struct_assembly(PyMOLGlobals * G,
     }
   }
 
-  CoordSet ** csets = nullptr;
+  CoordSet** csets = nullptr;
   int csetbeginidx = 0;
 
   // assembly
@@ -761,8 +786,8 @@ CoordSet ** read_pdbx_struct_assembly(PyMOLGlobals * G,
     if (strcmp(assembly_id, arr_assembly_id->as_s(i)))
       continue;
 
-    const char * oper_expr    = arr_oper_expr->as_s(i);
-    const char * asym_id_list = arr_asym_id_list->as_s(i);
+    const char* oper_expr = arr_oper_expr->as_s(i);
+    const char* asym_id_list = arr_asym_id_list->as_s(i);
 
     oper_collection_t collection = parse_oper_expression(oper_expr);
     std::vector<std::string> chains = strsplit(asym_id_list, ',');
@@ -791,7 +816,7 @@ CoordSet ** read_pdbx_struct_assembly(PyMOLGlobals * G,
     int c_src_len = 1;
 
     // coord set for subset of atoms
-    CoordSet ** c_csets = csets + csetbeginidx;
+    CoordSet** c_csets = csets + csetbeginidx;
     c_csets[0] = CoordSetCopyFilterChains(cset, atInfo, chains_set);
 
     // build new coord sets
@@ -808,7 +833,7 @@ CoordSet ** read_pdbx_struct_assembly(PyMOLGlobals * G,
       // transform
       j = 0;
       for (auto& s_item : *c_it) {
-        const float * matrix = oper_list[s_item].data();
+        const float* matrix = oper_list[s_item].data();
 
         // cartesian product
         for (int k = 0; k < c_src_len; ++k, ++j) {
@@ -830,9 +855,11 @@ CoordSet ** read_pdbx_struct_assembly(PyMOLGlobals * G,
 /**
  * Set ribbon_trace_atoms and cartoon_trace_atoms for CA/P only models
  */
-static bool read_pdbx_coordinate_model(PyMOLGlobals * G, const cif_data * data, ObjectMolecule * mol) {
-  const cif_array * arr_type = data->get_arr("_pdbx_coordinate_model.type");
-  const cif_array * arr_asym = data->get_arr("_pdbx_coordinate_model.asym_id");
+static bool read_pdbx_coordinate_model(
+    PyMOLGlobals* G, const cif_data* data, ObjectMolecule* mol)
+{
+  const cif_array* arr_type = data->get_arr("_pdbx_coordinate_model.type");
+  const cif_array* arr_asym = data->get_arr("_pdbx_coordinate_model.asym_id");
 
   if (!arr_type || !arr_asym)
     return false;
@@ -842,7 +869,7 @@ static bool read_pdbx_coordinate_model(PyMOLGlobals * G, const cif_data * data, 
 
   // collect CA/P-only chain identifiers
   for (unsigned i = 0, nrows = arr_type->size(); i < nrows; ++i) {
-    const char * type = arr_type->as_s(i);
+    const char* type = arr_type->as_s(i);
     // no need anymore to check "CA ATOMS ONLY", since nonbonded CA are
     // now (v1.8.2) detected automatically in RepCartoon and RepRibbon
     if (strcmp(type, "P ATOMS ONLY") == 0) {
@@ -855,10 +882,10 @@ static bool read_pdbx_coordinate_model(PyMOLGlobals * G, const cif_data * data, 
 
   // set on atom-level
   for (int i = 0, nrows = VLAGetSize(mol->AtomInfo); i < nrows; ++i) {
-    AtomInfoType * ai = mol->AtomInfo + i;
+    AtomInfoType* ai = mol->AtomInfo + i;
     if (asyms.count(LexStr(G, ai->segi))) {
       SettingSet(G, cSetting_cartoon_trace_atoms, true, ai);
-      SettingSet(G, cSetting_ribbon_trace_atoms,  true, ai);
+      SettingSet(G, cSetting_ribbon_trace_atoms, true, ai);
     }
   }
 
@@ -868,21 +895,18 @@ static bool read_pdbx_coordinate_model(PyMOLGlobals * G, const cif_data * data, 
 /**
  * Read CELL and SYMMETRY
  */
-static CSymmetry * read_symmetry(PyMOLGlobals * G, const cif_data * data) {
-  const cif_array * cell[6] = {
-    data->get_arr("_cell?length_a"),
-    data->get_arr("_cell?length_b"),
-    data->get_arr("_cell?length_c"),
-    data->get_arr("_cell?angle_alpha"),
-    data->get_arr("_cell?angle_beta"),
-    data->get_arr("_cell?angle_gamma")
-  };
+static CSymmetry* read_symmetry(PyMOLGlobals* G, const cif_data* data)
+{
+  const cif_array* cell[6] = {data->get_arr("_cell?length_a"),
+      data->get_arr("_cell?length_b"), data->get_arr("_cell?length_c"),
+      data->get_arr("_cell?angle_alpha"), data->get_arr("_cell?angle_beta"),
+      data->get_arr("_cell?angle_gamma")};
 
   for (int i = 0; i < 6; i++)
     if (cell[i] == nullptr)
       return nullptr;
 
-  CSymmetry * symmetry = new CSymmetry(G);
+  CSymmetry* symmetry = new CSymmetry(G);
   if (!symmetry)
     return nullptr;
 
@@ -893,16 +917,15 @@ static CSymmetry * read_symmetry(PyMOLGlobals * G, const cif_data * data) {
 
   symmetry->Crystal.setDims(cellparams);
   symmetry->Crystal.setAngles(cellparams + 3);
-  symmetry->setSpaceGroup(
-      data->get_opt("_symmetry?space_group_name_h-m",
-                    "_space_group?name_h-m_alt")->as_s());
+  symmetry->setSpaceGroup(data->get_opt("_symmetry?space_group_name_h-m",
+                                  "_space_group?name_h-m_alt")
+                              ->as_s());
 
   symmetry->PDBZValue = data->get_opt("_cell.z_pdb")->as_i(0, 1);
 
   // register symmetry operations if given
-  const cif_array * arr_as_xyz = data->get_arr(
-      "_symmetry_equiv?pos_as_xyz",
-      "_space_group_symop?operation_xyz");
+  const cif_array* arr_as_xyz = data->get_arr(
+      "_symmetry_equiv?pos_as_xyz", "_space_group_symop?operation_xyz");
   if (arr_as_xyz) {
     std::vector<std::string> sym_op;
     for (unsigned i = 0, n = arr_as_xyz->size(); i < n; ++i) {
@@ -917,33 +940,33 @@ static CSymmetry * read_symmetry(PyMOLGlobals * G, const cif_data * data) {
 /**
  * Read CHEM_COMP_ATOM
  */
-static CoordSet ** read_chem_comp_atom_model(PyMOLGlobals * G, const cif_data * data,
-    AtomInfoType ** atInfoPtr) {
+static CoordSet** read_chem_comp_atom_model(
+    PyMOLGlobals* G, const cif_data* data, AtomInfoType** atInfoPtr)
+{
 
   const cif_array *arr_x, *arr_y = nullptr, *arr_z = nullptr;
 
   // setting to exclude one or more coordinate columns
   unsigned mask = SettingGetGlobal_i(G, cSetting_chem_comp_cartn_use);
-  const char * feedback = "";
+  const char* feedback = "";
 
   if (!mask) {
     mask = 0xFF;
   }
 
-  if ((mask & 0x01)
-      && (arr_x = data->get_arr("_chem_comp_atom.pdbx_model_cartn_x_ideal"))
-      && !arr_x->is_missing_all()) {
+  if ((mask & 0x01) &&
+      (arr_x = data->get_arr("_chem_comp_atom.pdbx_model_cartn_x_ideal")) &&
+      !arr_x->is_missing_all()) {
     arr_y = data->get_arr("_chem_comp_atom.pdbx_model_cartn_y_ideal");
     arr_z = data->get_arr("_chem_comp_atom.pdbx_model_cartn_z_ideal");
     feedback = ".pdbx_model_Cartn_{x,y,z}_ideal";
-  } else if ((mask & 0x02)
-      && (arr_x = data->get_arr("_chem_comp_atom.model_cartn_x"))) {
+  } else if ((mask & 0x02) &&
+             (arr_x = data->get_arr("_chem_comp_atom.model_cartn_x"))) {
     arr_y = data->get_arr("_chem_comp_atom.model_cartn_y");
     arr_z = data->get_arr("_chem_comp_atom.model_cartn_z");
     feedback = ".model_Cartn_{x,y,z}";
-  } else if ((mask & 0x04)
-      && (arr_x = data->get_arr("_chem_comp_atom.x"))
-      && !arr_x->is_missing_all()) {
+  } else if ((mask & 0x04) && (arr_x = data->get_arr("_chem_comp_atom.x")) &&
+             !arr_x->is_missing_all()) {
     arr_y = data->get_arr("_chem_comp_atom.y");
     arr_z = data->get_arr("_chem_comp_atom.z");
     feedback = ".{x,y,z}";
@@ -954,20 +977,21 @@ static CoordSet ** read_chem_comp_atom_model(PyMOLGlobals * G, const cif_data * 
   }
 
   PRINTFB(G, FB_Executive, FB_Details)
-    " ExecutiveLoad-Detail: Detected chem_comp CIF (%s)\n", feedback
-    ENDFB(G);
+  " ExecutiveLoad-Detail: Detected chem_comp CIF (%s)\n", feedback ENDFB(G);
 
-  const cif_array * arr_name            = data->get_opt("_chem_comp_atom.atom_id");
-  const cif_array * arr_symbol          = data->get_opt("_chem_comp_atom.type_symbol");
-  const cif_array * arr_resn            = data->get_opt("_chem_comp_atom.comp_id");
-  const cif_array * arr_partial_charge  = data->get_opt("_chem_comp_atom.partial_charge");
-  const cif_array * arr_formal_charge   = data->get_opt("_chem_comp_atom.charge");
-  const cif_array * arr_stereo          = data->get_opt("_chem_comp_atom.pdbx_stereo_config");
+  const cif_array* arr_name = data->get_opt("_chem_comp_atom.atom_id");
+  const cif_array* arr_symbol = data->get_opt("_chem_comp_atom.type_symbol");
+  const cif_array* arr_resn = data->get_opt("_chem_comp_atom.comp_id");
+  const cif_array* arr_partial_charge =
+      data->get_opt("_chem_comp_atom.partial_charge");
+  const cif_array* arr_formal_charge = data->get_opt("_chem_comp_atom.charge");
+  const cif_array* arr_stereo =
+      data->get_opt("_chem_comp_atom.pdbx_stereo_config");
 
   int nrows = arr_x->size();
-  AtomInfoType *ai;
+  AtomInfoType* ai;
   int atomCount = 0, nAtom = nrows;
-  float * coord = VLAlloc(float, 3 * nAtom);
+  float* coord = VLAlloc(float, 3 * nAtom);
   int auto_show = RepGetAutoShowMask(G);
 
   for (int i = 0; i < nrows; i++) {
@@ -1006,10 +1030,10 @@ static CoordSet ** read_chem_comp_atom_model(PyMOLGlobals * G, const cif_data * 
   VLASize(coord, float, 3 * atomCount);
   VLASize(*atInfoPtr, AtomInfoType, atomCount);
 
-  CoordSet ** csets = VLACalloc(CoordSet*, 1);
+  CoordSet** csets = VLACalloc(CoordSet*, 1);
   csets[0] = CoordSetNew(G);
   csets[0]->NIndex = atomCount;
-  csets[0]->Coord= pymol::vla_take_ownership(coord);
+  csets[0]->Coord = pymol::vla_take_ownership(coord);
 
   return csets;
 }
@@ -1017,13 +1041,19 @@ static CoordSet ** read_chem_comp_atom_model(PyMOLGlobals * G, const cif_data * 
 /**
  * Map model number to state (1-based)
  */
-class ModelStateMapper {
+class ModelStateMapper
+{
   bool remap;
   std::map<int, int> mapping;
-public:
-  ModelStateMapper(bool remap) : remap(remap) {}
 
-  int operator()(int model) {
+public:
+  ModelStateMapper(bool remap)
+      : remap(remap)
+  {
+  }
+
+  int operator()(int model)
+  {
     if (!remap)
       return model;
 
@@ -1052,85 +1082,91 @@ static CoordSet** read_atom_site(PyMOLGlobals* G, const cif_data* data,
 
   const cif_array *arr_x, *arr_y, *arr_z;
   const cif_array *arr_name = nullptr, *arr_resn = nullptr, *arr_resi = nullptr,
-            *arr_chain = nullptr, *arr_symbol,
-            *arr_group_pdb, *arr_alt, *arr_ins_code = nullptr, *arr_b, *arr_u,
-            *arr_q, *arr_ID, *arr_mod_num, *arr_entity_id, *arr_segi;
+                  *arr_chain = nullptr, *arr_symbol, *arr_group_pdb, *arr_alt,
+                  *arr_ins_code = nullptr, *arr_b, *arr_u, *arr_q, *arr_ID,
+                  *arr_mod_num, *arr_entity_id, *arr_segi;
 
   if ((arr_x = data->get_arr("_atom_site?cartn_x")) &&
       (arr_y = data->get_arr("_atom_site?cartn_y")) &&
       (arr_z = data->get_arr("_atom_site?cartn_z"))) {
-  } else if (
-      (arr_x = data->get_arr("_atom_site?fract_x")) &&
-      (arr_y = data->get_arr("_atom_site?fract_y")) &&
-      (arr_z = data->get_arr("_atom_site?fract_z"))) {
+  } else if ((arr_x = data->get_arr("_atom_site?fract_x")) &&
+             (arr_y = data->get_arr("_atom_site?fract_y")) &&
+             (arr_z = data->get_arr("_atom_site?fract_z"))) {
     info.fractional = true;
   } else {
     return nullptr;
   }
 
   if (info.use_auth) {
-    arr_name      = data->get_arr("_atom_site.auth_atom_id");
-    arr_resn      = data->get_arr("_atom_site.auth_comp_id");
-    arr_resi      = data->get_arr("_atom_site.auth_seq_id");
-    arr_chain     = data->get_arr("_atom_site.auth_asym_id");
-    arr_ins_code  = data->get_arr("_atom_site.pdbx_pdb_ins_code");
+    arr_name = data->get_arr("_atom_site.auth_atom_id");
+    arr_resn = data->get_arr("_atom_site.auth_comp_id");
+    arr_resi = data->get_arr("_atom_site.auth_seq_id");
+    arr_chain = data->get_arr("_atom_site.auth_asym_id");
+    arr_ins_code = data->get_arr("_atom_site.pdbx_pdb_ins_code");
   }
 
-  if (!arr_name) arr_name = data->get_arr("_atom_site.label_atom_id");
-  if (!arr_resn) arr_resn = data->get_opt("_atom_site.label_comp_id");
+  if (!arr_name)
+    arr_name = data->get_arr("_atom_site.label_atom_id");
+  if (!arr_resn)
+    arr_resn = data->get_opt("_atom_site.label_comp_id");
 
-  const cif_array *arr_label_seq_id = data->get_opt("_atom_site.label_seq_id");
+  const cif_array* arr_label_seq_id = data->get_opt("_atom_site.label_seq_id");
 
   // PDBe provides unique seq_ids for bulk het groups
-  if (!arr_resi) arr_resi = data->get_arr("_atom_site.pdbe_label_seq_id");
-  if (!arr_resi) arr_resi = arr_label_seq_id;
+  if (!arr_resi)
+    arr_resi = data->get_arr("_atom_site.pdbe_label_seq_id");
+  if (!arr_resi)
+    arr_resi = arr_label_seq_id;
 
   if (arr_name) {
     info.type = CIF_MMCIF;
     if (!quiet) {
       PRINTFB(G, FB_Executive, FB_Details)
-        " ExecutiveLoad-Detail: Detected mmCIF\n" ENDFB(G);
+      " ExecutiveLoad-Detail: Detected mmCIF\n" ENDFB(G);
     }
   } else {
-    arr_name      = data->get_opt("_atom_site_label");
+    arr_name = data->get_opt("_atom_site_label");
     info.type = CIF_CORE;
     if (!quiet) {
       PRINTFB(G, FB_Executive, FB_Details)
-        " ExecutiveLoad-Detail: Detected small molecule CIF\n" ENDFB(G);
+      " ExecutiveLoad-Detail: Detected small molecule CIF\n" ENDFB(G);
     }
   }
 
-  arr_segi        = data->get_opt("_atom_site.label_asym_id");
-  arr_symbol      = data->get_opt("_atom_site?type_symbol", "_atom_site_label");
-  arr_group_pdb   = data->get_opt("_atom_site.group_pdb");
-  arr_alt         = data->get_opt("_atom_site.label_alt_id");
-  arr_b           = data->get_opt("_atom_site?b_iso_or_equiv");
-  arr_u           = data->get_arr("_atom_site?u_iso_or_equiv"); // nullptr
-  arr_q           = data->get_opt("_atom_site?occupancy");
-  arr_ID          = data->get_opt("_atom_site.id",
-                                  "_atom_site_label");
-  arr_mod_num     = data->get_opt("_atom_site.pdbx_pdb_model_num");
-  arr_entity_id   = data->get_arr("_atom_site.label_entity_id"); // nullptr
+  arr_segi = data->get_opt("_atom_site.label_asym_id");
+  arr_symbol = data->get_opt("_atom_site?type_symbol", "_atom_site_label");
+  arr_group_pdb = data->get_opt("_atom_site.group_pdb");
+  arr_alt = data->get_opt("_atom_site.label_alt_id");
+  arr_b = data->get_opt("_atom_site?b_iso_or_equiv");
+  arr_u = data->get_arr("_atom_site?u_iso_or_equiv"); // nullptr
+  arr_q = data->get_opt("_atom_site?occupancy");
+  arr_ID = data->get_opt("_atom_site.id", "_atom_site_label");
+  arr_mod_num = data->get_opt("_atom_site.pdbx_pdb_model_num");
+  arr_entity_id = data->get_arr("_atom_site.label_entity_id"); // nullptr
 
-  const cif_array * arr_color = data->get_arr("_atom_site.pymol_color");
-  const cif_array * arr_reps  = data->get_arr("_atom_site.pymol_reps");
-  const cif_array * arr_ss    = data->get_opt("_atom_site.pymol_ss");
-  const cif_array * arr_label = data->get_opt("_atom_site.pymol_label");
-  const cif_array * arr_vdw   = data->get_opt("_atom_site.pymol_vdw");
-  const cif_array * arr_elec_radius = data->get_opt("_atom_site.pymol_elec_radius");
-  const cif_array * arr_partial_charge = data->get_opt("_atom_site.pymol_partial_charge");
-  const cif_array * arr_formal_charge = data->get_opt("_atom_site.pdbx_formal_charge");
+  const cif_array* arr_color = data->get_arr("_atom_site.pymol_color");
+  const cif_array* arr_reps = data->get_arr("_atom_site.pymol_reps");
+  const cif_array* arr_ss = data->get_opt("_atom_site.pymol_ss");
+  const cif_array* arr_label = data->get_opt("_atom_site.pymol_label");
+  const cif_array* arr_vdw = data->get_opt("_atom_site.pymol_vdw");
+  const cif_array* arr_elec_radius =
+      data->get_opt("_atom_site.pymol_elec_radius");
+  const cif_array* arr_partial_charge =
+      data->get_opt("_atom_site.pymol_partial_charge");
+  const cif_array* arr_formal_charge =
+      data->get_opt("_atom_site.pdbx_formal_charge");
 
   if (!arr_chain)
     arr_chain = arr_segi;
 
-  ModelStateMapper model_to_state(!SettingGetGlobal_i(G, cSetting_pdb_honor_model_number));
+  ModelStateMapper model_to_state(
+      !SettingGetGlobal_i(G, cSetting_pdb_honor_model_number));
   int nrows = arr_x->size();
-  AtomInfoType *ai;
+  AtomInfoType* ai;
   int atomCount = 0;
   int auto_show = RepGetAutoShowMask(G);
   int first_model_num = model_to_state(arr_mod_num->as_i(0, 1));
-  CoordSet * cset;
+  CoordSet* cset;
   int mod_num, ncsets = 0;
 
   // collect number of atoms per model and number of coord sets
@@ -1140,7 +1176,7 @@ static CoordSet** read_atom_site(PyMOLGlobals* G, const cif_data* data,
 
     if (mod_num < 1) {
       PRINTFB(G, FB_ObjectMolecule, FB_Errors)
-        " Error: model numbers < 1 not supported: %d\n", mod_num ENDFB(G);
+      " Error: model numbers < 1 not supported: %d\n", mod_num ENDFB(G);
       return nullptr;
     }
 
@@ -1151,7 +1187,7 @@ static CoordSet** read_atom_site(PyMOLGlobals* G, const cif_data* data,
   }
 
   // set up coordinate sets
-  CoordSet ** csets = VLACalloc(CoordSet*, ncsets);
+  CoordSet** csets = VLACalloc(CoordSet*, ncsets);
   for (auto it = atoms_per_model.begin(); it != atoms_per_model.end(); ++it) {
     csets[it->first] = cset = CoordSetNew(G);
     cset->Coord.resize(3 * it->second);
@@ -1174,20 +1210,17 @@ static CoordSet** read_atom_site(PyMOLGlobals* G, const cif_data* data,
     // copy coordinates into coord set
     cset = csets[mod_num - 1];
     int idx = cset->NIndex++;
-    float * coord = cset->coordPtr(idx);
+    float* coord = cset->coordPtr(idx);
     coord[0] = arr_x->as_d(i);
     coord[1] = arr_y->as_d(i);
     coord[2] = arr_z->as_d(i);
 
     if (!discrete && ncsets > 1) {
       // mm_atom_site_label aggregate
-      std::string key = make_mm_atom_site_label(G,
-          arr_chain->as_s(i),
-          arr_resn->as_s(i),
-          arr_resi->as_s(i),
-          arr_ins_code ? arr_ins_code->as_s(i) : "",
-          arr_name->as_s(i),
-          arr_alt->as_s(i));
+      std::string key =
+          make_mm_atom_site_label(G, arr_chain->as_s(i), arr_resn->as_s(i),
+              arr_resi->as_s(i), arr_ins_code ? arr_ins_code->as_s(i) : "",
+              arr_name->as_s(i), arr_alt->as_s(i));
 
       // check if this is not a new atom
       if (mod_num != first_model_num) {
@@ -1210,9 +1243,9 @@ static CoordSet** read_atom_site(PyMOLGlobals* G, const cif_data* data,
     ai->alt[0] = arr_alt->as_s(i)[0];
 
     ai->id = arr_ID->as_i(i);
-    ai->b = (arr_u != nullptr) ?
-             arr_u->as_d(i) * 78.95683520871486 : // B = U * 8 * pi^2
-             arr_b->as_d(i);
+    ai->b = (arr_u != nullptr) ? arr_u->as_d(i) * 78.95683520871486
+                               : // B = U * 8 * pi^2
+                arr_b->as_d(i);
     ai->q = arr_q->as_d(i, 1.0);
 
     strncpy_alpha(ai->elem, arr_symbol->as_s(i), cElemNameLen);
@@ -1271,32 +1304,35 @@ static CoordSet** read_atom_site(PyMOLGlobals* G, const cif_data* data,
 /**
  * Update `info` with entity polymer information
  */
-static bool read_entity_poly(PyMOLGlobals * G, const cif_data * data, CifContentInfo &info) {
+static bool read_entity_poly(
+    PyMOLGlobals* G, const cif_data* data, CifContentInfo& info)
+{
   const cif_array *arr_entity_id = nullptr, *arr_type = nullptr,
-        *arr_num = nullptr, *arr_mon_id = nullptr;
+                  *arr_num = nullptr, *arr_mon_id = nullptr;
 
-  if (!(arr_entity_id     = data->get_arr("_entity_poly.entity_id")) ||
-      !(arr_type          = data->get_arr("_entity_poly.type")))
+  if (!(arr_entity_id = data->get_arr("_entity_poly.entity_id")) ||
+      !(arr_type = data->get_arr("_entity_poly.type")))
     return false;
 
-  const cif_array * arr_seq_one_letter = data->get_arr("_entity_poly.pdbx_seq_one_letter_code");
+  const cif_array* arr_seq_one_letter =
+      data->get_arr("_entity_poly.pdbx_seq_one_letter_code");
 
   // polypeptides
   for (unsigned i = 0, n = arr_entity_id->size(); i < n; i++) {
     if (!strncasecmp("polypeptide", arr_type->as_s(i), 11)) {
-      const char * entity_id = arr_entity_id->as_s(i);
+      const char* entity_id = arr_entity_id->as_s(i);
       info.polypeptide_entities.insert(entity_id);
 
       if (arr_seq_one_letter) {
         // sequences
         auto& entity_sequence = info.sequences[entity_id];
-        const char * one = arr_seq_one_letter->as_s(i);
+        const char* one = arr_seq_one_letter->as_s(i);
         for (int i = 0; *one; ++one) {
           if (strchr(" \t\r\n", *one)) // skip whitespace
             continue;
 
           if (*one == '(') {
-            const char * end = strchr(one, ')');
+            const char* end = strchr(one, ')');
             if (!end)
               break;
 
@@ -1313,13 +1349,12 @@ static bool read_entity_poly(PyMOLGlobals * G, const cif_data * data, CifContent
 
   if (!arr_seq_one_letter) {
     // sequences
-    if ((arr_entity_id     = data->get_arr("_entity_poly_seq.entity_id")) &&
-        (arr_num           = data->get_arr("_entity_poly_seq.num")) &&
-        (arr_mon_id        = data->get_arr("_entity_poly_seq.mon_id"))) {
+    if ((arr_entity_id = data->get_arr("_entity_poly_seq.entity_id")) &&
+        (arr_num = data->get_arr("_entity_poly_seq.num")) &&
+        (arr_mon_id = data->get_arr("_entity_poly_seq.mon_id"))) {
       for (unsigned i = 0, n = arr_entity_id->size(); i < n; i++) {
         info.sequences[arr_entity_id->as_s(i)].set(
-            arr_num->as_i(i),
-            arr_mon_id->as_s(i));
+            arr_num->as_i(i), arr_mon_id->as_s(i));
       }
     }
   }
@@ -1335,14 +1370,10 @@ static bool read_entity_poly(PyMOLGlobals * G, const cif_data * data, CifContent
  * @param at_terminus True if adding residues beyond the last observed residue
  * in this chain.
  */
-static void add_missing_ca_sub(PyMOLGlobals * G,
-    pymol::vla<AtomInfoType>& atInfo,
-    int& current_resv,
-    int& atomCount,
-    const int i_ref, int resv,
-    const seqvec_t * current_seq,
-    const char * entity_id,
-    bool at_terminus = true)
+static void add_missing_ca_sub(PyMOLGlobals* G,
+    pymol::vla<AtomInfoType>& atInfo, int& current_resv, int& atomCount,
+    const int i_ref, int resv, const seqvec_t* current_seq,
+    const char* entity_id, bool at_terminus = true)
 {
   if (!atInfo[i_ref].temp1)
     return;
@@ -1352,7 +1383,7 @@ static void add_missing_ca_sub(PyMOLGlobals * G,
   }
 
   for (++current_resv; current_resv < resv; ++current_resv) {
-    const char * resn = current_seq->get(current_resv);
+    const char* resn = current_seq->get(current_resv);
     if (!resn)
       continue;
 
@@ -1364,7 +1395,7 @@ static void add_missing_ca_sub(PyMOLGlobals * G,
       continue;
     }
 
-    AtomInfoType *ai = atInfo.check(atomCount);
+    AtomInfoType* ai = atInfo.check(atomCount);
 
     ai->rank = atomCount;
     ai->id = -1;
@@ -1396,34 +1427,33 @@ static void add_missing_ca_sub(PyMOLGlobals * G,
  * missing residues in partially present chains. Add CA atoms for those
  * to present complete sequences in the sequence viewer.
  */
-static bool add_missing_ca(PyMOLGlobals * G,
-    pymol::vla<AtomInfoType>& atInfo, CifContentInfo &info) {
+static bool add_missing_ca(
+    PyMOLGlobals* G, pymol::vla<AtomInfoType>& atInfo, CifContentInfo& info)
+{
 
   int oldAtomCount = atInfo.size();
   int atomCount = oldAtomCount;
   int current_resv = 0;
-  const seqvec_t * current_seq = nullptr;
-  const char * current_entity_id = "";
+  const seqvec_t* current_seq = nullptr;
+  const char* current_entity_id = "";
 
   for (int i = 0; i < oldAtomCount; ++i) {
-    const char * entity_id = LexStr(G, atInfo[i].custom);
+    const char* entity_id = LexStr(G, atInfo[i].custom);
 
-    if (i == 0
-        || atInfo[i].chain != atInfo[i - 1].chain
-        || strcmp(entity_id, current_entity_id)) {
+    if (i == 0 || atInfo[i].chain != atInfo[i - 1].chain ||
+        strcmp(entity_id, current_entity_id)) {
       // finish prev seq
       if (current_seq && i > 0) {
-         add_missing_ca_sub(G,
-             atInfo, current_resv, atomCount,
-             i - 1, current_seq->size() + 1,
-             current_seq, current_entity_id);
+        add_missing_ca_sub(G, atInfo, current_resv, atomCount, i - 1,
+            current_seq->size() + 1, current_seq, current_entity_id);
       }
 
       current_resv = 0;
       current_seq = nullptr;
       current_entity_id = entity_id;
 
-      if (info.is_polypeptide(entity_id) && !info.is_excluded_chain(atInfo[i].segi)) {
+      if (info.is_polypeptide(entity_id) &&
+          !info.is_excluded_chain(atInfo[i].segi)) {
         // get new sequence
         auto it = info.sequences.find(entity_id);
         if (it != info.sequences.end()) {
@@ -1436,19 +1466,15 @@ static bool add_missing_ca(PyMOLGlobals * G,
     }
 
     if (current_seq) {
-      add_missing_ca_sub(G,
-          atInfo, current_resv, atomCount,
-          i, atInfo[i].temp1,
+      add_missing_ca_sub(G, atInfo, current_resv, atomCount, i, atInfo[i].temp1,
           current_seq, entity_id, false);
     }
   }
 
   // finish last seq
   if (current_seq) {
-    add_missing_ca_sub(G,
-        atInfo, current_resv, atomCount,
-        oldAtomCount - 1, current_seq->size() + 1,
-        current_seq, current_entity_id);
+    add_missing_ca_sub(G, atInfo, current_resv, atomCount, oldAtomCount - 1,
+        current_seq->size() + 1, current_seq, current_entity_id);
   }
 
   atInfo.resize(atomCount);
@@ -1459,8 +1485,8 @@ static bool add_missing_ca(PyMOLGlobals * G,
 /**
  * Read secondary structure from STRUCT_CONF or STRUCT_SHEET_RANGE
  */
-static bool read_ss_(PyMOLGlobals * G, const cif_data * data, char ss,
-    sshashmap &ssrecords, CifContentInfo &info)
+static bool read_ss_(PyMOLGlobals* G, const cif_data* data, char ss,
+    sshashmap& ssrecords, CifContentInfo& info)
 {
   const cif_array *arr_beg_chain = nullptr, *arr_beg_resi = nullptr,
                   *arr_end_chain = nullptr, *arr_end_resi = nullptr,
@@ -1472,22 +1498,27 @@ static bool read_ss_(PyMOLGlobals * G, const cif_data * data, char ss,
 
   if (info.use_auth &&
       (arr_beg_chain = data->get_arr((prefix + "beg_auth_asym_id").c_str())) &&
-      (arr_beg_resi  = data->get_arr((prefix + "beg_auth_seq_id").c_str())) &&
+      (arr_beg_resi = data->get_arr((prefix + "beg_auth_seq_id").c_str())) &&
       (arr_end_chain = data->get_arr((prefix + "end_auth_asym_id").c_str())) &&
-      (arr_end_resi  = data->get_arr((prefix + "end_auth_seq_id").c_str()))) {
+      (arr_end_resi = data->get_arr((prefix + "end_auth_seq_id").c_str()))) {
     // auth only
-    arr_beg_ins_code = data->get_arr((prefix + "pdbx_beg_pdb_ins_code").c_str());
-    arr_end_ins_code = data->get_arr((prefix + "pdbx_end_pdb_ins_code").c_str());
-  } else if (
-      !(arr_beg_chain = data->get_arr((prefix + "beg_label_asym_id").c_str())) ||
-      !(arr_beg_resi  = data->get_arr((prefix + "beg_label_seq_id").c_str())) ||
-      !(arr_end_chain = data->get_arr((prefix + "end_label_asym_id").c_str())) ||
-      !(arr_end_resi  = data->get_arr((prefix + "end_label_seq_id").c_str()))) {
+    arr_beg_ins_code =
+        data->get_arr((prefix + "pdbx_beg_pdb_ins_code").c_str());
+    arr_end_ins_code =
+        data->get_arr((prefix + "pdbx_end_pdb_ins_code").c_str());
+  } else if (!(arr_beg_chain =
+                     data->get_arr((prefix + "beg_label_asym_id").c_str())) ||
+             !(arr_beg_resi =
+                     data->get_arr((prefix + "beg_label_seq_id").c_str())) ||
+             !(arr_end_chain =
+                     data->get_arr((prefix + "end_label_asym_id").c_str())) ||
+             !(arr_end_resi =
+                     data->get_arr((prefix + "end_label_seq_id").c_str()))) {
     return false;
   }
 
-  const cif_array *arr_conf_type_id = (ss == 'S') ? nullptr :
-    data->get_arr("_struct_conf.conf_type_id");
+  const cif_array* arr_conf_type_id =
+      (ss == 'S') ? nullptr : data->get_arr("_struct_conf.conf_type_id");
 
   int nrows = arr_beg_chain->size();
   sshashkey key;
@@ -1500,15 +1531,12 @@ static bool read_ss_(PyMOLGlobals * G, const cif_data * data, char ss,
     if (ss_i == 'T')
       continue;
 
-    key.assign(
-      LexBorrow(G, arr_beg_chain->as_s(i)),
-      arr_beg_resi->as_i(i),
-      arr_beg_ins_code ? arr_beg_ins_code->as_s(i)[0] : '\0');
+    key.assign(LexBorrow(G, arr_beg_chain->as_s(i)), arr_beg_resi->as_i(i),
+        arr_beg_ins_code ? arr_beg_ins_code->as_s(i)[0] : '\0');
 
-    sshashvalue &value = ssrecords[key];
+    sshashvalue& value = ssrecords[key];
     value.ss = ss_i;
-    value.end.assign(
-        LexBorrow(G, arr_end_chain->as_s(i)),
+    value.end.assign(LexBorrow(G, arr_end_chain->as_s(i)),
         arr_end_resi->as_i(i),
         arr_end_ins_code ? arr_end_ins_code->as_s(i)[0] : '\0');
   }
@@ -1519,8 +1547,8 @@ static bool read_ss_(PyMOLGlobals * G, const cif_data * data, char ss,
 /**
  * Read secondary structure
  */
-static bool read_ss(PyMOLGlobals * G, const cif_data * datablock,
-    pymol::vla<AtomInfoType>& atInfo, CifContentInfo &info)
+static bool read_ss(PyMOLGlobals* G, const cif_data* datablock,
+    pymol::vla<AtomInfoType>& atInfo, CifContentInfo& info)
 {
   sshashmap ssrecords;
 
@@ -1536,8 +1564,8 @@ static bool read_ss(PyMOLGlobals * G, const cif_data * datablock,
   for (ai = atInfo.data(); ai < atoms_end;) {
     // advance to the next residue
     aj = ai;
-    while (++ai < atoms_end &&
-        AtomInfoSameResidue(G, aj, ai)) {}
+    while (++ai < atoms_end && AtomInfoSameResidue(G, aj, ai)) {
+    }
 
     // check if residue is the beginning of a secondary structure element
     key.assign(aj->chain, aj->resv, aj->inscode);
@@ -1546,7 +1574,7 @@ static bool read_ss(PyMOLGlobals * G, const cif_data * datablock,
     if (it == ssrecords.end())
       continue;
 
-    sshashvalue &value = it->second;
+    sshashvalue& value = it->second;
 
     // assign ss type to all atoms in the segment
     bool hit_end_residue = false;
@@ -1566,23 +1594,37 @@ static bool read_ss(PyMOLGlobals * G, const cif_data * datablock,
 /**
  * Read the SCALEn matrix into 4x4 `matrix`
  */
-static bool read_atom_site_fract_transf(PyMOLGlobals * G, const cif_data * data, float * matrix) {
-  const cif_array *arr_transf[12];
+static bool read_atom_site_fract_transf(
+    PyMOLGlobals* G, const cif_data* data, float* matrix)
+{
+  const cif_array* arr_transf[12];
 
-  if (!(arr_transf[0] = data->get_arr("_atom_sites.fract_transf_matrix[1][1]", "_atom_sites_fract_tran_matrix_11")))
+  if (!(arr_transf[0] = data->get_arr("_atom_sites.fract_transf_matrix[1][1]",
+            "_atom_sites_fract_tran_matrix_11")))
     return false;
 
-  arr_transf[1]  = data->get_opt("_atom_sites.fract_transf_matrix[1][2]", "_atom_sites_fract_tran_matrix_12");
-  arr_transf[2]  = data->get_opt("_atom_sites.fract_transf_matrix[1][3]", "_atom_sites_fract_tran_matrix_13");
-  arr_transf[3]  = data->get_opt("_atom_sites.fract_transf_vector[1]", "_atom_sites_fract_tran_vector_1");
-  arr_transf[4]  = data->get_opt("_atom_sites.fract_transf_matrix[2][1]", "_atom_sites_fract_tran_matrix_21");
-  arr_transf[5]  = data->get_opt("_atom_sites.fract_transf_matrix[2][2]", "_atom_sites_fract_tran_matrix_22");
-  arr_transf[6]  = data->get_opt("_atom_sites.fract_transf_matrix[2][3]", "_atom_sites_fract_tran_matrix_23");
-  arr_transf[7]  = data->get_opt("_atom_sites.fract_transf_vector[2]", "_atom_sites_fract_tran_vector_2");
-  arr_transf[8]  = data->get_opt("_atom_sites.fract_transf_matrix[3][1]", "_atom_sites_fract_tran_matrix_31");
-  arr_transf[9]  = data->get_opt("_atom_sites.fract_transf_matrix[3][2]", "_atom_sites_fract_tran_matrix_32");
-  arr_transf[10] = data->get_opt("_atom_sites.fract_transf_matrix[3][3]", "_atom_sites_fract_tran_matrix_33");
-  arr_transf[11] = data->get_opt("_atom_sites.fract_transf_vector[3]", "_atom_sites_fract_tran_vector_3");
+  arr_transf[1] = data->get_opt("_atom_sites.fract_transf_matrix[1][2]",
+      "_atom_sites_fract_tran_matrix_12");
+  arr_transf[2] = data->get_opt("_atom_sites.fract_transf_matrix[1][3]",
+      "_atom_sites_fract_tran_matrix_13");
+  arr_transf[3] = data->get_opt(
+      "_atom_sites.fract_transf_vector[1]", "_atom_sites_fract_tran_vector_1");
+  arr_transf[4] = data->get_opt("_atom_sites.fract_transf_matrix[2][1]",
+      "_atom_sites_fract_tran_matrix_21");
+  arr_transf[5] = data->get_opt("_atom_sites.fract_transf_matrix[2][2]",
+      "_atom_sites_fract_tran_matrix_22");
+  arr_transf[6] = data->get_opt("_atom_sites.fract_transf_matrix[2][3]",
+      "_atom_sites_fract_tran_matrix_23");
+  arr_transf[7] = data->get_opt(
+      "_atom_sites.fract_transf_vector[2]", "_atom_sites_fract_tran_vector_2");
+  arr_transf[8] = data->get_opt("_atom_sites.fract_transf_matrix[3][1]",
+      "_atom_sites_fract_tran_matrix_31");
+  arr_transf[9] = data->get_opt("_atom_sites.fract_transf_matrix[3][2]",
+      "_atom_sites_fract_tran_matrix_32");
+  arr_transf[10] = data->get_opt("_atom_sites.fract_transf_matrix[3][3]",
+      "_atom_sites_fract_tran_matrix_33");
+  arr_transf[11] = data->get_opt(
+      "_atom_sites.fract_transf_vector[3]", "_atom_sites_fract_tran_vector_3");
 
   for (int i = 0; i < 12; ++i)
     matrix[i] = arr_transf[i]->as_d(0);
@@ -1596,10 +1638,12 @@ static bool read_atom_site_fract_transf(PyMOLGlobals * G, const cif_data * data,
 /**
  * Read anisotropic temperature factors from ATOM_SITE or ATOM_SITE_ANISOTROP
  */
-static bool read_atom_site_aniso(PyMOLGlobals * G, const cif_data * data,
-    pymol::vla<AtomInfoType>& atInfo) {
+static bool read_atom_site_aniso(
+    PyMOLGlobals* G, const cif_data* data, pymol::vla<AtomInfoType>& atInfo)
+{
 
-  const cif_array *arr_label, *arr_u11, *arr_u22, *arr_u33, *arr_u12, *arr_u13, *arr_u23;
+  const cif_array *arr_label, *arr_u11, *arr_u22, *arr_u33, *arr_u12, *arr_u13,
+      *arr_u23;
   bool mmcif = true;
   float factor = 1.0;
 
@@ -1613,27 +1657,38 @@ static bool read_atom_site_aniso(PyMOLGlobals * G, const cif_data * data,
     return false;
   }
 
-  if ((arr_u11 = data->get_arr("_atom_site_anisotrop.u[1][1]", "_atom_site_aniso_u_11", "_atom_site.aniso_u[1][1]"))) {
+  if ((arr_u11 = data->get_arr("_atom_site_anisotrop.u[1][1]",
+           "_atom_site_aniso_u_11", "_atom_site.aniso_u[1][1]"))) {
     // U
-    arr_u22 = data->get_opt("_atom_site_anisotrop.u[2][2]", "_atom_site_aniso_u_22", "_atom_site.aniso_u[2][2]");
-    arr_u33 = data->get_opt("_atom_site_anisotrop.u[3][3]", "_atom_site_aniso_u_33", "_atom_site.aniso_u[3][3]");
-    arr_u12 = data->get_opt("_atom_site_anisotrop.u[1][2]", "_atom_site_aniso_u_12", "_atom_site.aniso_u[1][2]");
-    arr_u13 = data->get_opt("_atom_site_anisotrop.u[1][3]", "_atom_site_aniso_u_13", "_atom_site.aniso_u[1][3]");
-    arr_u23 = data->get_opt("_atom_site_anisotrop.u[2][3]", "_atom_site_aniso_u_23", "_atom_site.aniso_u[2][3]");
-  } else if (
-      (arr_u11 = data->get_arr("_atom_site_anisotrop.b[1][1]", "_atom_site_aniso_b_11", "_atom_site.aniso_b[1][1]"))) {
+    arr_u22 = data->get_opt("_atom_site_anisotrop.u[2][2]",
+        "_atom_site_aniso_u_22", "_atom_site.aniso_u[2][2]");
+    arr_u33 = data->get_opt("_atom_site_anisotrop.u[3][3]",
+        "_atom_site_aniso_u_33", "_atom_site.aniso_u[3][3]");
+    arr_u12 = data->get_opt("_atom_site_anisotrop.u[1][2]",
+        "_atom_site_aniso_u_12", "_atom_site.aniso_u[1][2]");
+    arr_u13 = data->get_opt("_atom_site_anisotrop.u[1][3]",
+        "_atom_site_aniso_u_13", "_atom_site.aniso_u[1][3]");
+    arr_u23 = data->get_opt("_atom_site_anisotrop.u[2][3]",
+        "_atom_site_aniso_u_23", "_atom_site.aniso_u[2][3]");
+  } else if ((arr_u11 = data->get_arr("_atom_site_anisotrop.b[1][1]",
+                  "_atom_site_aniso_b_11", "_atom_site.aniso_b[1][1]"))) {
     // B
     factor = 0.012665147955292222; // U = B / (8 * pi^2)
-    arr_u22 = data->get_opt("_atom_site_anisotrop.b[2][2]", "_atom_site_aniso_b_22", "_atom_site.aniso_b[2][2]");
-    arr_u33 = data->get_opt("_atom_site_anisotrop.b[3][3]", "_atom_site_aniso_b_33", "_atom_site.aniso_b[3][3]");
-    arr_u12 = data->get_opt("_atom_site_anisotrop.b[1][2]", "_atom_site_aniso_b_12", "_atom_site.aniso_b[1][2]");
-    arr_u13 = data->get_opt("_atom_site_anisotrop.b[1][3]", "_atom_site_aniso_b_13", "_atom_site.aniso_b[1][3]");
-    arr_u23 = data->get_opt("_atom_site_anisotrop.b[2][3]", "_atom_site_aniso_b_23", "_atom_site.aniso_b[2][3]");
+    arr_u22 = data->get_opt("_atom_site_anisotrop.b[2][2]",
+        "_atom_site_aniso_b_22", "_atom_site.aniso_b[2][2]");
+    arr_u33 = data->get_opt("_atom_site_anisotrop.b[3][3]",
+        "_atom_site_aniso_b_33", "_atom_site.aniso_b[3][3]");
+    arr_u12 = data->get_opt("_atom_site_anisotrop.b[1][2]",
+        "_atom_site_aniso_b_12", "_atom_site.aniso_b[1][2]");
+    arr_u13 = data->get_opt("_atom_site_anisotrop.b[1][3]",
+        "_atom_site_aniso_b_13", "_atom_site.aniso_b[1][3]");
+    arr_u23 = data->get_opt("_atom_site_anisotrop.b[2][3]",
+        "_atom_site_aniso_b_23", "_atom_site.aniso_b[2][3]");
   } else {
     return false;
   }
 
-  AtomInfoType *ai;
+  AtomInfoType* ai;
   int nAtom = VLAGetSize(atInfo);
 
   std::map<int, AtomInfoType*> id_dict;
@@ -1665,7 +1720,7 @@ static bool read_atom_site_aniso(PyMOLGlobals * G, const cif_data * data,
       continue;
     }
 
-    float * anisou = ai->get_anisou();
+    float* anisou = ai->get_anisou();
     anisou[0] = arr_u11->as_d(i) * factor;
     anisou[1] = arr_u22->as_d(i) * factor;
     anisou[2] = arr_u33->as_d(i) * factor;
@@ -1682,18 +1737,19 @@ static bool read_atom_site_aniso(PyMOLGlobals * G, const cif_data * data,
  *
  * return: BondType VLA
  */
-static pymol::vla<BondType> read_geom_bond(PyMOLGlobals * G, const cif_data * data,
-    const pymol::vla<AtomInfoType>& atInfo) {
+static pymol::vla<BondType> read_geom_bond(PyMOLGlobals* G,
+    const cif_data* data, const pymol::vla<AtomInfoType>& atInfo)
+{
 
   const cif_array *arr_ID_1, *arr_ID_2;
   if ((arr_ID_1 = data->get_arr("_geom_bond.atom_site_id_1",
-                                "_geom_bond_atom_site_label_1")) == nullptr ||
+           "_geom_bond_atom_site_label_1")) == nullptr ||
       (arr_ID_2 = data->get_arr("_geom_bond.atom_site_id_2",
-                                "_geom_bond_atom_site_label_2")) == nullptr)
+           "_geom_bond_atom_site_label_2")) == nullptr)
     return {};
 
-  const cif_array *arr_symm_1 = data->get_opt("_geom_bond?site_symmetry_1");
-  const cif_array *arr_symm_2 = data->get_opt("_geom_bond?site_symmetry_2");
+  const cif_array* arr_symm_1 = data->get_opt("_geom_bond?site_symmetry_1");
+  const cif_array* arr_symm_2 = data->get_opt("_geom_bond?site_symmetry_2");
 
   int nrows = arr_ID_1->size();
   int nAtom = VLAGetSize(atInfo);
@@ -1725,8 +1781,8 @@ static pymol::vla<BondType> read_geom_bond(PyMOLGlobals * G, const cif_data * da
       }
     } else {
       PRINTFB(G, FB_Executive, FB_Details)
-        " Executive-Detail: _geom_bond name lookup failed: %s %s\n",
-        key1.c_str(), key2.c_str() ENDFB(G);
+      " Executive-Detail: _geom_bond name lookup failed: %s %s\n", key1.c_str(),
+          key2.c_str() ENDFB(G);
     }
   }
 
@@ -1744,14 +1800,17 @@ static pymol::vla<BondType> read_geom_bond(PyMOLGlobals * G, const cif_data * da
  *
  * return: BondType VLA
  */
-static pymol::vla<BondType> read_chemical_conn_bond(PyMOLGlobals * G, const cif_data * data) {
+static pymol::vla<BondType> read_chemical_conn_bond(
+    PyMOLGlobals* G, const cif_data* data)
+{
 
   const cif_array *arr_number, *arr_atom_1, *arr_atom_2, *arr_type;
 
-  if ((arr_number = data->get_arr("_atom_site?chemical_conn_number")) == nullptr ||
+  if ((arr_number = data->get_arr("_atom_site?chemical_conn_number")) ==
+          nullptr ||
       (arr_atom_1 = data->get_arr("_chemical_conn_bond?atom_1")) == nullptr ||
       (arr_atom_2 = data->get_arr("_chemical_conn_bond?atom_2")) == nullptr ||
-      (arr_type   = data->get_arr("_chemical_conn_bond?type")) == nullptr)
+      (arr_type = data->get_arr("_chemical_conn_bond?type")) == nullptr)
     return {};
 
   int nAtom = arr_number->size();
@@ -1771,14 +1830,11 @@ static pymol::vla<BondType> read_chemical_conn_bond(PyMOLGlobals * G, const cif_
   // read table
   int i1, i2;
   for (int i = 0; i < nBond; i++) {
-    if (find2(number_dict,
-          i1, arr_atom_1->as_i(i),
-          i2, arr_atom_2->as_i(i))) {
-      BondTypeInit2(bond++, i1, i2,
-          bondOrderLookup(arr_type->as_s(i)));
+    if (find2(number_dict, i1, arr_atom_1->as_i(i), i2, arr_atom_2->as_i(i))) {
+      BondTypeInit2(bond++, i1, i2, bondOrderLookup(arr_type->as_s(i)));
     } else {
       PRINTFB(G, FB_Executive, FB_Details)
-        " Executive-Detail: _chemical_conn_bond name lookup failed\n" ENDFB(G);
+      " Executive-Detail: _chemical_conn_bond name lookup failed\n" ENDFB(G);
     }
   }
 
@@ -1792,36 +1848,36 @@ static pymol::vla<BondType> read_chemical_conn_bond(PyMOLGlobals * G, const cif_
  *   cset->TmpBond
  *   cset->NTmpBond
  */
-static bool read_struct_conn_(PyMOLGlobals * G, const cif_data * data,
-    const pymol::vla<AtomInfoType>& atInfo, CoordSet * cset,
-    CifContentInfo &info) {
+static bool read_struct_conn_(PyMOLGlobals* G, const cif_data* data,
+    const pymol::vla<AtomInfoType>& atInfo, CoordSet* cset,
+    CifContentInfo& info)
+{
 
-  const cif_array *col_type_id = data->get_arr("_struct_conn.conn_type_id");
+  const cif_array* col_type_id = data->get_arr("_struct_conn.conn_type_id");
 
   if (!col_type_id)
     return false;
 
-  const cif_array
-    *col_asym_id[2] = {nullptr, nullptr},
-    *col_comp_id[2] = {nullptr, nullptr},
-    *col_seq_id[2] = {nullptr, nullptr},
-    *col_atom_id[2] = {nullptr, nullptr},
-    *col_alt_id[2] = {nullptr, nullptr},
-    *col_ins_code[2] = {nullptr, nullptr},
-    *col_symm[2] = {nullptr, nullptr};
+  const cif_array *col_asym_id[2] = {nullptr, nullptr},
+                  *col_comp_id[2] = {nullptr, nullptr},
+                  *col_seq_id[2] = {nullptr, nullptr},
+                  *col_atom_id[2] = {nullptr, nullptr},
+                  *col_alt_id[2] = {nullptr, nullptr},
+                  *col_ins_code[2] = {nullptr, nullptr},
+                  *col_symm[2] = {nullptr, nullptr};
 
   if (info.use_auth) {
     col_asym_id[0] = data->get_arr("_struct_conn.ptnr1_auth_asym_id");
     col_comp_id[0] = data->get_arr("_struct_conn.ptnr1_auth_comp_id");
-    col_seq_id[0]  = data->get_arr("_struct_conn.ptnr1_auth_seq_id");
+    col_seq_id[0] = data->get_arr("_struct_conn.ptnr1_auth_seq_id");
     col_atom_id[0] = data->get_arr("_struct_conn.ptnr1_auth_atom_id");
     col_asym_id[1] = data->get_arr("_struct_conn.ptnr2_auth_asym_id");
     col_comp_id[1] = data->get_arr("_struct_conn.ptnr2_auth_comp_id");
-    col_seq_id[1]  = data->get_arr("_struct_conn.ptnr2_auth_seq_id");
+    col_seq_id[1] = data->get_arr("_struct_conn.ptnr2_auth_seq_id");
     col_atom_id[1] = data->get_arr("_struct_conn.ptnr2_auth_atom_id");
 
-    col_alt_id[0]  = data->get_arr("_struct_conn.pdbx_ptnr1_auth_alt_id");
-    col_alt_id[1]  = data->get_arr("_struct_conn.pdbx_ptnr2_auth_alt_id");
+    col_alt_id[0] = data->get_arr("_struct_conn.pdbx_ptnr1_auth_alt_id");
+    col_alt_id[1] = data->get_arr("_struct_conn.pdbx_ptnr2_auth_alt_id");
 
     // auth only
     col_ins_code[0] = data->get_arr("_struct_conn.pdbx_ptnr1_pdb_ins_code");
@@ -1829,28 +1885,35 @@ static bool read_struct_conn_(PyMOLGlobals * G, const cif_data * data,
   }
 
   // for assembly chain filtering
-  const cif_array *col_label_asym_id[2] = {
-    data->get_arr("_struct_conn.ptnr1_label_asym_id"),
-    data->get_arr("_struct_conn.ptnr2_label_asym_id")
-  };
+  const cif_array* col_label_asym_id[2] = {
+      data->get_arr("_struct_conn.ptnr1_label_asym_id"),
+      data->get_arr("_struct_conn.ptnr2_label_asym_id")};
 
   if ((!col_asym_id[0] && !(col_asym_id[0] = col_label_asym_id[0])) ||
-      (!col_comp_id[0] && !(col_comp_id[0] = data->get_arr("_struct_conn.ptnr1_label_comp_id"))) ||
-      (!col_seq_id[0]  && !(col_seq_id[0]  = data->get_arr("_struct_conn.ptnr1_label_seq_id"))) ||
-      (!col_atom_id[0] && !(col_atom_id[0] = data->get_arr("_struct_conn.ptnr1_label_atom_id"))) ||
+      (!col_comp_id[0] && !(col_comp_id[0] = data->get_arr(
+                                "_struct_conn.ptnr1_label_comp_id"))) ||
+      (!col_seq_id[0] && !(col_seq_id[0] = data->get_arr(
+                               "_struct_conn.ptnr1_label_seq_id"))) ||
+      (!col_atom_id[0] && !(col_atom_id[0] = data->get_arr(
+                                "_struct_conn.ptnr1_label_atom_id"))) ||
       (!col_asym_id[1] && !(col_asym_id[1] = col_label_asym_id[1])) ||
-      (!col_comp_id[1] && !(col_comp_id[1] = data->get_arr("_struct_conn.ptnr2_label_comp_id"))) ||
-      (!col_seq_id[1]  && !(col_seq_id[1]  = data->get_arr("_struct_conn.ptnr2_label_seq_id"))) ||
-      (!col_atom_id[1] && !(col_atom_id[1] = data->get_arr("_struct_conn.ptnr2_label_atom_id"))))
+      (!col_comp_id[1] && !(col_comp_id[1] = data->get_arr(
+                                "_struct_conn.ptnr2_label_comp_id"))) ||
+      (!col_seq_id[1] && !(col_seq_id[1] = data->get_arr(
+                               "_struct_conn.ptnr2_label_seq_id"))) ||
+      (!col_atom_id[1] && !(col_atom_id[1] = data->get_arr(
+                                "_struct_conn.ptnr2_label_atom_id"))))
     return false;
 
-  if (!col_alt_id[0]) col_alt_id[0] = data->get_opt("_struct_conn.pdbx_ptnr1_label_alt_id");
-  if (!col_alt_id[1]) col_alt_id[1] = data->get_opt("_struct_conn.pdbx_ptnr2_label_alt_id");
+  if (!col_alt_id[0])
+    col_alt_id[0] = data->get_opt("_struct_conn.pdbx_ptnr1_label_alt_id");
+  if (!col_alt_id[1])
+    col_alt_id[1] = data->get_opt("_struct_conn.pdbx_ptnr2_label_alt_id");
 
-  col_symm[0]     = data->get_opt("_struct_conn.ptnr1_symmetry");
-  col_symm[1]     = data->get_opt("_struct_conn.ptnr2_symmetry");
+  col_symm[0] = data->get_opt("_struct_conn.ptnr1_symmetry");
+  col_symm[1] = data->get_opt("_struct_conn.ptnr2_symmetry");
 
-  const cif_array *col_order = data->get_opt("_struct_conn.pdbx_value_order");
+  const cif_array* col_order = data->get_opt("_struct_conn.pdbx_value_order");
 
   int nrows = col_type_id->size();
   int nAtom = VLAGetSize(atInfo);
@@ -1868,13 +1931,13 @@ static bool read_struct_conn_(PyMOLGlobals * G, const cif_data * data,
   }
 
 #ifdef _PYMOL_IP_EXTRAS
-  bool metalc_as_zero = SettingGetGlobal_b(G, cSetting_cif_metalc_as_zero_order_bonds);
+  bool metalc_as_zero =
+      SettingGetGlobal_b(G, cSetting_cif_metalc_as_zero_order_bonds);
 #endif
 
   for (int i = 0; i < nrows; i++) {
-    const char * type_id = col_type_id->as_s(i);
-    if (strncasecmp(type_id, "covale", 6) &&
-        strcasecmp(type_id, "modres") &&
+    const char* type_id = col_type_id->as_s(i);
+    if (strncasecmp(type_id, "covale", 6) && strcasecmp(type_id, "modres") &&
 #ifdef _PYMOL_IP_EXTRAS
         !(metalc_as_zero && strcasecmp(type_id, "metalc") == 0) &&
 #endif
@@ -1884,24 +1947,20 @@ static bool read_struct_conn_(PyMOLGlobals * G, const cif_data * data,
 
     std::string key[2];
     for (int j = 0; j < 2; j++) {
-      const char * asym_id = col_asym_id[j]->as_s(i);
+      const char* asym_id = col_asym_id[j]->as_s(i);
 
       if (col_label_asym_id[j] &&
           info.is_excluded_chain(col_label_asym_id[j]->as_s(i)))
         goto next_row;
 
       // doen't work with label_seq_id and bulk solvent
-      const char * seq_id = col_seq_id[j]->as_s(i);
+      const char* seq_id = col_seq_id[j]->as_s(i);
       if (!seq_id[0])
         goto next_row;
 
-      key[j] = make_mm_atom_site_label(G,
-          asym_id,
-          col_comp_id[j]->as_s(i),
-          seq_id,
-          col_ins_code[j] ? col_ins_code[j]->as_s(i) : "",
-          col_atom_id[j]->as_s(i),
-          col_alt_id[j]->as_s(i));
+      key[j] = make_mm_atom_site_label(G, asym_id, col_comp_id[j]->as_s(i),
+          seq_id, col_ins_code[j] ? col_ins_code[j]->as_s(i) : "",
+          col_atom_id[j]->as_s(i), col_alt_id[j]->as_s(i));
     }
 
     int i1, i2;
@@ -1921,12 +1980,12 @@ static bool read_struct_conn_(PyMOLGlobals * G, const cif_data * data,
       }
     } else {
       PRINTFB(G, FB_Executive, FB_Details)
-        " Executive-Detail: _struct_conn name lookup failed: %s %s\n",
-        key[0].c_str(), key[1].c_str() ENDFB(G);
+      " Executive-Detail: _struct_conn name lookup failed: %s %s\n",
+          key[0].c_str(), key[1].c_str() ENDFB(G);
     }
 
     // label to "continue" from inner for-loop
-next_row:;
+  next_row:;
   }
 
   if (nBond) {
@@ -1944,13 +2003,14 @@ next_row:;
  *
  * return: BondType VLA
  */
-static pymol::vla<BondType> read_chem_comp_bond(PyMOLGlobals * G, const cif_data * data,
-    const pymol::vla<AtomInfoType>& atInfo) {
+static pymol::vla<BondType> read_chem_comp_bond(PyMOLGlobals* G,
+    const cif_data* data, const pymol::vla<AtomInfoType>& atInfo)
+{
 
   const cif_array *col_ID_1, *col_ID_2, *col_comp_id;
 
-  if ((col_ID_1    = data->get_arr("_chem_comp_bond.atom_id_1")) == nullptr ||
-      (col_ID_2    = data->get_arr("_chem_comp_bond.atom_id_2")) == nullptr ||
+  if ((col_ID_1 = data->get_arr("_chem_comp_bond.atom_id_1")) == nullptr ||
+      (col_ID_2 = data->get_arr("_chem_comp_bond.atom_id_2")) == nullptr ||
       (col_comp_id = data->get_arr("_chem_comp_bond.comp_id")) == nullptr)
     return {};
 
@@ -1958,9 +2018,8 @@ static pymol::vla<BondType> read_chem_comp_bond(PyMOLGlobals * G, const cif_data
   // wild with values like "double" and "aromatic". mmcif_nmr-star.dic defines
   // it, but with different vocabulary (e.g. "amide", "ether", etc.).
 
-  const cif_array *col_order = data->get_opt(
-      "_chem_comp_bond.value_order",
-      "_chem_comp_bond.type");
+  const cif_array* col_order =
+      data->get_opt("_chem_comp_bond.value_order", "_chem_comp_bond.type");
 
   int nrows = col_ID_1->size();
   int nAtom = VLAGetSize(atInfo);
@@ -1980,7 +2039,7 @@ static pymol::vla<BondType> read_chem_comp_bond(PyMOLGlobals * G, const cif_data
   for (int i = 0; i < nrows; i++) {
     std::string key1(col_ID_1->as_s(i));
     std::string key2(col_ID_2->as_s(i));
-    const char * order = col_order->as_s(i);
+    const char* order = col_order->as_s(i);
 
     int i1, i2;
     if (find2(name_dict, i1, key1, i2, key2)) {
@@ -1991,8 +2050,8 @@ static pymol::vla<BondType> read_chem_comp_bond(PyMOLGlobals * G, const cif_data
 
     } else {
       PRINTFB(G, FB_Executive, FB_Details)
-        " Executive-Detail: _chem_comp_bond name lookup failed: %s %s\n",
-        key1.c_str(), key2.c_str() ENDFB(G);
+      " Executive-Detail: _chem_comp_bond name lookup failed: %s %s\n",
+          key1.c_str(), key2.c_str() ENDFB(G);
     }
   }
 
@@ -2010,14 +2069,15 @@ static pymol::vla<BondType> read_chem_comp_bond(PyMOLGlobals * G, const cif_data
  *
  * return: BondType VLA
  */
-static pymol::vla<BondType> read_pymol_bond(PyMOLGlobals * G, const cif_data * data,
-    const pymol::vla<AtomInfoType>& atInfo) {
+static pymol::vla<BondType> read_pymol_bond(PyMOLGlobals* G,
+    const cif_data* data, const pymol::vla<AtomInfoType>& atInfo)
+{
 
   const cif_array *col_ID_1, *col_ID_2, *col_order;
 
-  if ((col_ID_1    = data->get_arr("_pymol_bond.atom_site_id_1")) == nullptr ||
-      (col_ID_2    = data->get_arr("_pymol_bond.atom_site_id_2")) == nullptr ||
-      (col_order   = data->get_arr("_pymol_bond.order")) == nullptr)
+  if ((col_ID_1 = data->get_arr("_pymol_bond.atom_site_id_1")) == nullptr ||
+      (col_ID_2 = data->get_arr("_pymol_bond.atom_site_id_2")) == nullptr ||
+      (col_order = data->get_arr("_pymol_bond.order")) == nullptr)
     return {};
 
   int nrows = col_ID_1->size();
@@ -2043,8 +2103,8 @@ static pymol::vla<BondType> read_pymol_bond(PyMOLGlobals * G, const cif_data * d
       BondTypeInit2(bond++, i1, i2, order_value);
     } else {
       PRINTFB(G, FB_Executive, FB_Details)
-        " Executive-Detail: _pymol_bond name lookup failed: %d %d\n",
-        key1, key2 ENDFB(G);
+      " Executive-Detail: _pymol_bond name lookup failed: %d %d\n", key1,
+          key2 ENDFB(G);
     }
   }
 
@@ -2054,30 +2114,30 @@ static pymol::vla<BondType> read_pymol_bond(PyMOLGlobals * G, const cif_data * d
 /**
  * Create a new (multi-state) object-molecule from datablock
  */
-static ObjectMolecule *ObjectMoleculeReadCifData(PyMOLGlobals * G,
-    const cif_data * datablock, int discrete, bool quiet)
+static ObjectMolecule* ObjectMoleculeReadCifData(
+    PyMOLGlobals* G, const cif_data* datablock, int discrete, bool quiet)
 {
-  CoordSet ** csets = nullptr;
+  CoordSet** csets = nullptr;
   int ncsets;
   CifContentInfo info(G, SettingGetGlobal_b(G, cSetting_cif_use_auth));
-  const char * assembly_id = SettingGetGlobal_s(G, cSetting_assembly);
+  const char* assembly_id = SettingGetGlobal_s(G, cSetting_assembly);
 
   // title "echo tag"
-  const char * title = datablock->get_opt("_struct.title")->as_s();
+  const char* title = datablock->get_opt("_struct.title")->as_s();
   if (!quiet && title[0] &&
       strstr(SettingGetGlobal_s(G, cSetting_pdb_echo_tags), "TITLE")) {
     PRINTFB(G, FB_ObjectMolecule, FB_Details)
-      "TITLE     %s\n", title ENDFB(G);
+    "TITLE     %s\n", title ENDFB(G);
   }
 
   if (assembly_id && assembly_id[0]) {
     if (!get_assembly_chains(G, datablock, info.chains_filter, assembly_id))
       PRINTFB(G, FB_Executive, FB_Details)
-        " ExecutiveLoad-Detail: No such assembly: '%s'\n", assembly_id ENDFB(G);
+    " ExecutiveLoad-Detail: No such assembly: '%s'\n", assembly_id ENDFB(G);
   }
 
   // allocate ObjectMolecule
-  ObjectMolecule * I = new ObjectMolecule(G, (discrete > 0));
+  ObjectMolecule* I = new ObjectMolecule(G, (discrete > 0));
   I->Color = AtomInfoUpdateAutoColor(G);
 
   // read coordsets from datablock
@@ -2135,53 +2195,53 @@ static ObjectMolecule *ObjectMoleculeReadCifData(PyMOLGlobals * G,
         if (csets[i])
           CoordSetFracToReal(csets[i], &I->Symmetry->Crystal);
       }
-      } else if (info.chains_filter.empty() &&
-          read_atom_site_fract_transf(G, datablock, sca)) {
-        // don't do this for assemblies
-        for (int i = 0; i < ncsets; i++) {
-          if (csets[i])
-            CoordSetInsureOrthogonal(G, csets[i], sca, &I->Symmetry->Crystal);
-        }
+    } else if (info.chains_filter.empty() &&
+               read_atom_site_fract_transf(G, datablock, sca)) {
+      // don't do this for assemblies
+      for (int i = 0; i < ncsets; i++) {
+        if (csets[i])
+          CoordSetInsureOrthogonal(G, csets[i], sca, &I->Symmetry->Crystal);
       }
+    }
   }
 
   // coord set to use for distance based bonding and for attaching TmpBond
-  CoordSet * cset = VLAGetFirstNonNULL(csets);
+  CoordSet* cset = VLAGetFirstNonNULL(csets);
 
   // create bonds
   switch (info.type) {
-    case CIF_CHEM_COMP:
-      I->Bond = read_chem_comp_bond(G, datablock, I->AtomInfo);
-      break;
-    case CIF_CORE:
-      I->Bond = read_geom_bond(G, datablock, I->AtomInfo);
+  case CIF_CHEM_COMP:
+    I->Bond = read_chem_comp_bond(G, datablock, I->AtomInfo);
+    break;
+  case CIF_CORE:
+    I->Bond = read_geom_bond(G, datablock, I->AtomInfo);
 
-      if (!I->Bond)
-        I->Bond = read_chemical_conn_bond(G, datablock);
+    if (!I->Bond)
+      I->Bond = read_chemical_conn_bond(G, datablock);
 
-      break;
-    case CIF_MMCIF:
-      I->Bond = read_pymol_bond(G, datablock, I->AtomInfo);
+    break;
+  case CIF_MMCIF:
+    I->Bond = read_pymol_bond(G, datablock, I->AtomInfo);
 
-      if (cset && !I->Bond) {
-        // sort atoms internally
-        ObjectMoleculeSort(I);
+    if (cset && !I->Bond) {
+      // sort atoms internally
+      ObjectMoleculeSort(I);
 
-        // bonds from file, goes to cset->TmpBond
-        read_struct_conn_(G, datablock, I->AtomInfo, cset, info);
+      // bonds from file, goes to cset->TmpBond
+      read_struct_conn_(G, datablock, I->AtomInfo, cset, info);
 
-        // macromolecular bonding
-        bond_dict_t bond_dict_local;
-        if (read_chem_comp_bond_dict(datablock, bond_dict_local)) {
-          ObjectMoleculeConnectComponents(I, &bond_dict_local);
-        } else if(SettingGetGlobal_i(G, cSetting_connect_mode) == 4) {
-          // read components.cif
-          ObjectMoleculeConnectComponents(I);
-        }
+      // macromolecular bonding
+      bond_dict_t bond_dict_local;
+      if (read_chem_comp_bond_dict(datablock, bond_dict_local)) {
+        ObjectMoleculeConnectComponents(I, &bond_dict_local);
+      } else if (SettingGetGlobal_i(G, cSetting_connect_mode) == 4) {
+        // read components.cif
+        ObjectMoleculeConnectComponents(I);
       }
-      break;
-    case CIF_UNKNOWN:
-      printf("coding error...\n");
+    }
+    break;
+  case CIF_UNKNOWN:
+    printf("coding error...\n");
   }
 
   // if non of the above created I->Bond, then do distance based bonding
@@ -2203,10 +2263,8 @@ static ObjectMolecule *ObjectMoleculeReadCifData(PyMOLGlobals * G,
     // bonds from coordset
     if (cset && cset->TmpBond && cset->NTmpBond) {
       for (int i = 0; i < cset->NTmpBond; ++i) {
-        ObjectMoleculeAddBond2(I,
-            cset->IdxToAtm[cset->TmpBond[i].index[0]],
-            cset->IdxToAtm[cset->TmpBond[i].index[1]],
-            cset->TmpBond[i].order);
+        ObjectMoleculeAddBond2(I, cset->IdxToAtm[cset->TmpBond[i].index[0]],
+            cset->IdxToAtm[cset->TmpBond[i].index[1]], cset->TmpBond[i].order);
       }
       VLASize(I->Bond, BondType, I->NBond);
       VLAFreeP(cset->TmpBond);
@@ -2216,10 +2274,10 @@ static ObjectMolecule *ObjectMoleculeReadCifData(PyMOLGlobals * G,
   // assemblies
   if (cset && !info.chains_filter.empty()) {
     PRINTFB(G, FB_Executive, FB_Details)
-      " ExecutiveLoad-Detail: Creating assembly '%s'\n", assembly_id ENDFB(G);
+    " ExecutiveLoad-Detail: Creating assembly '%s'\n", assembly_id ENDFB(G);
 
-    CoordSet **assembly_csets = read_pdbx_struct_assembly(G, datablock,
-        I->AtomInfo, cset, assembly_id);
+    CoordSet** assembly_csets =
+        read_pdbx_struct_assembly(G, datablock, I->AtomInfo, cset, assembly_id);
 
     ObjectMoleculeSetAssemblyCSets(I, assembly_csets);
   }
@@ -2244,10 +2302,9 @@ static ObjectMolecule *ObjectMoleculeReadCifData(PyMOLGlobals * G,
  * or multiplex=0, then return the object-molecule. Otherwise, create each
  * object - named by its data block name - and return nullptr.
  */
-pymol::Result<ObjectMolecule*> ObjectMoleculeReadCifStr(PyMOLGlobals * G, ObjectMolecule * I,
-                                      const char *st, int frame,
-                                      int discrete, int quiet, int multiplex,
-                                      int zoom)
+pymol::Result<ObjectMolecule*> ObjectMoleculeReadCifStr(PyMOLGlobals* G,
+    ObjectMolecule* I, const char* st, int frame, int discrete, int quiet,
+    int multiplex, int zoom)
 {
   if (I) {
     return pymol::Error("loading mmCIF into existing object not supported, "
@@ -2265,11 +2322,13 @@ pymol::Result<ObjectMolecule*> ObjectMoleculeReadCifStr(PyMOLGlobals * G, Object
   }
 
   for (const auto& [code, datablock] : cif->datablocks()) {
-    ObjectMolecule * obj = ObjectMoleculeReadCifData(G, &datablock, discrete, quiet);
+    ObjectMolecule* obj =
+        ObjectMoleculeReadCifData(G, &datablock, discrete, quiet);
 
     if (!obj) {
       PRINTFB(G, FB_ObjectMolecule, FB_Warnings)
-        " mmCIF-Warning: no coordinates found in data_%s\n", datablock.code() ENDFB(G);
+      " mmCIF-Warning: no coordinates found in data_%s\n",
+          datablock.code() ENDFB(G);
       continue;
     }
 
@@ -2296,7 +2355,9 @@ pymol::Result<ObjectMolecule*> ObjectMoleculeReadCifStr(PyMOLGlobals * G, Object
 /**
  * Bond dictionary getter, with on-demand download of residue dictionaries
  */
-const bond_dict_t::mapped_type * bond_dict_t::get(PyMOLGlobals * G, const char * resn, bool try_download) {
+const bond_dict_t::mapped_type* bond_dict_t::get(
+    PyMOLGlobals* G, const char* resn, bool try_download)
+{
   auto key = make_key(resn);
   auto it = m_map.find(key);
 
@@ -2324,9 +2385,9 @@ const bond_dict_t::mapped_type * bond_dict_t::get(PyMOLGlobals * G, const char *
         cif_file_with_error_capture cif;
         if (!cif.parse_file(filename)) {
           PRINTFB(G, FB_Executive, FB_Warnings)
-            " Warning: Loading _chem_comp_bond CIF data for residue '%s' "
-            "failed: %s\n",
-            resn, cif.m_error_msg.c_str() ENDFB(G);
+          " Warning: Loading _chem_comp_bond CIF data for residue '%s' "
+          "failed: %s\n",
+              resn, cif.m_error_msg.c_str() ENDFB(G);
           return nullptr;
         }
 
@@ -2343,15 +2404,14 @@ const bond_dict_t::mapped_type * bond_dict_t::get(PyMOLGlobals * G, const char *
 #endif
 
   PRINTFB(G, FB_Executive, FB_Warnings)
-    " ExecutiveLoad-Warning: No _chem_comp_bond data for residue '%s'\n", resn
-    ENDFB(G);
+  " ExecutiveLoad-Warning: No _chem_comp_bond data for residue '%s'\n",
+      resn ENDFB(G);
 
   // don't try downloading again
   unknown_resn.insert(key);
 
   return nullptr;
 }
-
 
 ///////////////////////////////////////
 
@@ -2361,9 +2421,8 @@ pymol::Result<ObjectMolecule*> ObjectMoleculeReadBCif(PyMOLGlobals* G,
 {
 #ifdef _PYMOL_NO_MSGPACKC
   PRINTFB(G, FB_ObjectMolecule, FB_Errors)
-    " Error: This build has no BinaryCIF support.\n"
-    " Please install/enable msgpack-c.\n"
-  ENDFB(G);
+  " Error: This build has no BinaryCIF support.\n"
+  " Please install/enable msgpack-c.\n" ENDFB(G);
   return nullptr;
 #endif
 
@@ -2379,12 +2438,13 @@ pymol::Result<ObjectMolecule*> ObjectMoleculeReadBCif(PyMOLGlobals* G,
 
   auto cif = std::make_shared<pymol::cif_file>();
   cif->parse_bcif(bytes, size);
-  
+
   for (const auto& [code, datablock] : cif->datablocks()) {
     auto obj = ObjectMoleculeReadCifData(G, &datablock, discrete, quiet);
     if (!obj) {
       PRINTFB(G, FB_ObjectMolecule, FB_Warnings)
-        " BCIF-Warning: no coordinates found in data_%s\n", datablock.code() ENDFB(G);
+      " BCIF-Warning: no coordinates found in data_%s\n",
+          datablock.code() ENDFB(G);
       continue;
     }
 

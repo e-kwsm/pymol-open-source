@@ -174,7 +174,6 @@ TEST_CASE("TTT Matrix - Transform Position", "[TTT Matrix]")
   auto newPos = ttt.transform(pos);
   ttt.transform(pos2, pos2_result);
 
-
   float tttMat[16];
   identity44f(tttMat);
   float oritttMat[16];
@@ -258,9 +257,9 @@ TEST_CASE("TTT Lerp", "[TTT Matrix]")
   REQUIRE(rot[1] == Approx(0.40825f));
   REQUIRE(rot[2] == Approx(0.0f));
   REQUIRE(rot[3] == Approx(0.40825f * 2.0f));
-  REQUIRE(post[0] == Approx( 165.0f));
-  REQUIRE(post[1] == Approx( 275.0f));
-  REQUIRE(post[2] == Approx( 385.0f));
+  REQUIRE(post[0] == Approx(165.0f));
+  REQUIRE(post[1] == Approx(275.0f));
+  REQUIRE(post[2] == Approx(385.0f));
 }
 
 TEST_CASE("TTT Serialize To", "[TTT Matrix]")

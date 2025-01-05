@@ -17,8 +17,9 @@
 #define VAR_FOR_NORMAL_CNT_PLUS
 
 #ifdef PURE_OPENGL_ES_2
-#define glVertexAttrib4ubv(loc, data) glVertexAttrib4f(loc, \
-    (data)[0] / 255.f, (data)[1] / 255.f, (data)[2] / 255.f, (data)[3] / 255.f);
+#define glVertexAttrib4ubv(loc, data)                                          \
+  glVertexAttrib4f(loc, (data)[0] / 255.f, (data)[1] / 255.f,                  \
+      (data)[2] / 255.f, (data)[3] / 255.f);
 #endif
 
 constexpr unsigned VERTEX_PICKCOLOR_RGBA_SIZE = 1;  // 4 unsigned bytes
@@ -1055,8 +1056,8 @@ static void CGO_gl_special(CCGORenderer* I, CGO_op_data pc)
   int mode = CGO_get_int(*pc);
   bool openVR = SceneGetStereo(I->G) == cStereo_openvr;
   char varwidth = 0;
-  float vScale =
-      (I->info ? I->info->vertex_scale : SceneGetScreenVertexScale(I->G, nullptr));
+  float vScale = (I->info ? I->info->vertex_scale
+                          : SceneGetScreenVertexScale(I->G, nullptr));
 
   CSetting *csSetting = nullptr, *objSetting = nullptr;
   auto shaderPrg = I->G->ShaderMgr->Get_Current_Shader();
@@ -1068,7 +1069,8 @@ static void CGO_gl_special(CCGORenderer* I, CGO_op_data pc)
   }
   switch (mode) {
   case LINEWIDTH_DYNAMIC_WITH_SCALE_RIBBON: {
-    float line_width = SettingGet_f(I->G, nullptr, nullptr, cSetting_ribbon_width);
+    float line_width =
+        SettingGet_f(I->G, nullptr, nullptr, cSetting_ribbon_width);
     if (!openVR)
       line_width = SceneGetDynamicLineWidth(I->info, line_width);
     if (I->info && I->info->width_scale_flag) {
@@ -1077,7 +1079,8 @@ static void CGO_gl_special(CCGORenderer* I, CGO_op_data pc)
     glLineWidthAndUniform(line_width, shaderPrg);
   } break;
   case LINEWIDTH_DYNAMIC_WITH_SCALE_DASH: {
-    float line_width = SettingGet_f(I->G, nullptr, nullptr, cSetting_dash_width);
+    float line_width =
+        SettingGet_f(I->G, nullptr, nullptr, cSetting_dash_width);
     if (!openVR)
       line_width = SceneGetDynamicLineWidth(I->info, line_width);
     if (I->info && I->info->width_scale_flag) {
@@ -1086,7 +1089,8 @@ static void CGO_gl_special(CCGORenderer* I, CGO_op_data pc)
     glLineWidthAndUniform(line_width, shaderPrg);
   } break;
   case LINEWIDTH_DYNAMIC_WITH_SCALE: {
-    float line_width = SettingGet_f(I->G, nullptr, nullptr, cSetting_line_width);
+    float line_width =
+        SettingGet_f(I->G, nullptr, nullptr, cSetting_line_width);
     if (!openVR)
       line_width = SceneGetDynamicLineWidth(I->info, line_width);
     if (I->info && I->info->width_scale_flag) {
@@ -1095,7 +1099,8 @@ static void CGO_gl_special(CCGORenderer* I, CGO_op_data pc)
     glLineWidthAndUniform(line_width, shaderPrg);
   } break;
   case LINEWIDTH_WITH_SCALE: {
-    float line_width = SettingGet_f(I->G, nullptr, nullptr, cSetting_line_width);
+    float line_width =
+        SettingGet_f(I->G, nullptr, nullptr, cSetting_line_width);
     if (I->info && I->info->width_scale_flag) {
       line_width *= I->info->width_scale;
     }
@@ -1838,8 +1843,7 @@ CGO_op_fn CGO_gl[] = {CGO_gl_null, /* 0x00 */
     CGO_gl_vertex_attribute_4ub_if_picking,
     CGO_gl_null, // custom cylinder alpha
     CGO_gl_null, // bezier
-    CGO_gl_draw_bezier_buffers,
-    CGO_gl_error};
+    CGO_gl_draw_bezier_buffers, CGO_gl_error};
 
 #if 0
 static

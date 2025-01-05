@@ -1,6 +1,6 @@
-#include <array>
 #include "Test.h"
 #include "vla.h"
+#include <array>
 
 using namespace pymol::test;
 using pymol::vla;

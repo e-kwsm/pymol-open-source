@@ -2,6 +2,7 @@
 #include "ButMode.h"
 #include "Editor.h"
 #include "Executive.h"
+#include "Feedback.h"
 #include "Matrix.h"
 #include "Menu.h"
 #include "ObjectDist.h"
@@ -16,16 +17,15 @@
 #include "Selector.h"
 #include "Seq.h"
 #include "Wizard.h"
-#include "Feedback.h"
 
-#include <glm/vec3.hpp>
-#include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 
 #define cDoubleTime 0.35
 
 NamedPicking::NamedPicking(const Picking& pick)
-  : src(pick.src)
+    : src(pick.src)
 {
   if (pick.context.object != nullptr) {
     context.name = pick.context.object->Name;
@@ -229,8 +229,8 @@ static int SceneClickSceneButton(
  * @param sel_mode_kw Current selection mode operator for the mouse
  *
  */
-void SceneClickObject(PyMOLGlobals* G, pymol::CObject* obj, const NamedPicking& LastPicked,
-    int mode, pymol::zstring_view sel_mode_kw)
+void SceneClickObject(PyMOLGlobals* G, pymol::CObject* obj,
+    const NamedPicking& LastPicked, int mode, pymol::zstring_view sel_mode_kw)
 {
   std::string selName;
   switch (obj->type) {
@@ -371,8 +371,8 @@ void SceneClickObject(PyMOLGlobals* G, pymol::CObject* obj, const NamedPicking& 
   }
 }
 
-void SceneClickTransformObject(
-    PyMOLGlobals* G, pymol::CObject* obj, const NamedPicking& LastPicked, int mode, bool is_single_click)
+void SceneClickTransformObject(PyMOLGlobals* G, pymol::CObject* obj,
+    const NamedPicking& LastPicked, int mode, bool is_single_click)
 {
   auto I = G->Scene;
   switch (obj->type) {
@@ -381,9 +381,9 @@ void SceneClickTransformObject(
     case cButModeMenu: {
       ObjectMolecule* objMol = (ObjectMolecule*) obj;
       int active_sele = ExecutiveGetActiveSele(G);
-      if (active_sele && SelectorIsMember(G,
-                             objMol->AtomInfo[LastPicked.src.index].selEntry,
-                             active_sele)) {
+      if (active_sele &&
+          SelectorIsMember(G, objMol->AtomInfo[LastPicked.src.index].selEntry,
+              active_sele)) {
         /* user clicked on a selected atom */
         ObjectNameType name;
         ExecutiveGetActiveSeleName(
@@ -404,19 +404,20 @@ void SceneClickTransformObject(
       if (obj && obj->type == cObjectMolecule) {
         if (Feedback(G, FB_Scene, FB_Results)) {
           auto buffer = obj->describeElement(LastPicked.src.index);
-          PRINTF " You clicked %s -> (%s)\n", buffer.c_str(), cEditorSele1 ENDF(G);
+          PRINTF " You clicked %s -> (%s)\n", buffer.c_str(),
+              cEditorSele1 ENDF(G);
         }
         if (SettingGet<int>(G, cSetting_logging)) {
           auto objMol = (ObjectMolecule*) obj;
-          auto atomSele = ObjectMoleculeGetAtomSeleLog(
-              objMol, LastPicked.src.index, false);
+          auto atomSele =
+              ObjectMoleculeGetAtomSeleLog(objMol, LastPicked.src.index, false);
           auto pLogBuffer =
               pymol::string_format("cmd.edit(\"%s\",pkresi=1)", atomSele);
           PLog(G, pLogBuffer, cPLog_pym);
         }
         OrthoRestorePrompt(G);
-        auto buffer = pymol::string_format(
-            "%s`%d", obj->Name, LastPicked.src.index + 1);
+        auto buffer =
+            pymol::string_format("%s`%d", obj->Name, LastPicked.src.index + 1);
         EditorInactivate(G);
         SelectorCreate(G, cEditorSele1, buffer.c_str(), nullptr, true, nullptr);
         EditorActivate(G, SettingGet<int>(G, cSetting_state) - 1, false);
@@ -486,7 +487,8 @@ void SceneClickTransformObject(
  * @param lastPicked last picked info
  */
 
-void SceneClickPickBond(PyMOLGlobals* G, int x, int y, int mode, const NamedPicking& LastPicked)
+void SceneClickPickBond(
+    PyMOLGlobals* G, int x, int y, int mode, const NamedPicking& LastPicked)
 {
   auto I = G->Scene;
   auto obj = ExecutiveFindObject<ObjectMolecule>(G, LastPicked.context.name);
@@ -504,7 +506,8 @@ void SceneClickPickBond(PyMOLGlobals* G, int x, int y, int mode, const NamedPick
      &I->LastPicked.src.index,&atIndex); */
 
   {
-    auto buffer = pymol::string_format("%s`%d", obj->Name, I->LastPicked.src.index + 1);
+    auto buffer =
+        pymol::string_format("%s`%d", obj->Name, I->LastPicked.src.index + 1);
     SelectorCreate(G, cEditorSele1, buffer.c_str(), nullptr, true, nullptr);
   }
 
@@ -519,8 +522,8 @@ void SceneClickPickBond(PyMOLGlobals* G, int x, int y, int mode, const NamedPick
     }
 
     if (SettingGetGlobal_i(G, cSetting_logging)) {
-      auto buf1 = ObjectMoleculeGetAtomSeleLog(
-          obj, LastPicked.src.index, false);
+      auto buf1 =
+          ObjectMoleculeGetAtomSeleLog(obj, LastPicked.src.index, false);
       auto buf2 = ObjectMoleculeGetAtomSeleLog(obj, atIndex, false);
       auto buffer = pymol::string_format("cmd.edit(\"%s\",\"%s\")", buf1, buf2);
       PLog(G, buffer, cPLog_pym);
@@ -535,8 +538,7 @@ void SceneClickPickBond(PyMOLGlobals* G, int x, int y, int mode, const NamedPick
       EditorPrepareDrag(G, obj, -1, LastPicked.src.index,
           SettingGetGlobal_i(G, cSetting_state) - 1, mode);
       I->SculptingFlag = 1;
-      I->SculptingSave =
-          obj->AtomInfo[LastPicked.src.index].protekted;
+      I->SculptingSave = obj->AtomInfo[LastPicked.src.index].protekted;
       obj->AtomInfo[LastPicked.src.index].protekted = cAtomProtected_drag;
     }
     WizardDoPick(G, 1, LastPicked.context.state);
@@ -732,7 +734,8 @@ void SceneClick(Block* block, int button, int x, int y, int mod, double when)
         float old_back = I->m_view.m_clip().m_back;
         float old_origin = -I->m_view.pos().z;
         SceneClip(G, SceneClipMode::Proportional,
-            0.1F * SettingGetGlobal_f(G, cSetting_mouse_wheel_scale), nullptr, 0);
+            0.1F * SettingGetGlobal_f(G, cSetting_mouse_wheel_scale), nullptr,
+            0);
         SceneDoRoving(G, old_front, old_back, old_origin, true, false);
       }
       break;
@@ -744,7 +747,8 @@ void SceneClick(Block* block, int button, int x, int y, int mod, double when)
         float old_origin = -I->m_view.pos().z;
 
         SceneClip(G, SceneClipMode::Proportional,
-            -0.1F * SettingGetGlobal_f(G, cSetting_mouse_wheel_scale), nullptr, 0);
+            -0.1F * SettingGetGlobal_f(G, cSetting_mouse_wheel_scale), nullptr,
+            0);
         SceneDoRoving(G, old_front, old_back, old_origin, true, false);
       }
       break;
@@ -767,7 +771,8 @@ void SceneClick(Block* block, int button, int x, int y, int mod, double when)
       SceneNoteMouseInteraction(G);
       {
         float factor =
-            ((I->m_view.m_clipSafe().m_front + I->m_view.m_clipSafe().m_back) / 2) *
+            ((I->m_view.m_clipSafe().m_front + I->m_view.m_clipSafe().m_back) /
+                2) *
             0.1F * SettingGetGlobal_f(G, cSetting_mouse_wheel_scale);
         if (factor >= 0.0F) {
           I->m_view.translate(0.0f, 0.0f, factor);
@@ -784,7 +789,8 @@ void SceneClick(Block* block, int button, int x, int y, int mod, double when)
         float old_back = I->m_view.m_clip().m_back;
         float old_origin = -I->m_view.pos().z;
         SceneClip(G, SceneClipMode::Proportional,
-            0.1F * SettingGetGlobal_f(G, cSetting_mouse_wheel_scale), nullptr, 0);
+            0.1F * SettingGetGlobal_f(G, cSetting_mouse_wheel_scale), nullptr,
+            0);
         SceneDoRoving(G, old_front, old_back, old_origin, true, true);
       }
       break;
@@ -795,7 +801,8 @@ void SceneClick(Block* block, int button, int x, int y, int mod, double when)
         float old_back = I->m_view.m_clip().m_back;
         float old_origin = -I->m_view.pos().z;
         SceneClip(G, SceneClipMode::Proportional,
-            -0.1F * SettingGetGlobal_f(G, cSetting_mouse_wheel_scale), nullptr, 0);
+            -0.1F * SettingGetGlobal_f(G, cSetting_mouse_wheel_scale), nullptr,
+            0);
         SceneDoRoving(G, old_front, old_back, old_origin, true, true);
       }
       break;
@@ -994,7 +1001,8 @@ void SceneClick(Block* block, int button, int x, int y, int mod, double when)
               I->SculptingFlag = 1;
               I->SculptingSave =
                   objMol->AtomInfo[I->LastPicked.src.index].protekted;
-              objMol->AtomInfo[I->LastPicked.src.index].protekted = cAtomProtected_drag;
+              objMol->AtomInfo[I->LastPicked.src.index].protekted =
+                  cAtomProtected_drag;
             }
           }
           break;
@@ -1097,7 +1105,8 @@ void SceneRelease(Block* block, int button, int x, int y, int mod, double when)
           switch (I->PressMode) {
           case 1:
             if (I->Over == I->Pressed) {
-              auto buffer = pymol::string_format("cmd.scene('''%s''')", elem->name);
+              auto buffer =
+                  pymol::string_format("cmd.scene('''%s''')", elem->name);
               PParse(G, buffer);
               PFlush(G);
               PLog(G, buffer, cPLog_pym);
@@ -1107,7 +1116,8 @@ void SceneRelease(Block* block, int button, int x, int y, int mod, double when)
             const char* cur_name =
                 SettingGetGlobal_s(G, cSetting_scene_current_name);
             if (cur_name && elem->name != cur_name) {
-              auto buffer = pymol::string_format("cmd.scene('''%s''')", elem->name);
+              auto buffer =
+                  pymol::string_format("cmd.scene('''%s''')", elem->name);
               PParse(G, buffer);
               PFlush(G);
               PLog(G, buffer, cPLog_pym);
@@ -1117,7 +1127,8 @@ void SceneRelease(Block* block, int button, int x, int y, int mod, double when)
             if (I->Pressed == I->Over) {
               Block* block = MenuActivate1Arg(G, I->LastWinX,
                   I->LastWinY + 20, /* scene menu */
-                  I->LastWinX, I->LastWinY, true, "scene_menu", elem->name.c_str());
+                  I->LastWinX, I->LastWinY, true, "scene_menu",
+                  elem->name.c_str());
               if (block)
                 block->drag(x, y, mod);
               ungrab = false;
@@ -1253,8 +1264,8 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
               int animate = -1;
               if (mod & cOrthoCTRL)
                 animate = 0;
-              auto buffer = pymol::string_format("cmd.scene('''%s''',animate=%d)", elem->name,
-                  animate);
+              auto buffer = pymol::string_format(
+                  "cmd.scene('''%s''',animate=%d)", elem->name, animate);
               PParse(G, buffer);
               PFlush(G);
               PLog(G, buffer, cPLog_pym);
@@ -1283,11 +1294,12 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
               first = elem;
               second = pressed;
             }
-            buffer = pymol::string_format("cmd.scene_order(['''%s''','''%s'''])", first->name,
-                second->name);
+            buffer =
+                pymol::string_format("cmd.scene_order(['''%s''','''%s'''])",
+                    first->name, second->name);
           } else {
-            buffer = pymol::string_format("cmd.scene_order(['''%s'''],location='top')",
-                pressed->name);
+            buffer = pymol::string_format(
+                "cmd.scene_order(['''%s'''],location='top')", pressed->name);
           }
           PParse(G, buffer);
           PFlush(G);
@@ -1346,7 +1358,8 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
             v2[0] = (x - I->LastX) * vScale;
             v2[1] = (y - I->LastY) * vScale;
             v2[2] = 0;
-            MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
+            MatrixInvTransformC44fAs33f3f(
+                glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
             break;
           }
           add3f(v1, v2, v2);
@@ -1430,7 +1443,8 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
       normalize23f(v2, n2);
       cross_product3f(n1, n2, cp);
       theta =
-          (float) (SettingGet_f(G, nullptr, nullptr, cSetting_mouse_scale) * 2 * 180 *
+          (float) (SettingGet_f(G, nullptr, nullptr, cSetting_mouse_scale) * 2 *
+                   180 *
                    asin(sqrt1f(cp[0] * cp[0] + cp[1] * cp[1] + cp[2] * cp[2])) /
                    cPI);
       dx = (v1[0] - v2[0]);
@@ -1448,10 +1462,11 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
       theta = theta / (1.0F + (float) fabs(axis[2]));
 
       /* transform into model coodinate space */
-      MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), axis, v2);
+      MatrixInvTransformC44fAs33f3f(
+          glm::value_ptr(I->m_view.rotMatrix()), axis, v2);
       v1[0] = (float) (cPI * theta / 180.0);
-      EditorDrag(G, nullptr, -1, mode, SettingGetGlobal_i(G, cSetting_state) - 1,
-          v1, v2, v3);
+      EditorDrag(G, nullptr, -1, mode,
+          SettingGetGlobal_i(G, cSetting_state) - 1, v1, v2, v3);
       I->LastX = x;
       I->LastY = y;
       break;
@@ -1486,11 +1501,13 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
         v3[2] = 1.0F;
 
         /* transform into model coodinate space */
-        MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
-        MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), v3, v3);
+        MatrixInvTransformC44fAs33f3f(
+            glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
+        MatrixInvTransformC44fAs33f3f(
+            glm::value_ptr(I->m_view.rotMatrix()), v3, v3);
 
-        EditorDrag(G, nullptr, -1, mode, SettingGetGlobal_i(G, cSetting_state) - 1,
-            v1, v2, v3);
+        EditorDrag(G, nullptr, -1, mode,
+            SettingGetGlobal_i(G, cSetting_state) - 1, v1, v2, v3);
       }
       I->LastX = x;
       I->LastY = y;
@@ -1546,7 +1563,8 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
               v2[0] = (x - I->LastX) * vScale;
               v2[1] = (y - I->LastY) * vScale;
               v2[2] = 0;
-              MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
+              MatrixInvTransformC44fAs33f3f(
+                  glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
               break;
             }
             add3f(v1, v2, v2);
@@ -1592,8 +1610,10 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
               v3[2] = 1.0F;
 
               /* transform into model coodinate space */
-              MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
-              MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), v3, v3);
+              MatrixInvTransformC44fAs33f3f(
+                  glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
+              MatrixInvTransformC44fAs33f3f(
+                  glm::value_ptr(I->m_view.rotMatrix()), v3, v3);
 
               if (I->LastPicked.src.bond >= cPickableAtom) {
                 if ((mode != cButModeMoveAtom) && (mode != cButModeMoveAtomZ)) {
@@ -1665,8 +1685,10 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
               v3[2] = 1.0F;
 
               /* transform into model coodinate space */
-              MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
-              MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), v3, v3);
+              MatrixInvTransformC44fAs33f3f(
+                  glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
+              MatrixInvTransformC44fAs33f3f(
+                  glm::value_ptr(I->m_view.rotMatrix()), v3, v3);
 
               ObjectSliceDrag(slice, state, mode, v1, v2, v3);
             }
@@ -1701,8 +1723,10 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
               v3[2] = 1.0F;
 
               /* transform into model coodinate space */
-              MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
-              MatrixInvTransformC44fAs33f3f(glm::value_ptr(I->m_view.rotMatrix()), v3, v3);
+              MatrixInvTransformC44fAs33f3f(
+                  glm::value_ptr(I->m_view.rotMatrix()), v2, v2);
+              MatrixInvTransformC44fAs33f3f(
+                  glm::value_ptr(I->m_view.rotMatrix()), v3, v3);
 
               if (I->LastPicked.src.bond == cPickableLabel) {
                 int log_trans =
@@ -1725,7 +1749,8 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
 
       SceneNoteMouseInteraction(G);
 
-      vScale = SceneGetExactScreenVertexScale(G, glm::value_ptr(I->m_view.origin()));
+      vScale =
+          SceneGetExactScreenVertexScale(G, glm::value_ptr(I->m_view.origin()));
       if (stereo_via_adjacent_array(I->StereoMode)) {
 
         x = get_stereo_x(x, &I->LastX, I->Width, nullptr);
@@ -1807,7 +1832,8 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
 
       {
         short r1lt, r2lt;
-        if (SettingGet_i(G, nullptr, nullptr, cSetting_virtual_trackball) == 2) {
+        if (SettingGet_i(G, nullptr, nullptr, cSetting_virtual_trackball) ==
+            2) {
           r1lt = I->prev_no_z_rotation1;
           r2lt = I->prev_no_z_rotation2;
         } else {
@@ -1837,7 +1863,8 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
       normalize23f(v2, n2);
       cross_product3f(n1, n2, cp);
       theta =
-          (float) (SettingGet_f(G, nullptr, nullptr, cSetting_mouse_scale) * 2 * 180 *
+          (float) (SettingGet_f(G, nullptr, nullptr, cSetting_mouse_scale) * 2 *
+                   180 *
                    asin(sqrt1f(cp[0] * cp[0] + cp[1] * cp[1] + cp[2] * cp[2])) /
                    cPI);
 
@@ -1933,7 +1960,8 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
           moved_flag = true;
         }
         if (moved_flag) {
-          SceneClipSet(G, I->m_view.m_clip().m_front, I->m_view.m_clip().m_back);
+          SceneClipSet(
+              G, I->m_view.m_clip().m_front, I->m_view.m_clip().m_back);
         }
         break;
       case cButModeClipN:
@@ -1941,7 +1969,8 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
           I->m_view.m_clip().m_front -= (x - I->LastX + y - I->LastY) / 10.f;
           I->LastX = x;
           I->LastY = y;
-          SceneClipSet(G, I->m_view.m_clip().m_front, I->m_view.m_clip().m_back);
+          SceneClipSet(
+              G, I->m_view.m_clip().m_front, I->m_view.m_clip().m_back);
           moved_flag = true;
         }
         break;
@@ -1950,7 +1979,8 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
           I->m_view.m_clip().m_back -= (x - I->LastX + y - I->LastY) / 10.f;
           I->LastX = x;
           I->LastY = y;
-          SceneClipSet(G, I->m_view.m_clip().m_front, I->m_view.m_clip().m_back);
+          SceneClipSet(
+              G, I->m_view.m_clip().m_front, I->m_view.m_clip().m_back);
           moved_flag = true;
         }
         break;
@@ -1998,10 +2028,9 @@ void SceneDrag(Block* block, int x, int y, int mod, double when)
             [glm::clamp(SettingGetGlobal_i(G, cSetting_edit_light), 1, 9) - 1];
 
         if (I->LastY != y) {
-          factor =
-              400 /
-              ((I->m_view.m_clipSafe().m_front + I->m_view.m_clipSafe().m_back) /
-                  2);
+          factor = 400 / ((I->m_view.m_clipSafe().m_front +
+                              I->m_view.m_clipSafe().m_back) /
+                             2);
           if (factor >= 0.0F) {
             factor = SettingGetGlobal_f(G, cSetting_mouse_z_scale) *
                      (((float) y) - I->LastY) / factor;

@@ -20,7 +20,7 @@
  *
  ***************************************************************************/
 
-/* 
+/*
  * SPIDER volumetric image datasets
  *   http://www.wadsworth.org/spider_doc/spider/docs/image_doc.html
  *
@@ -28,19 +28,19 @@
  *  - Add code to determine axis scaling factors, axis angles, offsets, etc
  */
 
-#include <stdlib.h>
-#include <stdio.h>
+#include "endianswap.h"
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include "endianswap.h"
 
 #if defined(_AIX)
 #include <strings.h>
 #endif
 
 #if defined(WIN32) || defined(WIN64)
-#define strcasecmp  stricmp
+#define strcasecmp stricmp
 #define strncasecmp strnicmp
 #endif
 
@@ -49,9 +49,9 @@
 #define LINESIZE 85
 
 typedef struct {
-  FILE *fd;
+  FILE* fd;
   int nsets;
-  molfile_volumetric_t *vol;
+  molfile_volumetric_t* vol;
   int byteswap;
   int nslice;
   int nrow;
@@ -76,22 +76,22 @@ typedef struct {
   int reclen;
   int nstack;
   int inuse;
-  int maxim; 
+  int maxim;
 } spider_t;
 
-
-static void *open_spider_read(const char *filepath, const char *filetype,
-    int *natoms) {
-  FILE *fd;
-  spider_t *vol;
+static void* open_spider_read(
+    const char* filepath, const char* filetype, int* natoms)
+{
+  FILE* fd;
+  spider_t* vol;
   int total;
 
-  /* file header buffer union */ 
+  /* file header buffer union */
   union buffer {
-    float fbuf[256];  
-    char  cbuf[1024];
+    float fbuf[256];
+    char cbuf[1024];
   } h;
- 
+
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "spiderplugin) Error opening file.\n");
@@ -112,20 +112,18 @@ static void *open_spider_read(const char *filepath, const char *filetype,
   // read SPIDER file header
   if (fread(&h.cbuf, 1024, 1, fd) < 1) {
     printf("spiderplugin) failed to read file header\n");
-    return NULL; 
-  } 
+    return NULL;
+  }
 
-  // perform sanity checks on header values to see if we 
+  // perform sanity checks on header values to see if we
   // need to do byte swapping, or abort.
-  vol->nslice   = (h.fbuf[0] < 0) ? -h.fbuf[0] : h.fbuf[0];
-  vol->nrow     = h.fbuf[1];
-  vol->nsam     = h.fbuf[11];
+  vol->nslice = (h.fbuf[0] < 0) ? -h.fbuf[0] : h.fbuf[0];
+  vol->nrow = h.fbuf[1];
+  vol->nsam = h.fbuf[11];
   total = vol->nslice * vol->nrow * vol->nsam;
 
-  if (total <= 0 || 
-      vol->nsam   <= 0 || vol->nsam   > 100000 ||
-      vol->nrow   <= 0 || vol->nrow   > 100000 ||
-      vol->nslice <= 0 || vol->nslice > 100000) { 
+  if (total <= 0 || vol->nsam <= 0 || vol->nsam > 100000 || vol->nrow <= 0 ||
+      vol->nrow > 100000 || vol->nslice <= 0 || vol->nslice > 100000) {
 
     printf("spiderplugin) Non-native endianness or unusual file detected\n");
 
@@ -133,18 +131,16 @@ static void *open_spider_read(const char *filepath, const char *filetype,
     vol->byteswap = 1;
     swap4_aligned(&h.fbuf, 256);
 
-    vol->nslice   = (h.fbuf[0] < 0) ? -h.fbuf[0] : h.fbuf[0];
-    vol->nrow     = h.fbuf[1];
-    vol->nsam     = h.fbuf[11];
+    vol->nslice = (h.fbuf[0] < 0) ? -h.fbuf[0] : h.fbuf[0];
+    vol->nrow = h.fbuf[1];
+    vol->nsam = h.fbuf[11];
     total = vol->nslice * vol->nrow * vol->nsam;
 
     // check to see if we still have gibberish or not, bail out if we do.
-    if (total <= 0 || 
-      vol->nsam   <= 0 || vol->nsam   > 100000 ||
-      vol->nrow   <= 0 || vol->nrow   > 100000 ||
-      vol->nslice <= 0 || vol->nslice > 100000) { 
+    if (total <= 0 || vol->nsam <= 0 || vol->nsam > 100000 || vol->nrow <= 0 ||
+        vol->nrow > 100000 || vol->nslice <= 0 || vol->nslice > 100000) {
       printf("spiderplugin) bad header values in file fail sanity checks\n");
-      delete [] vol->vol;
+      delete[] vol->vol;
       delete vol;
       return NULL;
     }
@@ -153,53 +149,53 @@ static void *open_spider_read(const char *filepath, const char *filetype,
     printf("spiderplugin) Enabling byte swapping\n");
   }
 
-  vol->nlabel   = h.fbuf[3];
-  vol->iform    = h.fbuf[4];
-  vol->imami    = h.fbuf[5];
-  vol->fmax     = h.fbuf[6];
-  vol->fmin     = h.fbuf[7];
-  vol->av       = h.fbuf[8];
-  vol->sig      = h.fbuf[9];
-  vol->headrec  = h.fbuf[12];
-  vol->iangle   = h.fbuf[13];
-  vol->phi      = h.fbuf[14];
-  vol->theta    = h.fbuf[15];
-  vol->gamma    = h.fbuf[16];
-  vol->xoffset  = h.fbuf[17];
-  vol->yoffset  = h.fbuf[18];
-  vol->zoffset  = h.fbuf[19];
-  vol->scale    = h.fbuf[20];
-  vol->headbyt  = h.fbuf[21];
-  vol->reclen   = h.fbuf[22];
-  vol->nstack   = h.fbuf[23];
-  vol->inuse    = h.fbuf[24];
-  vol->maxim    = h.fbuf[25];
+  vol->nlabel = h.fbuf[3];
+  vol->iform = h.fbuf[4];
+  vol->imami = h.fbuf[5];
+  vol->fmax = h.fbuf[6];
+  vol->fmin = h.fbuf[7];
+  vol->av = h.fbuf[8];
+  vol->sig = h.fbuf[9];
+  vol->headrec = h.fbuf[12];
+  vol->iangle = h.fbuf[13];
+  vol->phi = h.fbuf[14];
+  vol->theta = h.fbuf[15];
+  vol->gamma = h.fbuf[16];
+  vol->xoffset = h.fbuf[17];
+  vol->yoffset = h.fbuf[18];
+  vol->zoffset = h.fbuf[19];
+  vol->scale = h.fbuf[20];
+  vol->headbyt = h.fbuf[21];
+  vol->reclen = h.fbuf[22];
+  vol->nstack = h.fbuf[23];
+  vol->inuse = h.fbuf[24];
+  vol->maxim = h.fbuf[25];
 
-printf("spider  nslice: %d\n", vol->nslice);
-printf("spider    nrow: %d\n", vol->nrow);
-printf("spider    nsam: %d\n", vol->nsam);
-printf("spider   iform: %d\n", vol->iform);
-printf("spider   scale: %f\n", vol->scale);
-printf("spider xoffset: %f\n", vol->xoffset);
-printf("spider yoffset: %f\n", vol->yoffset);
-printf("spider zoffset: %f\n", vol->zoffset);
-printf("spider     phi: %f\n", vol->phi);
-printf("spider   theta: %f\n", vol->theta);
-printf("spider   gamma: %f\n", vol->gamma);
+  printf("spider  nslice: %d\n", vol->nslice);
+  printf("spider    nrow: %d\n", vol->nrow);
+  printf("spider    nsam: %d\n", vol->nsam);
+  printf("spider   iform: %d\n", vol->iform);
+  printf("spider   scale: %f\n", vol->scale);
+  printf("spider xoffset: %f\n", vol->xoffset);
+  printf("spider yoffset: %f\n", vol->yoffset);
+  printf("spider zoffset: %f\n", vol->zoffset);
+  printf("spider     phi: %f\n", vol->phi);
+  printf("spider   theta: %f\n", vol->theta);
+  printf("spider   gamma: %f\n", vol->gamma);
 
   /* correct bad headbyt and reclen SPIDER files */
   if (vol->iform < 4 && (vol->reclen < (vol->nsam * 4)))
-    vol->reclen = vol->nsam * 4; 
+    vol->reclen = vol->nsam * 4;
 
   int headrec = 1024 / vol->reclen;
   if (vol->reclen < 1024 && (1024 % (vol->reclen)) != 0)
-     headrec++;
+    headrec++;
   int headbyt = headrec * vol->reclen;
- 
+
   if (vol->iform < 4 && (vol->headbyt < headbyt))
     vol->headbyt = headbyt;
 
-printf("spider headbyt: %d\n", vol->headbyt);
+  printf("spider headbyt: %d\n", vol->headbyt);
 
   /* seek to data offset */
   fseek(fd, vol->headbyt, SEEK_SET);
@@ -219,7 +215,7 @@ printf("spider headbyt: %d\n", vol->headbyt);
 
   /* the scale value may be zero, if so, just reset to 1.0 */
   float vscale = vol->scale;
-  if (vscale == 0.0) 
+  if (vscale == 0.0)
     vscale = 1.0;
 
   /* the data is stored in y/x/-z order and coordinate handedness  */
@@ -227,53 +223,49 @@ printf("spider headbyt: %d\n", vol->headbyt);
   /* so that future conversions to other formats don't leave it in */
   /* an unusual packing order.  For now this works however         */
 
-  float xlen = vscale * (vol->vol[0].ysize-1);
-  float ylen = vscale * (vol->vol[0].xsize-1);
-  float zlen = vscale * (vol->vol[0].zsize-1);
+  float xlen = vscale * (vol->vol[0].ysize - 1);
+  float ylen = vscale * (vol->vol[0].xsize - 1);
+  float zlen = vscale * (vol->vol[0].zsize - 1);
 
-  vol->vol[0].xaxis[1] =  xlen;
-  vol->vol[0].yaxis[0] =  ylen;
+  vol->vol[0].xaxis[1] = xlen;
+  vol->vol[0].yaxis[0] = ylen;
   vol->vol[0].zaxis[2] = -zlen;
 
   vol->vol[0].origin[0] = vol->yoffset - (0.5 * ylen);
   vol->vol[0].origin[1] = vol->xoffset - (0.5 * xlen);
   vol->vol[0].origin[2] = vol->zoffset + (0.5 * zlen);
 
-printf("spider final offset: (%f, %f, %f)\n",
-  vol->vol[0].origin[0], vol->vol[0].origin[1], vol->vol[0].origin[2]);
+  printf("spider final offset: (%f, %f, %f)\n", vol->vol[0].origin[0],
+      vol->vol[0].origin[1], vol->vol[0].origin[2]);
 
-printf("spider final axes:\n");
-printf("  X (%f, %f, %f)\n",
-  vol->vol[0].xaxis[0], 
-  vol->vol[0].xaxis[1], 
-  vol->vol[0].xaxis[2]);
+  printf("spider final axes:\n");
+  printf("  X (%f, %f, %f)\n", vol->vol[0].xaxis[0], vol->vol[0].xaxis[1],
+      vol->vol[0].xaxis[2]);
 
-printf("  Y (%f, %f, %f)\n",
-  vol->vol[0].yaxis[0], 
-  vol->vol[0].yaxis[1], 
-  vol->vol[0].yaxis[2]);
+  printf("  Y (%f, %f, %f)\n", vol->vol[0].yaxis[0], vol->vol[0].yaxis[1],
+      vol->vol[0].yaxis[2]);
 
-printf("  Z (%f, %f, %f)\n",
-  vol->vol[0].zaxis[0], 
-  vol->vol[0].zaxis[1], 
-  vol->vol[0].zaxis[2]);
+  printf("  Z (%f, %f, %f)\n", vol->vol[0].zaxis[0], vol->vol[0].zaxis[1],
+      vol->vol[0].zaxis[2]);
 
   return vol;
 }
 
-static int read_spider_metadata(void *v, int *nsets, 
-  molfile_volumetric_t **metadata) {
-  spider_t *vol = (spider_t *)v;
+static int read_spider_metadata(
+    void* v, int* nsets, molfile_volumetric_t** metadata)
+{
+  spider_t* vol = (spider_t*) v;
   *nsets = vol->nsets;
-  *metadata = vol->vol;  
+  *metadata = vol->vol;
 
   return MOLFILE_SUCCESS;
 }
 
-static int read_spider_data(void *v, int set, float *datablock,
-                         float *colorblock) {
-  spider_t *vol = (spider_t *)v;
-  FILE *fd = vol->fd;
+static int read_spider_data(
+    void* v, int set, float* datablock, float* colorblock)
+{
+  spider_t* vol = (spider_t*) v;
+  FILE* fd = vol->fd;
   int xsize, ysize, zsize, xysize, total;
 
   xsize = vol->vol[0].xsize;
@@ -286,18 +278,19 @@ static int read_spider_data(void *v, int set, float *datablock,
   fread(datablock, total * sizeof(float), 1, fd);
 
   // perform byte swapping if necessary
-  if (vol->byteswap) 
+  if (vol->byteswap)
     swap4_aligned(datablock, total);
 
   return MOLFILE_SUCCESS;
 }
 
-static void close_spider_read(void *v) {
-  spider_t *vol = (spider_t *)v;
-  
+static void close_spider_read(void* v)
+{
+  spider_t* vol = (spider_t*) v;
+
   fclose(vol->fd);
   if (vol->vol != NULL)
-    delete [] vol->vol; 
+    delete[] vol->vol;
   delete vol;
 }
 
@@ -306,7 +299,8 @@ static void close_spider_read(void *v) {
  */
 static molfile_plugin_t plugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) {
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -324,10 +318,13 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
-
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}

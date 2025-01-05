@@ -45,9 +45,15 @@ TEST_CASE("misc", "[CifFile]")
   REQUIRE(cf1.datablocks().size() == 3);
   REQUIRE(cf2.datablocks().size() == 3);
   REQUIRE(cf3.datablocks().size() == 3);
-  REQUIRE(cf1.datablocks().find("baz")->second.get_opt("_undotted_key")->as_s() == std::string("why not"));
-  REQUIRE(cf2.datablocks().find("baz")->second.get_opt("_undotted_key")->as_s() == std::string("why not"));
-  REQUIRE(cf3.datablocks().find("baz")->second.get_opt("_undotted_key")->as_s() == std::string("why not"));
+  REQUIRE(
+      cf1.datablocks().find("baz")->second.get_opt("_undotted_key")->as_s() ==
+      std::string("why not"));
+  REQUIRE(
+      cf2.datablocks().find("baz")->second.get_opt("_undotted_key")->as_s() ==
+      std::string("why not"));
+  REQUIRE(
+      cf3.datablocks().find("baz")->second.get_opt("_undotted_key")->as_s() ==
+      std::string("why not"));
 
   auto& blocks = cf1.datablocks();
 
@@ -85,31 +91,41 @@ TEST_CASE("misc", "[CifFile]")
 
   REQUIRE(data->get_opt("_cat2.key4")->as<std::string>(0) == "foo");
   REQUIRE(data->get_opt("_cat2.key4")->as<std::string>(1) == "TWO WORDS");
-  REQUIRE(data->get_opt("_cat2.key4")->as<std::string>(2) == "multi\nline\nvalue");
+  REQUIRE(
+      data->get_opt("_cat2.key4")->as<std::string>(2) == "multi\nline\nvalue");
   REQUIRE(data->get_opt("_cat2.key4")->as<std::string>(3) == "");
 
-  REQUIRE(data->get_opt("_cat2.key4")->as<const char*>(0) == std::string("foo"));
+  REQUIRE(
+      data->get_opt("_cat2.key4")->as<const char*>(0) == std::string("foo"));
   REQUIRE(data->get_opt("_cat2.key4")->as<const char*>(3) == nullptr);
 
-  REQUIRE(data->get_opt("_cat2.key4")->to_vector<const char*>()[0] == std::string("foo"));
+  REQUIRE(data->get_opt("_cat2.key4")->to_vector<const char*>()[0] ==
+          std::string("foo"));
   REQUIRE(data->get_opt("_cat2.key4")->to_vector<const char*>()[3] == nullptr);
-  REQUIRE(data->get_opt("_cat2.key4")->to_vector<const char*>("ABC")[0] == std::string("foo"));
-  REQUIRE(data->get_opt("_cat2.key4")->to_vector<const char*>("ABC")[3] == std::string("ABC"));
+  REQUIRE(data->get_opt("_cat2.key4")->to_vector<const char*>("ABC")[0] ==
+          std::string("foo"));
+  REQUIRE(data->get_opt("_cat2.key4")->to_vector<const char*>("ABC")[3] ==
+          std::string("ABC"));
 
   // type deducted from default value
 
   REQUIRE(data->get_opt("_cat2.key1")->as(0, 99) / 3 == 3); // int
-  REQUIRE(data->get_opt("_cat2.key1")->as(0, 99) / 3 != Approx(10. / 3.)); // int
-  REQUIRE(data->get_opt("_cat2.key1")->as(0, 99.) / 3 == Approx(10. / 3.)); // double
+  REQUIRE(
+      data->get_opt("_cat2.key1")->as(0, 99) / 3 != Approx(10. / 3.)); // int
+  REQUIRE(data->get_opt("_cat2.key1")->as(0, 99.) / 3 ==
+          Approx(10. / 3.)); // double
   REQUIRE(data->get_opt("_cat2.key2")->as(0, 99.) == 0.1);
   REQUIRE(data->get_opt("_cat2.key3")->as(0, 99.f) == 99.f);
-  REQUIRE(data->get_opt("_cat2.key4")->as(0, std::string("type deducted")) == "foo");
-  REQUIRE(data->get_opt("_cat2.key4")->as(3, std::string("type deducted")) == "type deducted");
+  REQUIRE(data->get_opt("_cat2.key4")->as(0, std::string("type deducted")) ==
+          "foo");
+  REQUIRE(data->get_opt("_cat2.key4")->as(3, std::string("type deducted")) ==
+          "type deducted");
 
   // as_X getters
 
   REQUIRE(data->get_opt("_cat2.key4")->as_s(0, "ABC") == std::string("foo"));
-  REQUIRE(data->get_opt("_cat2.key4")->as_s(3, "ABC") == std::string("ABC")); // missing
+  REQUIRE(data->get_opt("_cat2.key4")->as_s(3, "ABC") ==
+          std::string("ABC")); // missing
 
   REQUIRE(data->get_opt("_cat2.key1")->as_i(0, 99) == 10);
   REQUIRE(data->get_opt("_cat2.key1")->as_i(1, 99) == 11);
@@ -117,7 +133,7 @@ TEST_CASE("misc", "[CifFile]")
 
   REQUIRE(data->get_opt("_cat2.key1")->as_d(0, 99.) == 10.);
   REQUIRE(data->get_opt("_cat2.key1")->as_d(1, 99.) == 11.);
-  REQUIRE(data->get_opt("_cat2.key1")->as_d(3, 99.) == 99.);  // missing
+  REQUIRE(data->get_opt("_cat2.key1")->as_d(3, 99.) == 99.); // missing
 
   REQUIRE(data->get_opt("_cat2.key2")->as_d(0, 99.) == 0.1);
   REQUIRE(data->get_opt("_cat2.key2")->as_d(2, 99.) == 99.f); // missing
@@ -138,14 +154,19 @@ TEST_CASE("misc", "[CifFile]")
   REQUIRE(data->get_arr("_cat2_key1") == nullptr);
   REQUIRE(data->get_opt("_cat2?key1")->as_i(0, 99) == 10);
   REQUIRE(blocks.find("baz")->second.get_arr("_undotted.key") == nullptr);
-  REQUIRE(blocks.find("baz")->second.get_opt("_undotted?key")->as_s() == std::string("why not"));
+  REQUIRE(blocks.find("baz")->second.get_opt("_undotted?key")->as_s() ==
+          std::string("why not"));
 
   // float parsing
 
-  REQUIRE(blocks.find("baz")->second.get_opt("_typed_float1")->as<float>() == Approx(1230.f));
-  REQUIRE(blocks.find("baz")->second.get_opt("_typed_float1")->as<double>() == Approx(1230.00000));
-  REQUIRE(blocks.find("baz")->second.get_opt("_typed_float2")->as<double>() == Approx(12.3400000));
-  REQUIRE(blocks.find("baz")->second.get_opt("_typed_float3")->as<double>() == Approx(1.23456789));
+  REQUIRE(blocks.find("baz")->second.get_opt("_typed_float1")->as<float>() ==
+          Approx(1230.f));
+  REQUIRE(blocks.find("baz")->second.get_opt("_typed_float1")->as<double>() ==
+          Approx(1230.00000));
+  REQUIRE(blocks.find("baz")->second.get_opt("_typed_float2")->as<double>() ==
+          Approx(12.3400000));
+  REQUIRE(blocks.find("baz")->second.get_opt("_typed_float3")->as<double>() ==
+          Approx(1.23456789));
 }
 
 // vi:sw=2:expandtab

@@ -14,44 +14,44 @@ I* Additional authors of this source file include:
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
-#include"os_numpy.h"
+#include "os_numpy.h"
+#include "os_python.h"
 
-#include"os_std.h"
+#include "os_std.h"
 
 #include <algorithm>
 
-#include"Base.h"
-#include"MemoryDebug.h"
-#include"Err.h"
-#include"Scene.h"
-#include"CoordSet.h"
-#include"Color.h"
-#include"PConv.h"
-#include"P.h"
-#include"Matrix.h"
-#include"Sphere.h"
-#include"Util.h"
-#include"Feedback.h"
-#include"RepWireBond.h"
-#include"RepCylBond.h"
-#include"RepDot.h"
-#include"RepMesh.h"
-#include"RepSphere.h"
-#include"RepSphereImmediate.h"
-#include"RepRibbon.h"
-#include"RepCartoon.h"
-#include"RepSurface.h"
-#include"RepLabel.h"
-#include"RepNonbonded.h"
-#include"RepNonbondedSphere.h"
-#include"RepEllipsoid.h"
-#include"Symmetry.h"
+#include "Base.h"
+#include "Color.h"
+#include "CoordSet.h"
+#include "Err.h"
+#include "Feedback.h"
+#include "Matrix.h"
+#include "MemoryDebug.h"
+#include "P.h"
+#include "PConv.h"
+#include "RepCartoon.h"
+#include "RepCylBond.h"
+#include "RepDot.h"
+#include "RepEllipsoid.h"
+#include "RepLabel.h"
+#include "RepMesh.h"
+#include "RepNonbonded.h"
+#include "RepNonbondedSphere.h"
+#include "RepRibbon.h"
+#include "RepSphere.h"
+#include "RepSphereImmediate.h"
+#include "RepSurface.h"
+#include "RepWireBond.h"
+#include "Scene.h"
+#include "Sphere.h"
+#include "Symmetry.h"
+#include "Util.h"
 
-#include"PyMOLGlobals.h"
-#include"PyMOLObject.h"
 #include "Executive.h"
 #include "Lex.h"
+#include "PyMOLGlobals.h"
+#include "PyMOLObject.h"
 
 #ifdef _PYMOL_IP_PROPERTIES
 #include "Property.h"
@@ -124,7 +124,8 @@ float const* CoordSet::coordPtrSym(
 /**
  * Get coordinate index for given atom index
  */
-int CoordSet::atmToIdx(int atm) const {
+int CoordSet::atmToIdx(int atm) const
+{
   if (Obj->DiscreteFlag) {
     if (this == Obj->DiscreteCSet[atm])
       return Obj->DiscreteAtmToIdx[atm];
@@ -150,16 +151,16 @@ void CoordSet::updateNonDiscreteAtmToIdx(unsigned natom)
 static char sATOM[] = "ATOM  ";
 static char sHETATM[] = "HETATM";
 
-int CoordSetValidateRefPos(CoordSet * I)
+int CoordSetValidateRefPos(CoordSet* I)
 {
-  if(I->RefPos) {
+  if (I->RefPos) {
     VLACheck(I->RefPos, RefPosType, I->NIndex);
     return true;
   } else {
     int ok = true && (I->RefPos = pymol::vla<RefPosType>(I->NIndex));
-    if(ok) {
+    if (ok) {
       int a;
-      for(a = 0; a < I->NIndex; a++) {
+      for (a = 0; a < I->NIndex; a++) {
         const float* src = I->coordPtr(a);
         copy3f(src, I->RefPos[a].coord);
         I->RefPos[a].specified = true;
@@ -199,56 +200,56 @@ int BondCompare(BondType const* a, BondType const* b)
   return c;
 }
 
-
 /*========================================================================*/
 int BondInOrder(BondType const* a, int b1, int b2)
 {
   return (BondCompare(a + b1, a + b2) <= 0);
 }
 
-int CoordSetFromPyList(PyMOLGlobals * G, PyObject * list, CoordSet ** cs)
+int CoordSetFromPyList(PyMOLGlobals* G, PyObject* list, CoordSet** cs)
 {
-  CoordSet *I = nullptr;
+  CoordSet* I = nullptr;
   int ok = true;
   int ll = 0;
 
-  if(*cs) {
+  if (*cs) {
     delete *cs;
     *cs = nullptr;
   }
 
-  if(list == Py_None) {         /* allow None for CSet */
+  if (list == Py_None) { /* allow None for CSet */
     *cs = nullptr;
   } else {
 
-    if(ok)
+    if (ok)
       I = CoordSetNew(G);
-    if(ok)
+    if (ok)
       ok = (I != nullptr);
-    if(ok)
+    if (ok)
       ok = (list != nullptr);
-    if(ok)
+    if (ok)
       ok = PyList_Check(list);
-    if(ok)
+    if (ok)
       ll = PyList_Size(list);
     /* TO SUPPORT BACKWARDS COMPATIBILITY...
        Always check ll when adding new PyList_GetItem's */
-    if(ok)
+    if (ok)
       ok = PConvPyIntToInt(PyList_GetItem(list, 0), &I->NIndex);
-    if(ok)
+    if (ok)
       ok = PConvPyListToFloatVLA(PyList_GetItem(list, 2), &I->Coord);
-    if(ok){
+    if (ok) {
       PConvFromPyListItem(G, list, 3, I->IdxToAtm);
     }
-    if(ok && (ll > 5))
-      ok = CPythonVal_PConvPyStrToStr_From_List(G, list, 5, I->Name, sizeof(WordType));
-    if(ok && (ll > 6)){
-      CPythonVal *val = CPythonVal_PyList_GetItem(G, list, 6);
+    if (ok && (ll > 5))
+      ok = CPythonVal_PConvPyStrToStr_From_List(
+          G, list, 5, I->Name, sizeof(WordType));
+    if (ok && (ll > 6)) {
+      CPythonVal* val = CPythonVal_PyList_GetItem(G, list, 6);
       ok = ObjectStateFromPyList(G, val, I);
       CPythonVal_Free(val);
     }
-    if(ok && (ll > 7)){
-      CPythonVal *val = CPythonVal_PyList_GetItem(G, list, 7);
+    if (ok && (ll > 7)) {
+      CPythonVal* val = CPythonVal_PyList_GetItem(G, list, 7);
       I->Setting.reset(SettingNewFromPyList(G, val));
       CPythonVal_Free(val);
     }
@@ -256,36 +257,37 @@ int CoordSetFromPyList(PyMOLGlobals * G, PyObject * list, CoordSet ** cs)
 #ifdef _PYMOL_IP_PROPERTIES
 #endif
 
-    if(ok && (ll > 10)){
-      CPythonVal *val = CPythonVal_PyList_GetItem(G, list, 10);
+    if (ok && (ll > 10)) {
+      CPythonVal* val = CPythonVal_PyList_GetItem(G, list, 10);
       if (!CPythonVal_IsNone(val))
-	I->SculptCGO = CGONewFromPyList(G, val, 0, 1);
+        I->SculptCGO = CGONewFromPyList(G, val, 0, 1);
       else {
-	I->SculptShaderCGO = I->SculptCGO = nullptr;
+        I->SculptShaderCGO = I->SculptCGO = nullptr;
       }
       CPythonVal_Free(val);
     }
-    if(ok){
-      if(ll > 11){
-	// load in atom-state settings
-	CPythonVal *val = CPythonVal_PyList_GetItem(G, list, 11);
-	if (!CPythonVal_IsNone(val)){
-	  int a;
-	  I->atom_state_setting_id = pymol::vla<int>(I->NIndex);
-	  for (a=0; a<I->NIndex; a++){
-	    CPythonVal *val2 = CPythonVal_PyList_GetItem(G, val, a);
-	    if (!CPythonVal_IsNone(val2)){
-	      CPythonVal_PConvPyIntToInt(val2, &I->atom_state_setting_id[a]);
-	      if (I->atom_state_setting_id[a]) {
-	        I->atom_state_setting_id[a] = SettingUniqueConvertOldSessionID(G, I->atom_state_setting_id[a]);
-	      }
-	    }
-	    CPythonVal_Free(val2);
-	  }
-	} else {
-	  I->atom_state_setting_id = nullptr;
-	}
-	CPythonVal_Free(val);
+    if (ok) {
+      if (ll > 11) {
+        // load in atom-state settings
+        CPythonVal* val = CPythonVal_PyList_GetItem(G, list, 11);
+        if (!CPythonVal_IsNone(val)) {
+          int a;
+          I->atom_state_setting_id = pymol::vla<int>(I->NIndex);
+          for (a = 0; a < I->NIndex; a++) {
+            CPythonVal* val2 = CPythonVal_PyList_GetItem(G, val, a);
+            if (!CPythonVal_IsNone(val2)) {
+              CPythonVal_PConvPyIntToInt(val2, &I->atom_state_setting_id[a]);
+              if (I->atom_state_setting_id[a]) {
+                I->atom_state_setting_id[a] = SettingUniqueConvertOldSessionID(
+                    G, I->atom_state_setting_id[a]);
+              }
+            }
+            CPythonVal_Free(val2);
+          }
+        } else {
+          I->atom_state_setting_id = nullptr;
+        }
+        CPythonVal_Free(val);
       } else {
         // translate legacy LabPos to label_placement_offset
         auto val = CPythonVal_PyList_GetItem(G, list, 8);
@@ -309,7 +311,7 @@ int CoordSetFromPyList(PyMOLGlobals * G, PyObject * list, CoordSet ** cs)
       CPythonVal_Free(val);
     }
 
-    if(!ok) {
+    if (!ok) {
       delete I;
       *cs = nullptr;
     } else {
@@ -322,36 +324,41 @@ int CoordSetFromPyList(PyMOLGlobals * G, PyObject * list, CoordSet ** cs)
 /**
  * Coord set as numpy array
  */
-PyObject *CoordSetAsNumPyArray(CoordSet * cs, short copy)
+PyObject* CoordSetAsNumPyArray(CoordSet* cs, short copy)
 {
 #ifndef _PYMOL_NUMPY
   PRINTFB(cs->G, FB_CoordSet, FB_Errors)
-    "No numpy support\n" ENDFB(cs->G);
+  "No numpy support\n" ENDFB(cs->G);
   return nullptr;
 #else
 
-  PyObject *result = nullptr;
+  PyObject* result = nullptr;
   const int base_size = sizeof(float);
   int typenum = -1;
   npy_intp dims[2] = {0, 3};
 
   import_array1(nullptr);
 
-  switch(base_size) {
-    case 4: typenum = NPY_FLOAT32; break;
-    case 8: typenum = NPY_FLOAT64; break;
+  switch (base_size) {
+  case 4:
+    typenum = NPY_FLOAT32;
+    break;
+  case 8:
+    typenum = NPY_FLOAT64;
+    break;
   }
 
-  if(typenum == -1) {
+  if (typenum == -1) {
     printf("error: no typenum for float size %d\n", base_size);
     return nullptr;
   }
 
   dims[0] = cs->NIndex;
 
-  if(copy) {
-    if((result = PyArray_SimpleNew(2, dims, typenum)))
-      memcpy(PyArray_DATA((PyArrayObject *)result), cs->Coord, cs->NIndex * 3 * base_size);
+  if (copy) {
+    if ((result = PyArray_SimpleNew(2, dims, typenum)))
+      memcpy(PyArray_DATA((PyArrayObject*) result), cs->Coord,
+          cs->NIndex * 3 * base_size);
   } else {
     result = PyArray_SimpleNewFromData(2, dims, typenum, cs->Coord.data());
   }
@@ -360,23 +367,28 @@ PyObject *CoordSetAsNumPyArray(CoordSet * cs, short copy)
 #endif
 }
 
-PyObject *CoordSetAsPyList(CoordSet * I)
+PyObject* CoordSetAsPyList(CoordSet* I)
 {
-  PyObject *result = nullptr;
+  PyObject* result = nullptr;
 
-  if(I) {
+  if (I) {
     auto G = I->G;
-    int pse_export_version = SettingGet<float>(G, cSetting_pse_export_version) * 1000;
-    bool dump_binary = SettingGet<bool>(G, cSetting_pse_binary_dump) && (!pse_export_version || pse_export_version >= 1765);
+    int pse_export_version =
+        SettingGet<float>(G, cSetting_pse_export_version) * 1000;
+    bool dump_binary = SettingGet<bool>(G, cSetting_pse_binary_dump) &&
+                       (!pse_export_version || pse_export_version >= 1765);
     result = PyList_New(13);
     PyList_SetItem(result, 0, PyInt_FromLong(I->NIndex));
     int const NAtIndex = I->AtmToIdx.size();
-    PyList_SetItem(result, 1, PyInt_FromLong(NAtIndex ? NAtIndex : I->Obj->NAtom)); // legacy
-    PyList_SetItem(result, 2, PConvFloatArrayToPyList(I->Coord, I->NIndex * 3, dump_binary));
-    PyList_SetItem(result, 3, PConvIntArrayToPyList(I->IdxToAtm.data(), I->NIndex, dump_binary));
-    if (!I->AtmToIdx.empty()
-        && pse_export_version < 1770)
-      PyList_SetItem(result, 4, PConvIntArrayToPyList(I->AtmToIdx.data(), NAtIndex, dump_binary));
+    PyList_SetItem(result, 1,
+        PyInt_FromLong(NAtIndex ? NAtIndex : I->Obj->NAtom)); // legacy
+    PyList_SetItem(result, 2,
+        PConvFloatArrayToPyList(I->Coord, I->NIndex * 3, dump_binary));
+    PyList_SetItem(result, 3,
+        PConvIntArrayToPyList(I->IdxToAtm.data(), I->NIndex, dump_binary));
+    if (!I->AtmToIdx.empty() && pse_export_version < 1770)
+      PyList_SetItem(result, 4,
+          PConvIntArrayToPyList(I->AtmToIdx.data(), NAtIndex, dump_binary));
     else
       PyList_SetItem(result, 4, PConvAutoNone(nullptr));
     PyList_SetItem(result, 5, PyString_FromString(I->Name));
@@ -389,21 +401,22 @@ PyObject *CoordSetAsPyList(CoordSet * I)
 #endif
         PConvAutoNone(Py_None));
 
-    if(I->SculptCGO) {
+    if (I->SculptCGO) {
       PyList_SetItem(result, 10, CGOAsPyList(I->SculptCGO));
     } else {
       PyList_SetItem(result, 10, PConvAutoNone(nullptr));
     }
     if (I->has_any_atom_state_settings()) {
       int a;
-      PyObject *settings_list = nullptr;
+      PyObject* settings_list = nullptr;
       settings_list = PyList_New(I->NIndex);
-      for (a=0; a<I->NIndex; a++){
+      for (a = 0; a < I->NIndex; a++) {
         if (I->has_atom_state_settings(a)) {
-	  PyList_SetItem(settings_list, a, PyInt_FromLong(I->atom_state_setting_id[a]));
-	} else {
-	  PyList_SetItem(settings_list, a, PConvAutoNone(nullptr));
-	}
+          PyList_SetItem(
+              settings_list, a, PyInt_FromLong(I->atom_state_setting_id[a]));
+        } else {
+          PyList_SetItem(settings_list, a, PConvAutoNone(nullptr));
+        }
       }
       PyList_SetItem(result, 11, settings_list);
     } else {
@@ -450,7 +463,8 @@ void CoordSetAdjustAtmIdx(CoordSet* I, const int* lookup)
       }
 
       if (I->has_atom_state_settings(idx)) {
-        I->atom_state_setting_id[idx_new] = std::move(I->atom_state_setting_id[idx]);
+        I->atom_state_setting_id[idx_new] =
+            std::move(I->atom_state_setting_id[idx]);
         I->atom_state_setting_id[idx] = 0;
       }
     }
@@ -466,12 +480,11 @@ void CoordSetAdjustAtmIdx(CoordSet* I, const int* lookup)
 
 CoordSet* CoordSetCopy(const CoordSet* src)
 {
-  if(!src) {
+  if (!src) {
     return nullptr;
   }
   return new CoordSet(*src);
 }
-
 
 /*========================================================================*/
 /**
@@ -479,7 +492,7 @@ CoordSet* CoordSetCopy(const CoordSet* src)
  *
  * @pre I and cs are non-overlapping
  */
-int CoordSetMerge(ObjectMolecule *OM, CoordSet * I, const CoordSet * cs)
+int CoordSetMerge(ObjectMolecule* OM, CoordSet* I, const CoordSet* cs)
 {
   assert(OM == I->Obj);
 
@@ -501,7 +514,8 @@ int CoordSetMerge(ObjectMolecule *OM, CoordSet * I, const CoordSet * cs)
 
   if (cs->RefPos) {
     I->RefPos.resize(I->getNIndex());
-    std::copy_n(cs->RefPos.data(), cs->getNIndex(), I->RefPos.data() + nIndexOld);
+    std::copy_n(
+        cs->RefPos.data(), cs->getNIndex(), I->RefPos.data() + nIndexOld);
   }
 
   // TODO copy or move atom_state_setting_id here?
@@ -511,12 +525,11 @@ int CoordSetMerge(ObjectMolecule *OM, CoordSet * I, const CoordSet * cs)
   return true;
 }
 
-
 /*========================================================================*/
-int CoordSetTransformAtomTTTf(CoordSet * I, int at, const float *TTT)
+int CoordSetTransformAtomTTTf(CoordSet* I, int at, const float* TTT)
 {
   int a1 = I->atmToIdx(at);
-  if(a1 < 0)
+  if (a1 < 0)
     return false;
 
   auto* v1 = I->coordPtr(a1);
@@ -524,12 +537,11 @@ int CoordSetTransformAtomTTTf(CoordSet * I, int at, const float *TTT)
   return true;
 }
 
-
 /*========================================================================*/
-int CoordSetTransformAtomR44f(CoordSet * I, int at, const float *matrix)
+int CoordSetTransformAtomR44f(CoordSet* I, int at, const float* matrix)
 {
   int a1 = I->atmToIdx(at);
-  if(a1 < 0)
+  if (a1 < 0)
     return false;
 
   auto* v1 = I->coordPtr(a1);
@@ -537,13 +549,12 @@ int CoordSetTransformAtomR44f(CoordSet * I, int at, const float *matrix)
   return true;
 }
 
-
 /*========================================================================*/
-void CoordSetRecordTxfApplied(CoordSet * I, const float *matrix, int homogenous)
+void CoordSetRecordTxfApplied(CoordSet* I, const float* matrix, int homogenous)
 {
   double temp[16];
 
-  if(!homogenous) {
+  if (!homogenous) {
     convertTTTfR44d(matrix, temp);
   } else {
     convert44f44d(matrix, temp);
@@ -552,23 +563,21 @@ void CoordSetRecordTxfApplied(CoordSet * I, const float *matrix, int homogenous)
   ObjectStateLeftCombineMatrixR44d(I, temp);
 }
 
-
 /*========================================================================*/
-int CoordSetMoveAtom(CoordSet * I, int at, const float *v, int mode)
+int CoordSetMoveAtom(CoordSet* I, int at, const float* v, int mode)
 {
   int a1 = I->atmToIdx(at);
-  if(a1 < 0)
+  if (a1 < 0)
     return false;
 
   auto* v1 = I->coordPtr(a1);
-  if(mode) {
+  if (mode) {
     add3f(v, v1, v1);
   } else {
     copy3f(v, v1);
   }
   return true;
 }
-
 
 /*========================================================================*/
 
@@ -614,8 +623,7 @@ pymol::Result<pymol::Vec3> CoordSet::getAtomLabelOffset(int atm) const
  * @param offset offset to be set at
  */
 
-pymol::Result<> CoordSet::setAtomLabelOffset(
-    int atm, const float* offset)
+pymol::Result<> CoordSet::setAtomLabelOffset(int atm, const float* offset)
 {
   int idx = this->atmToIdx(atm);
   if (idx < 0) {
@@ -648,80 +656,82 @@ void CoordSet::setTitle(pymol::zstring_view title)
  * nullptr if there is either no matrix set, or it's not pre-multiplied
  * (matrix_mode=1).
  */
-double const* CoordSet::getPremultipliedMatrix() const {
+double const* CoordSet::getPremultipliedMatrix() const
+{
   return (SettingGet<int>(*this, cSetting_matrix_mode) > 0)
              ? nullptr
              : ObjectStateGetMatrix(this);
 }
 
-int CoordSetMoveAtomLabel(CoordSet * I, int at, const float *v, const float *diff)
+int CoordSetMoveAtomLabel(
+    CoordSet* I, int at, const float* v, const float* diff)
 {
   auto G = I->G;
-  ObjectMolecule *obj = I->Obj;
+  ObjectMolecule* obj = I->Obj;
   int a1 = I->atmToIdx(at);
   int result = 0;
 
   /* if label is valid, get the label offset
    * and set the new position relative to that */
-  if(a1 >= 0) {
+  if (a1 >= 0) {
     float at_offset[3];
-    const float * at_offset_ptr;
+    const float* at_offset_ptr;
     int at_label_relative_mode = 0;
-    AtomInfoType *ai = obj->AtomInfo + at;
+    AtomInfoType* ai = obj->AtomInfo + at;
 
-    AtomStateGetSetting_i(G, obj, I, a1, ai, cSetting_label_relative_mode, &at_label_relative_mode);
-    switch (at_label_relative_mode){
+    AtomStateGetSetting_i(G, obj, I, a1, ai, cSetting_label_relative_mode,
+        &at_label_relative_mode);
+    switch (at_label_relative_mode) {
     case cLabelRelativeMode::Default:
-      AtomStateGetSetting(G, obj, I, a1, ai, cSetting_label_placement_offset, &at_offset_ptr);
+      AtomStateGetSetting(
+          G, obj, I, a1, ai, cSetting_label_placement_offset, &at_offset_ptr);
       add3f(v, at_offset_ptr, at_offset);
       SettingSet(cSetting_label_placement_offset, at_offset, I, a1);
       break;
-    case cLabelRelativeMode::ScreenRelative: // screen relative
+    case cLabelRelativeMode::ScreenRelative:   // screen relative
     case cLabelRelativeMode::ScreenPixelSpace: // screen pixel space
-      {
-	float voff[3];
-	int width, height;
-	SceneGetWidthHeight(G, &width, &height);
-	if (at_label_relative_mode==1){
-	  voff[0] = 2.f * diff[0] / width;
-	  voff[1] = 2.f * diff[1] / height;
-	} else {
-	  voff[0] = diff[0];
-	  voff[1] = diff[1];
-	}
-	voff[2] = 0.f;
-	AtomStateGetSetting(G, obj, I, a1, ai, cSetting_label_screen_point, &at_offset_ptr);
-	add3f(voff, at_offset_ptr, at_offset);
-	SettingSet(cSetting_label_screen_point, at_offset, I, a1);
+    {
+      float voff[3];
+      int width, height;
+      SceneGetWidthHeight(G, &width, &height);
+      if (at_label_relative_mode == 1) {
+        voff[0] = 2.f * diff[0] / width;
+        voff[1] = 2.f * diff[1] / height;
+      } else {
+        voff[0] = diff[0];
+        voff[1] = diff[1];
       }
-      break;
+      voff[2] = 0.f;
+      AtomStateGetSetting(
+          G, obj, I, a1, ai, cSetting_label_screen_point, &at_offset_ptr);
+      add3f(voff, at_offset_ptr, at_offset);
+      SettingSet(cSetting_label_screen_point, at_offset, I, a1);
+    } break;
     }
   }
 
   return (result);
 }
 
-
 /*========================================================================*/
-int CoordSetGetAtomVertex(const CoordSet * I, int at, float *v)
+int CoordSetGetAtomVertex(const CoordSet* I, int at, float* v)
 {
   int a1 = I->atmToIdx(at);
 
-  if(a1 < 0)
+  if (a1 < 0)
     return false;
 
   copy3f(I->coordPtr(a1), v);
   return true;
 }
 
-
 /*========================================================================*/
-int CoordSetGetAtomTxfVertex(const CoordSet * I, int at, float *v)
+int CoordSetGetAtomTxfVertex(const CoordSet* I, int at, float* v)
 {
-  ObjectMolecule *obj = I->Obj;
+  ObjectMolecule* obj = I->Obj;
   int a1 = I->atmToIdx(at);
 
-  if(a1 < 0)
+  if (a1 < 0)
     return false;
 
   copy3f(I->coordPtr(a1), v);
@@ -732,29 +742,27 @@ int CoordSetGetAtomTxfVertex(const CoordSet * I, int at, float *v)
   }
 
   /* object transformation */
-  if(obj->TTTFlag) {
+  if (obj->TTTFlag) {
     transformTTT44f3f(obj->TTT, v, v);
   }
 
   return true;
 }
 
-
 /*========================================================================*/
-int CoordSetSetAtomVertex(CoordSet * I, int at, const float *v)
+int CoordSetSetAtomVertex(CoordSet* I, int at, const float* v)
 {
   int a1 = I->atmToIdx(at);
 
-  if(a1 < 0)
-   return false;
+  if (a1 < 0)
+    return false;
 
   copy3f(v, I->coordPtr(a1));
   return true;
 }
 
-
 /*========================================================================*/
-void CoordSetRealToFrac(CoordSet * I, const CCrystal * cryst)
+void CoordSetRealToFrac(CoordSet* I, const CCrystal* cryst)
 {
   if (I->getPremultipliedMatrix()) {
     float mat[16];
@@ -765,43 +773,40 @@ void CoordSetRealToFrac(CoordSet * I, const CCrystal * cryst)
   CoordSetTransform33f(I, cryst->realToFrac());
 }
 
-
 /*========================================================================*/
-void CoordSetTransform44f(CoordSet * I, const float *mat)
+void CoordSetTransform44f(CoordSet* I, const float* mat)
 {
   int a;
   float* v = I->Coord.data();
-  for(a = 0; a < I->NIndex; a++) {
+  for (a = 0; a < I->NIndex; a++) {
     transform44f3f(mat, v, v);
     v += 3;
   }
 }
 
-
 /*========================================================================*/
 
-void CoordSetTransform33f(CoordSet * I, const float *mat)
+void CoordSetTransform33f(CoordSet* I, const float* mat)
 {
   int a;
   float* v = I->Coord.data();
-  for(a = 0; a < I->NIndex; a++) {
+  for (a = 0; a < I->NIndex; a++) {
     transform33f3f(mat, v, v);
     v += 3;
   }
 }
 
-
 /*========================================================================*/
-void CoordSetGetAverage(const CoordSet * I, float *v0)
+void CoordSetGetAverage(const CoordSet* I, float* v0)
 {
   int a;
   double accum[3];
-  if(I->NIndex) {
+  if (I->NIndex) {
     const float* v = I->Coord.data();
     accum[0] = *(v++);
     accum[1] = *(v++);
     accum[2] = *(v++);
-    for(a = 1; a < I->NIndex; a++) {
+    for (a = 1; a < I->NIndex; a++) {
       accum[0] += *(v++);
       accum[1] += *(v++);
       accum[2] += *(v++);
@@ -812,9 +817,8 @@ void CoordSetGetAverage(const CoordSet * I, float *v0)
   }
 }
 
-
 /*========================================================================*/
-void CoordSetFracToReal(CoordSet * I, const CCrystal * cryst)
+void CoordSetFracToReal(CoordSet* I, const CCrystal* cryst)
 {
   CoordSetTransform33f(I, cryst->fracToReal());
 
@@ -837,11 +841,10 @@ void CoordSetFracToReal(CoordSet * I, const CCrystal * cryst)
  *
  * Without this, creating symmetry mates might produce wrong results.
  */
-bool CoordSetInsureOrthogonal(PyMOLGlobals * G,
-    CoordSet * cset,            // coord set to modify
-    const float * sca,          // 4x4 SCALE
-    const CCrystal *cryst,
-    bool quiet)
+bool CoordSetInsureOrthogonal(PyMOLGlobals* G,
+    CoordSet* cset,   // coord set to modify
+    const float* sca, // 4x4 SCALE
+    const CCrystal* cryst, bool quiet)
 {
   if (!SettingGet<bool>(G, cSetting_pdb_insure_orthogonal))
     return false;
@@ -857,26 +860,24 @@ bool CoordSetInsureOrthogonal(PyMOLGlobals * G,
     return false;
   }
 
-  // is the cell a orthogonal 1x1x1? If so, then it should probably be ignored...
-  // is SCALEn the identity matrix?  If so, then it should probably be ignored...
-  if (is_identityf(3, r2f, R_SMALL4) ||
-      is_identityf(4, sca, R_SMALL4)) {
+  // is the cell a orthogonal 1x1x1? If so, then it should probably be
+  // ignored... is SCALEn the identity matrix?  If so, then it should probably
+  // be ignored...
+  if (is_identityf(3, r2f, R_SMALL4) || is_identityf(4, sca, R_SMALL4)) {
     PRINTFB(G, FB_ObjectMolecule, FB_Blather)
-      " ObjectMolReadPDBStr: ignoring SCALEn (identity matrix).\n" ENDFB(G);
+    " ObjectMolReadPDBStr: ignoring SCALEn (identity matrix).\n" ENDFB(G);
     return false;
   }
 
   // is SCALEn invalid?  If so, then it should definitely be ignored...
-  if (determinant33f(sca, 4) < R_SMALL8 ||
-      determinant33f(r2f, 3) < R_SMALL8) {
+  if (determinant33f(sca, 4) < R_SMALL8 || determinant33f(r2f, 3) < R_SMALL8) {
     PRINTFB(G, FB_ObjectMolecule, FB_Blather)
-      " ObjectMolReadPDBStr: ignoring SCALEn (invalid matrix).\n" ENDFB(G);
+    " ObjectMolReadPDBStr: ignoring SCALEn (invalid matrix).\n" ENDFB(G);
     return false;
   }
 
   PRINTFB(G, FB_ObjectMolecule, quiet ? FB_Blather : FB_Actions)
-    " ObjectMolecule: using SCALEn to compute orthogonal coordinates.\n"
-    ENDFB(G);
+  " ObjectMolecule: using SCALEn to compute orthogonal coordinates.\n" ENDFB(G);
 
   CoordSetTransform44f(cset, sca);
   CoordSetFracToReal(cset, cryst);
@@ -890,19 +891,19 @@ bool CoordSetInsureOrthogonal(PyMOLGlobals * G,
  * matrix: flat 4x4, but only rotation (upper left 3x3) is considered
  * anisou: has 6 elements (of symmetric 3x3) and will be rotated in-place
  */
-bool RotateU(const double *matrix, float *anisou)
+bool RotateU(const double* matrix, float* anisou)
 {
   int i, j, k;
   float Re[3][3];
   double e_val[3], e_vec[3][3];
   double U[3][3] = {
-    { anisou[0], anisou[3], anisou[4] },
-    { anisou[3], anisou[1], anisou[5] },
-    { anisou[4], anisou[5], anisou[2] },
+      {anisou[0], anisou[3], anisou[4]},
+      {anisou[3], anisou[1], anisou[5]},
+      {anisou[4], anisou[5], anisou[2]},
   };
 
   // e_val, e_vec = linalg.eigh(U)
-  if(!xx_matrix_jacobi_solve(*e_vec, e_val, &i, *U, 3))
+  if (!xx_matrix_jacobi_solve(*e_vec, e_val, &i, *U, 3))
     return false;
 
   // Re = dot(matrix[:3,:3], e_vec)
@@ -937,13 +938,11 @@ bool RotateU(const double *matrix, float *anisou)
  * @param matrix 4x4 homogenous transformation matrix from model space to output
  *         space (view matrix * state matrix). Used for ANISOU.
  */
-void CoordSetAtomToPDBStrVLA(PyMOLGlobals * G, char **charVLA, int *c,
-                             const AtomInfoType * ai,
-                             const float *v, int cnt,
-                             const PDBInfoRec * pdb_info,
-                             const double *matrix)
+void CoordSetAtomToPDBStrVLA(PyMOLGlobals* G, char** charVLA, int* c,
+    const AtomInfoType* ai, const float* v, int cnt, const PDBInfoRec* pdb_info,
+    const double* matrix)
 {
-  char *aType;
+  char* aType;
   AtomName name;
   ResName resn;
   lexidx_t chain;
@@ -957,14 +956,14 @@ void CoordSetAtomToPDBStrVLA(PyMOLGlobals * G, char **charVLA, int *c,
 
   formalCharge[0] = 0;
   if (SettingGet<bool>(G, cSetting_pdb_formal_charges)) {
-    if((ai->formalCharge > 0) && (ai->formalCharge < 10)) {
+    if ((ai->formalCharge > 0) && (ai->formalCharge < 10)) {
       sprintf(formalCharge, "%d+", ai->formalCharge);
-    } else if((ai->formalCharge < 0) && (ai->formalCharge > -10)) {
+    } else if ((ai->formalCharge < 0) && (ai->formalCharge > -10)) {
       sprintf(formalCharge, "%d-", -ai->formalCharge);
     }
   }
 
-  if(ai->hetatm)
+  if (ai->hetatm)
     aType = sHETATM;
   else
     aType = sATOM;
@@ -976,10 +975,11 @@ void CoordSetAtomToPDBStrVLA(PyMOLGlobals * G, char **charVLA, int *c,
   if (SettingGet<bool>(G, cSetting_pdb_retain_ids)) {
     cnt = ai->id - 1;
   }
-  if(cnt > 99998)
+  if (cnt > 99998)
     cnt = 99998;
 
-  if((!pdb_info) || (!pdb_info->is_pqr_file())) { /* relying upon short-circuit */
+  if ((!pdb_info) ||
+      (!pdb_info->is_pqr_file())) { /* relying upon short-circuit */
     short linelen;
     sprintf(x, "%8.3f", v[0]);
     x[8] = 0;
@@ -987,28 +987,27 @@ void CoordSetAtomToPDBStrVLA(PyMOLGlobals * G, char **charVLA, int *c,
     y[8] = 0;
     sprintf(z, "%8.3f", v[2]);
     z[8] = 0;
-    linelen =
-      sprintf((*charVLA) + (*c),
-              "%6s%5i %-4s%1s%-4s%1.1s%4i%c   %s%s%s%6.2f%6.2f      %-4.4s%2s%2s\n", aType,
-              cnt + 1, name, ai->alt, resn, LexStr(G, ai->chain), ai->resv % 10000, inscode, x, y, z, ai->q, ai->b,
-              ignore_pdb_segi ? "" :
-              LexStr(G, ai->segi), ai->elem, formalCharge);
-    if(ai->anisou) {
-      // Columns 7 - 27 and 73 - 80 are identical to the corresponding ATOM/HETATM record.
-      char *atomline = (*charVLA) + (*c);
-      char *anisoline = atomline + linelen;
+    linelen = sprintf((*charVLA) + (*c),
+        "%6s%5i %-4s%1s%-4s%1.1s%4i%c   %s%s%s%6.2f%6.2f      %-4.4s%2s%2s\n",
+        aType, cnt + 1, name, ai->alt, resn, LexStr(G, ai->chain),
+        ai->resv % 10000, inscode, x, y, z, ai->q, ai->b,
+        ignore_pdb_segi ? "" : LexStr(G, ai->segi), ai->elem, formalCharge);
+    if (ai->anisou) {
+      // Columns 7 - 27 and 73 - 80 are identical to the corresponding
+      // ATOM/HETATM record.
+      char* atomline = (*charVLA) + (*c);
+      char* anisoline = atomline + linelen;
       float anisou[6];
       std::copy_n(ai->anisou, 6, anisou);
 
-      if(matrix && !RotateU(matrix, anisou)) {
+      if (matrix && !RotateU(matrix, anisou)) {
         PRINTFB(G, FB_CoordSet, FB_Errors) "RotateU failed\n" ENDFB(G);
         return;
       }
       strncpy(anisoline + 6, atomline + 6, 22);
-      sprintf(anisoline + 28,
-          "%7.0f%7.0f%7.0f%7.0f%7.0f%7.0f",
-          anisou[0] * 1e4, anisou[1] * 1e4, anisou[2] * 1e4,
-          anisou[3] * 1e4, anisou[4] * 1e4, anisou[5] * 1e4);
+      sprintf(anisoline + 28, "%7.0f%7.0f%7.0f%7.0f%7.0f%7.0f", anisou[0] * 1e4,
+          anisou[1] * 1e4, anisou[2] * 1e4, anisou[3] * 1e4, anisou[4] * 1e4,
+          anisou[5] * 1e4);
       strcpy(anisoline + 70, atomline + 70);
       strncpy(anisoline, "ANISOU", 6);
       (*c) += linelen;
@@ -1016,10 +1015,10 @@ void CoordSetAtomToPDBStrVLA(PyMOLGlobals * G, char **charVLA, int *c,
     (*c) += linelen;
   } else {
     Chain alt;
-    if(pdb_info->is_pqr_file() && pdb_info->pqr_workarounds) {
+    if (pdb_info->is_pqr_file() && pdb_info->pqr_workarounds) {
       inscode = ' ';
-      chain = 0;                /* no chain IDs */
-      alt[0] = 0;               /* not alt conf identifiers */
+      chain = 0;  /* no chain IDs */
+      alt[0] = 0; /* not alt conf identifiers */
     } else {
       alt[0] = ai->alt[0];
       alt[1] = 0;
@@ -1032,80 +1031,79 @@ void CoordSetAtomToPDBStrVLA(PyMOLGlobals * G, char **charVLA, int *c,
       resn[0] = '.';
     }
     sprintf(x, "%8.3f", v[0]);
-    if(x[0] != 32)
+    if (x[0] != 32)
       sprintf(x, " %7.2f", v[0]);
     x[8] = 0;
     sprintf(y, "%8.3f", v[1]);
     y[8] = 0;
-    if(y[0] != 32)
+    if (y[0] != 32)
       sprintf(y, " %7.2f", v[1]);
     y[8] = 0;
     sprintf(z, "%8.3f", v[2]);
-    if(z[0] != 32)
+    if (z[0] != 32)
       sprintf(z, " %7.2f", v[2]);
     z[8] = 0;
 
-    (*c) += sprintf((*charVLA) + (*c), "%6s%5i %-4s%1s%-4s%1.1s%4i%c   %s%s%s %11.8f %7.3f\n",
-                    aType, cnt + 1, name, alt, resn,
-                    LexStr(G, chain), ai->resv, inscode, x, y, z, ai->partialCharge, ai->elec_radius);
+    (*c) += sprintf((*charVLA) + (*c),
+        "%6s%5i %-4s%1s%-4s%1.1s%4i%c   %s%s%s %11.8f %7.3f\n", aType, cnt + 1,
+        name, alt, resn, LexStr(G, chain), ai->resv, inscode, x, y, z,
+        ai->partialCharge, ai->elec_radius);
   }
-
 }
 
-
 /*========================================================================*/
-PyObject *CoordSetAtomToChemPyAtom(PyMOLGlobals * G, AtomInfoType * ai, ObjectMolecule *obj,
-                                   const float *v, const float *ref, int index, const double *matrix)
+PyObject* CoordSetAtomToChemPyAtom(PyMOLGlobals* G, AtomInfoType* ai,
+    ObjectMolecule* obj, const float* v, const float* ref, int index,
+    const double* matrix)
 {
 #ifdef _PYMOL_NOPY
   return nullptr;
 #else
-  PyObject *atom = PYOBJECT_CALLMETHOD(P_chempy, "Atom", "");
-  if(!atom)
+  PyObject* atom = PYOBJECT_CALLMETHOD(P_chempy, "Atom", "");
+  if (!atom)
     ErrMessage(G, "CoordSetAtomToChemPyAtom", "can't create atom");
   else {
-    float tmp_array[6] = { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f };
+    float tmp_array[6] = {0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
 
     if (ai->anisou) {
       std::copy_n(ai->anisou, 6, tmp_array);
       if (matrix)
-      RotateU(matrix, tmp_array);
+        RotateU(matrix, tmp_array);
     }
 
     PConvStringToPyObjAttr(atom, "model", obj->Name);
     PConvFloat3ToPyObjAttr(atom, "coord", v);
-    if(ref)
+    if (ref)
       PConvFloat3ToPyObjAttr(atom, "ref_coord", ref);
     if (ai->name)
-    PConvStringToPyObjAttr(atom, "name", LexStr(G, ai->name));
+      PConvStringToPyObjAttr(atom, "name", LexStr(G, ai->name));
     PConvStringToPyObjAttr(atom, "symbol", ai->elem);
-// TODO defaults to UNK    if (ai->resn)
+    // TODO defaults to UNK    if (ai->resn)
     PConvStringToPyObjAttr(atom, "resn", LexStr(G, ai->resn));
     if (ai->inscode) {
       char ins_code[2] = {ai->inscode, 0};
       PConvStringToPyObjAttr(atom, "ins_code", ins_code);
     }
     if (ai->ssType[0])
-    PConvStringToPyObjAttr(atom, "ss", ai->ssType);
-// TODO defaults to 1    if (ai->resv)
+      PConvStringToPyObjAttr(atom, "ss", ai->ssType);
+    // TODO defaults to 1    if (ai->resv)
     PConvIntToPyObjAttr(atom, "resi_number", ai->resv);
     if (ai->stereo)
-    PConvIntToPyObjAttr(atom, "stereo", ai->stereo);
+      PConvIntToPyObjAttr(atom, "stereo", ai->stereo);
     if (ai->chain)
-    PConvStringToPyObjAttr(atom, "chain", LexStr(G, ai->chain));
-    if(ai->alt[0])
+      PConvStringToPyObjAttr(atom, "chain", LexStr(G, ai->chain));
+    if (ai->alt[0])
       PConvStringToPyObjAttr(atom, "alt", ai->alt);
     if (ai->segi)
-    PConvStringToPyObjAttr(atom, "segi", LexStr(G, ai->segi));
+      PConvStringToPyObjAttr(atom, "segi", LexStr(G, ai->segi));
     if (ai->q != 1.)
-    PConvFloatToPyObjAttr(atom, "q", ai->q);
+      PConvFloatToPyObjAttr(atom, "q", ai->q);
     if (ai->b)
-    PConvFloatToPyObjAttr(atom, "b", ai->b);
-    if (ai->anisou)
-    {
+      PConvFloatToPyObjAttr(atom, "b", ai->b);
+    if (ai->anisou) {
       {
-        PyObject *tmp_obj = PConvFloatArrayToPyList(tmp_array, 6);
-        if(tmp_obj) {
+        PyObject* tmp_obj = PConvFloatArrayToPyList(tmp_array, 6);
+        if (tmp_obj) {
           PyObject_SetAttrString(atom, "u_aniso", tmp_obj);
           Py_XDECREF(tmp_obj);
         }
@@ -1113,50 +1111,47 @@ PyObject *CoordSetAtomToChemPyAtom(PyMOLGlobals * G, AtomInfoType * ai, ObjectMo
     }
     PConvFloatToPyObjAttr(atom, "vdw", ai->vdw);
     if (ai->elec_radius)
-    PConvFloatToPyObjAttr(atom, "elec_radius", ai->elec_radius);
+      PConvFloatToPyObjAttr(atom, "elec_radius", ai->elec_radius);
     if (ai->partialCharge)
-    PConvFloatToPyObjAttr(atom, "partial_charge", ai->partialCharge);
+      PConvFloatToPyObjAttr(atom, "partial_charge", ai->partialCharge);
     if (ai->formalCharge)
-    PConvIntToPyObjAttr(atom, "formal_charge", ai->formalCharge);
-// TODO customType=0 from most files
-    if(ai->customType != -9999)
+      PConvIntToPyObjAttr(atom, "formal_charge", ai->formalCharge);
+    // TODO customType=0 from most files
+    if (ai->customType != -9999)
       PConvIntToPyObjAttr(atom, "numeric_type", ai->customType);
     if (ai->textType)
-    PConvStringToPyObjAttr(atom, "text_type", LexStr(G, ai->textType));
+      PConvStringToPyObjAttr(atom, "text_type", LexStr(G, ai->textType));
     if (ai->custom)
-    PConvStringToPyObjAttr(atom, "custom", LexStr(G, ai->custom));
+      PConvStringToPyObjAttr(atom, "custom", LexStr(G, ai->custom));
 
     PConvIntToPyObjAttr(atom, "hetatm", ai->hetatm);
     PConvIntToPyObjAttr(atom, "flags", ai->flags);
-    PConvIntToPyObjAttr(atom, "id", ai->id);    /* not necc. unique */
-    PConvIntToPyObjAttr(atom, "index", index + 1);      /* fragile */
-
+    PConvIntToPyObjAttr(atom, "id", ai->id);       /* not necc. unique */
+    PConvIntToPyObjAttr(atom, "index", index + 1); /* fragile */
 
 #ifdef _PYMOL_IP_PROPERTIES
 #endif
-
   }
-  if(PyErr_Occurred())
+  if (PyErr_Occurred())
     PyErr_Print();
   return (atom);
 #endif
 }
 
-
 /*========================================================================*/
 void CoordSet::invalidateRep(cRep_t type, cRepInv_t level)
 {
-  if(level >= cRepInvVisib) {
+  if (level >= cRepInvVisib) {
     if (Obj)
       Obj->RepVisCacheValid = false;
   }
   /* graphical representations need redrawing */
-  if(level == cRepInvVisib) {
+  if (level == cRepInvVisib) {
     /* cartoon_side_chain_helper */
     if (SettingGet<bool>(*this, cSetting_cartoon_side_chain_helper)) {
-      if((type == cRepCyl) || (type == cRepLine) || (type == cRepSphere))
+      if ((type == cRepCyl) || (type == cRepLine) || (type == cRepSphere))
         invalidateRep(cRepCartoon, cRepInvVisib2);
-      else if(type == cRepCartoon) {
+      else if (type == cRepCartoon) {
         invalidateRep(cRepLine, cRepInvVisib2);
         invalidateRep(cRepCyl, cRepInvVisib2);
         invalidateRep(cRepSphere, cRepInvVisib2);
@@ -1164,9 +1159,9 @@ void CoordSet::invalidateRep(cRep_t type, cRepInv_t level)
     }
     /* ribbon_side_chain_helper */
     if (SettingGet<bool>(*this, cSetting_ribbon_side_chain_helper)) {
-      if((type == cRepCyl) || (type == cRepLine) || (type == cRepSphere))
+      if ((type == cRepCyl) || (type == cRepLine) || (type == cRepSphere))
         invalidateRep(cRepRibbon, cRepInvVisib2);
-      else if(type == cRepRibbon) {
+      else if (type == cRepRibbon) {
         invalidateRep(cRepLine, cRepInvVisib2);
         invalidateRep(cRepCyl, cRepInvVisib2);
         invalidateRep(cRepSphere, cRepInvVisib2);
@@ -1174,9 +1169,9 @@ void CoordSet::invalidateRep(cRep_t type, cRepInv_t level)
     }
     /* line_stick helper  */
     if (SettingGet<bool>(*this, cSetting_line_stick_helper)) {
-      if(type == cRepCyl)
+      if (type == cRepCyl)
         invalidateRep(cRepLine, cRepInvVisib2);
-      else if(type == cRepLine) {
+      else if (type == cRepLine) {
         invalidateRep(cRepCyl, cRepInvVisib2);
       }
     }
@@ -1188,10 +1183,10 @@ void CoordSet::invalidateRep(cRep_t type, cRepInv_t level)
   }
 
   /* invalidate basd on one representation, 'type' */
-  for (RepIterator iter(G, type); iter.next(); ){
+  for (RepIterator iter(G, type); iter.next();) {
     auto eff_level = level;
     auto const a = iter.rep;
-    if(level == cRepInvPick) {
+    if (level == cRepInvPick) {
       switch (a) {
       case cRepSurface:
       case cRepMesh:
@@ -1199,12 +1194,12 @@ void CoordSet::invalidateRep(cRep_t type, cRepInv_t level)
         /* skip the expensive to recompute, non-pickable
            representations */
         break;
-      default:               /* default behavior is to blow away the representation */
+      default: /* default behavior is to blow away the representation */
         eff_level = cRepInvRep;
         break;
       }
     }
-    if(eff_level >= cRepInvVisib)     /* make active if visibility has changed */
+    if (eff_level >= cRepInvVisib) /* make active if visibility has changed */
       Active[a] = true;
     if (Rep[a]) {
       if (eff_level < cRepInvPurge) {
@@ -1216,7 +1211,8 @@ void CoordSet::invalidateRep(cRep_t type, cRepInv_t level)
     }
   }
 
-  if(level >= cRepInvCoord) {   /* if coordinates change, then this map becomes invalid */
+  if (level >=
+      cRepInvCoord) { /* if coordinates change, then this map becomes invalid */
     MapFree(Coord2Idx);
     Coord2Idx = nullptr;
     ExecutiveInvalidateSelectionIndicatorsCGO(G);
@@ -1235,7 +1231,6 @@ void CoordSet::invalidateRep(cRep_t type, cRepInv_t level)
 
   SceneChanged(G);
 }
-
 
 /*========================================================================*/
 
@@ -1298,7 +1293,8 @@ void CoordSet::update(int state)
         auto preCGO = std::make_unique<CGO>(G);
         CGOColorv(preCGO.get(), color);
         CGOAppendNoStop(preCGO.get(), UnitCellCGO.get());
-        std::unique_ptr<CGO> optimized(CGOOptimizeToVBONotIndexed(preCGO.get(), 0));
+        std::unique_ptr<CGO> optimized(
+            CGOOptimizeToVBONotIndexed(preCGO.get(), 0));
         UnitCellShaderCGO.reset(optimized.release());
         assert(UnitCellShaderCGO->use_shader);
       }
@@ -1309,32 +1305,32 @@ void CoordSet::update(int state)
   OrthoBusyFast(G, 1, 1);
 }
 
-
 /*========================================================================*/
-void CoordSetUpdateCoord2IdxMap(CoordSet * I, float cutoff)
+void CoordSetUpdateCoord2IdxMap(CoordSet* I, float cutoff)
 {
-  if(cutoff < R_SMALL4)
+  if (cutoff < R_SMALL4)
     cutoff = R_SMALL4;
-  if(I->NIndex > 10) {
-    if(I->Coord2Idx) {
-      if((I->Coord2IdxDiv < cutoff) ||
-         (((cutoff - I->Coord2IdxReq) / I->Coord2IdxReq) < -0.5F)) {
+  if (I->NIndex > 10) {
+    if (I->Coord2Idx) {
+      if ((I->Coord2IdxDiv < cutoff) ||
+          (((cutoff - I->Coord2IdxReq) / I->Coord2IdxReq) < -0.5F)) {
         MapFree(I->Coord2Idx);
         I->Coord2Idx = nullptr;
       }
     }
-    if(I->NIndex && (!I->Coord2Idx)) {  /* NOTE: map based on stored coords */
+    if (I->NIndex && (!I->Coord2Idx)) { /* NOTE: map based on stored coords */
       I->Coord2IdxReq = cutoff;
       I->Coord2IdxDiv = cutoff * 1.25F;
-      I->Coord2Idx = MapNew(I->G, I->Coord2IdxDiv, I->Coord, I->NIndex, nullptr);
-      if(I->Coord2IdxDiv < I->Coord2Idx->Div)
+      I->Coord2Idx =
+          MapNew(I->G, I->Coord2IdxDiv, I->Coord, I->NIndex, nullptr);
+      if (I->Coord2IdxDiv < I->Coord2Idx->Div)
         I->Coord2IdxDiv = I->Coord2Idx->Div;
     }
   }
 }
 
 /*========================================================================*/
-void CoordSet::render(RenderInfo * info)
+void CoordSet::render(RenderInfo* info)
 {
   const auto pass = info->pass;
   const auto pick = bool(info->pick);
@@ -1376,8 +1372,7 @@ void CoordSet::render(RenderInfo * info)
       }
 
       auto* cgo = SculptShaderCGO ? SculptShaderCGO : SculptCGO;
-      CGORender(
-          cgo, nullptr, Setting.get(), Obj->Setting.get(), info, nullptr);
+      CGORender(cgo, nullptr, Setting.get(), Obj->Setting.get(), info, nullptr);
     }
   }
 
@@ -1509,11 +1504,12 @@ CoordSet::CoordSet(const CoordSet& cs)
   this->IdxToAtm = cs.IdxToAtm;
   this->NIndex = cs.NIndex;
   std::copy(std::begin(cs.Rep), std::end(cs.Rep), std::begin(this->Rep));
-  std::copy(std::begin(cs.Active), std::end(cs.Active), std::begin(this->Active));
+  std::copy(
+      std::begin(cs.Active), std::end(cs.Active), std::begin(this->Active));
   this->NTmpBond = cs.NTmpBond;
   this->NTmpLinkBond = cs.NTmpLinkBond;
   /* deep copy & return ptr to new symmetry */
-  if(cs.Symmetry) {
+  if (cs.Symmetry) {
     this->Symmetry = std::make_unique<CSymmetry>(*cs.Symmetry);
   }
   std::copy(std::begin(cs.Name), std::end(cs.Name), std::begin(this->Name));
@@ -1524,16 +1520,14 @@ CoordSet::CoordSet(const CoordSet& cs)
   this->objMolOpInvalidated = cs.objMolOpInvalidated;
 
   // copy VLAs
-  this->RefPos     = cs.RefPos;
-  this->AtmToIdx   = cs.AtmToIdx;
+  this->RefPos = cs.RefPos;
+  this->AtmToIdx = cs.AtmToIdx;
 
-  UtilZeroMem(this->Rep, sizeof(::Rep *) * cRepCnt);
+  UtilZeroMem(this->Rep, sizeof(::Rep*) * cRepCnt);
 
 #ifdef _PYMOL_IP_PROPERTIES
 #endif
-
 }
-
 
 /*========================================================================*/
 /**
@@ -1646,19 +1640,23 @@ CoordSet::~CoordSet()
   CGOFree(SculptShaderCGO);
 }
 
-void LabPosTypeCopy(const LabPosType * src, LabPosType * dst){
+void LabPosTypeCopy(const LabPosType* src, LabPosType* dst)
+{
   dst->mode = src->mode;
   copy3f(src->pos, dst->pos);
   copy3f(src->offset, dst->offset);
 }
 
-void RefPosTypeCopy(const RefPosType * src, RefPosType * dst){
+void RefPosTypeCopy(const RefPosType* src, RefPosType* dst)
+{
   copy3f(src->coord, dst->coord);
   dst->specified = src->specified;
 }
 
 #ifndef _PYMOL_NOPY
-int CoordSetSetSettingFromPyObject(PyMOLGlobals * G, CoordSet *cs, int at, int setting_id, PyObject *val){
+int CoordSetSetSettingFromPyObject(
+    PyMOLGlobals* G, CoordSet* cs, int at, int setting_id, PyObject* val)
+{
   if (val == Py_None)
     val = nullptr;
 
@@ -1668,11 +1666,13 @@ int CoordSetSetSettingFromPyObject(PyMOLGlobals * G, CoordSet *cs, int at, int s
 
   CoordSetCheckUniqueID(G, cs, at);
 
-  return SettingUniqueSetPyObject(G, cs->atom_state_setting_id[at], setting_id, val);
+  return SettingUniqueSetPyObject(
+      G, cs->atom_state_setting_id[at], setting_id, val);
 }
 #endif
 
-int CoordSetCheckSetting(PyMOLGlobals * G, CoordSet *cs, int at, int setting_id){
+int CoordSetCheckSetting(PyMOLGlobals* G, CoordSet* cs, int at, int setting_id)
+{
   if (!cs->has_atom_state_settings(at)) {
     return 0;
   }
@@ -1680,27 +1680,32 @@ int CoordSetCheckSetting(PyMOLGlobals * G, CoordSet *cs, int at, int setting_id)
   return SettingUniqueCheck(G, cs->atom_state_setting_id[at], setting_id);
 }
 
-PyObject *SettingGetIfDefinedPyObject(PyMOLGlobals * G, CoordSet *cs, int at, int setting_id){
+PyObject* SettingGetIfDefinedPyObject(
+    PyMOLGlobals* G, CoordSet* cs, int at, int setting_id)
+{
   if (cs->has_atom_state_settings(at)) {
-    return SettingUniqueGetPyObject(G, cs->atom_state_setting_id[at], setting_id);
+    return SettingUniqueGetPyObject(
+        G, cs->atom_state_setting_id[at], setting_id);
   }
   return nullptr;
 }
 
-int CoordSetCheckUniqueID(PyMOLGlobals * G, CoordSet *I, int at){
-  if (!I->atom_state_setting_id){
+int CoordSetCheckUniqueID(PyMOLGlobals* G, CoordSet* I, int at)
+{
+  if (!I->atom_state_setting_id) {
     I->atom_state_setting_id = pymol::vla<int>(I->NIndex);
   }
-  if (!I->atom_state_setting_id[at]){
+  if (!I->atom_state_setting_id[at]) {
     I->atom_state_setting_id[at] = AtomInfoGetNewUniqueID(G);
   }
   return I->atom_state_setting_id[at];
 }
 
-template <typename V>
-void AtomStateGetSetting(ATOMSTATEGETSETTINGARGS, V * out) {
+template <typename V> void AtomStateGetSetting(ATOMSTATEGETSETTINGARGS, V* out)
+{
   if (cs->has_atom_state_settings(idx) &&
-      SettingUniqueGetIfDefined(G, cs->atom_state_setting_id[idx], setting_id, out))
+      SettingUniqueGetIfDefined(
+          G, cs->atom_state_setting_id[idx], setting_id, out))
     return;
 
   if (AtomSettingGetIfDefined(G, ai, setting_id, out))
@@ -1709,6 +1714,6 @@ void AtomStateGetSetting(ATOMSTATEGETSETTINGARGS, V * out) {
   *out = SettingGet<V>(*cs, setting_id);
 }
 
-template void AtomStateGetSetting(ATOMSTATEGETSETTINGARGS, int * out);
-template void AtomStateGetSetting(ATOMSTATEGETSETTINGARGS, float * out);
-template void AtomStateGetSetting(ATOMSTATEGETSETTINGARGS, const float ** out);
+template void AtomStateGetSetting(ATOMSTATEGETSETTINGARGS, int* out);
+template void AtomStateGetSetting(ATOMSTATEGETSETTINGARGS, float* out);
+template void AtomStateGetSetting(ATOMSTATEGETSETTINGARGS, const float** out);

@@ -20,38 +20,39 @@
  *
  ***************************************************************************/
 
-#include <string.h>
 #include "ReadPARM.h"
 #include "molfile_plugin.h"
+#include <string.h>
 
-namespace {
+namespace
+{
 typedef struct {
-  ReadPARM *rp;
-  FILE *parm;
+  ReadPARM* rp;
+  FILE* parm;
   int natoms;
   int *from, *to;
 } parmdata;
-}
+} // namespace
 
-static void *open_parm_read(const char *filename, const char *, 
-    int *natoms) {
- 
-  FILE *parm;
-  ReadPARM *rp = new ReadPARM;
-  if(!(parm = rp->open_parm_file(filename))) {
+static void* open_parm_read(const char* filename, const char*, int* natoms)
+{
+
+  FILE* parm;
+  ReadPARM* rp = new ReadPARM;
+  if (!(parm = rp->open_parm_file(filename))) {
     fprintf(stderr, "parmplugin) Cannot open parm file '%s'\n", filename);
     delete rp;
     return NULL;
   }
-  
+
   if (rp->readparm(parm) != 0) {
     delete rp;
     // XXX should we call close_parm_file???
-    return NULL; 
+    return NULL;
   }
   *natoms = rp->get_parm_natoms();
-  
-  parmdata *p = new parmdata;
+
+  parmdata* p = new parmdata;
   memset(p, 0, sizeof(parmdata));
   p->rp = rp;
   p->parm = parm;
@@ -59,20 +60,21 @@ static void *open_parm_read(const char *filename, const char *,
   return p;
 }
 
-static int read_parm_structure(void *mydata, int *optflags,
-    molfile_atom_t *atoms) {
-  
-  parmdata *p = (parmdata *)mydata;
-  ReadPARM *rp = p->rp;
+static int read_parm_structure(
+    void* mydata, int* optflags, molfile_atom_t* atoms)
+{
+
+  parmdata* p = (parmdata*) mydata;
+  ReadPARM* rp = p->rp;
   rp->get_parm_boxInfo();
   int i;
- 
+
   *optflags = MOLFILE_CHARGE | MOLFILE_MASS;
 
-  for (i=0; i<p->natoms; i++) {
-    molfile_atom_t *atom = atoms+i;
+  for (i = 0; i < p->natoms; i++) {
+    molfile_atom_t* atom = atoms + i;
     // XXX Why isn't there a return code for error on read????
-    rp->get_parm_atom(i, atom->name, atom->type, atom->resname, atom->segid, 
+    rp->get_parm_atom(i, atom->name, atom->type, atom->resname, atom->segid,
         &atom->resid, &atom->charge, &atom->mass);
     atom->chain[0] = '\0';
   }
@@ -80,25 +82,25 @@ static int read_parm_structure(void *mydata, int *optflags,
   return MOLFILE_SUCCESS;
 }
 
-static int read_parm_bonds(void *v, int *nbonds, int **fromptr, int **toptr, 
-                           float **bondorderptr,  int **bondtype, 
-                           int *nbondtypes, char ***bondtypename) {
-  parmdata *p = (parmdata *)v;
-  ReadPARM *rp = p->rp;
+static int read_parm_bonds(void* v, int* nbonds, int** fromptr, int** toptr,
+    float** bondorderptr, int** bondtype, int* nbondtypes, char*** bondtypename)
+{
+  parmdata* p = (parmdata*) v;
+  ReadPARM* rp = p->rp;
   int i, j;
   int numbonds = rp->get_parm_nbonds();
-  p->from = (int *)malloc(numbonds*sizeof(int));
-  p->to = (int *)malloc(numbonds*sizeof(int));
+  p->from = (int*) malloc(numbonds * sizeof(int));
+  p->to = (int*) malloc(numbonds * sizeof(int));
   j = 0;
-  for (i=0; i<numbonds; i++) {
+  for (i = 0; i < numbonds; i++) {
     int a1, a2;
-    rp->get_parm_bond(i, (&a1)-i, (&a2)-i);
-    if ( a1 <= p->natoms && a2 <= p->natoms) {
+    rp->get_parm_bond(i, (&a1) - i, (&a2) - i);
+    if (a1 <= p->natoms && a2 <= p->natoms) {
       p->from[j] = a1;
       p->to[j] = a2;
       j++;
     } else {
-      printf("parmplugin) skipping bond (%d %d)\n", a1, a2); 
+      printf("parmplugin) skipping bond (%d %d)\n", a1, a2);
     }
   }
   *nbonds = j;
@@ -112,22 +114,25 @@ static int read_parm_bonds(void *v, int *nbonds, int **fromptr, int **toptr,
   return MOLFILE_SUCCESS;
 }
 
-
-static void close_parm_read(void *mydata) {
-  parmdata *p = (parmdata *)mydata;
+static void close_parm_read(void* mydata)
+{
+  parmdata* p = (parmdata*) mydata;
   p->rp->close_parm_file(p->parm);
-  if (p->from) free(p->from);
-  if (p->to) free(p->to);
+  if (p->from)
+    free(p->from);
+  if (p->to)
+    free(p->to);
   delete p->rp;
 }
- 
+
 /*
  * Initialization stuff down here
  */
 
 static molfile_plugin_t plugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) {
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -145,10 +150,13 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
   return 0;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
-
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}

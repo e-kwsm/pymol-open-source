@@ -20,10 +20,10 @@
  *
  ***************************************************************************/
 
-/* 
+/*
  * "unformatted" binary potential map, created by CHARMM PBEQ module
  *
- * Format (fortran): 
+ * Format (fortran):
  *      INTEGER UNIT
  *      INTEGER NCLX,NCLY,NCLZ
  *      REAL*8  DCEL
@@ -39,41 +39,41 @@
  *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if defined(_AIX)
 #include <strings.h>
 #endif
 
-#include "molfile_plugin.h"
 #include "endianswap.h"
+#include "molfile_plugin.h"
 
 typedef struct {
-  FILE *fd;
+  FILE* fd;
   int nsets;
   int ndata;
   int nclx;
   int ncly;
   int nclz;
   int swap;
-  molfile_volumetric_t *vol;
+  molfile_volumetric_t* vol;
 } pbeq_t;
 
-
-static void *open_pbeq_read(const char *filepath, const char *filetype,
-    int *natoms) {
-  FILE *fd;
-  pbeq_t *pbeq;
+static void* open_pbeq_read(
+    const char* filepath, const char* filetype, int* natoms)
+{
+  FILE* fd;
+  pbeq_t* pbeq;
   int nclx, ncly, nclz;
   int trash, length;
-  double dcel; 
+  double dcel;
   double xbcen, ybcen, zbcen;
   double epsw, epsp, conc, tmemb, zmemb, epsm;
-  int swap=0; 
+  int swap = 0;
 
   fd = fopen(filepath, "rb");
   if (!fd) {
@@ -98,7 +98,9 @@ static void *open_pbeq_read(const char *filepath, const char *filetype,
     swap = 1;
     swap4_aligned(&length, 1);
     if (length != 44) {
-      printf("pbeqplugin) length record != 44, unrecognized format (length: %d)\n", length);
+      printf(
+          "pbeqplugin) length record != 44, unrecognized format (length: %d)\n",
+          length);
       return NULL;
     }
   }
@@ -107,26 +109,25 @@ static void *open_pbeq_read(const char *filepath, const char *filetype,
     swap4_aligned(&nclx, 1);
     swap4_aligned(&ncly, 1);
     swap4_aligned(&nclz, 1);
-  } 
+  }
 
-  // this is a risky strategy for detecting endianness, 
+  // this is a risky strategy for detecting endianness,
   // but it works so far, and the charmm potential maps don't
   // have version numbers, magic numbers, or anything else that we
   // might otherwise use for this purpose.
-  if ((nclx > 4000 && ncly > 4000 && nclz > 4000) ||
-      (nclx * ncly * nclz < 0)) {
+  if ((nclx > 4000 && ncly > 4000 && nclz > 4000) || (nclx * ncly * nclz < 0)) {
     printf("pbeqplugin) inconclusive byte ordering, bailing out\n");
     return NULL;
   }
 
   // read the rest of the header
-  if (fread(&dcel, 8, 1, fd) != 1) 
+  if (fread(&dcel, 8, 1, fd) != 1)
     return NULL;
-  if (fread(&xbcen, 8, 1, fd) != 1) 
+  if (fread(&xbcen, 8, 1, fd) != 1)
     return NULL;
-  if (fread(&ybcen, 8, 1, fd) != 1) 
+  if (fread(&ybcen, 8, 1, fd) != 1)
     return NULL;
-  if (fread(&zbcen, 8, 1, fd) != 1) 
+  if (fread(&zbcen, 8, 1, fd) != 1)
     return NULL;
 
   // skip second Fortran length record for
@@ -134,25 +135,25 @@ static void *open_pbeq_read(const char *filepath, const char *filetype,
   if (fread(&trash, 4, 1, fd) != 1)
     return NULL;
 
-  // skip first Fortran length record for 
+  // skip first Fortran length record for
   // WRITE(UNIT) EPSW,EPSP,CONC,TMEMB,ZMEMB,EPSM
   if (fread(&trash, 4, 1, fd) != 1)
     return NULL;
 
-  if (fread(&epsw, 8, 1, fd) != 1) 
+  if (fread(&epsw, 8, 1, fd) != 1)
     return NULL;
-  if (fread(&epsp, 8, 1, fd) != 1) 
+  if (fread(&epsp, 8, 1, fd) != 1)
     return NULL;
-  if (fread(&conc, 8, 1, fd) != 1) 
+  if (fread(&conc, 8, 1, fd) != 1)
     return NULL;
-  if (fread(&tmemb, 8, 1, fd) != 1) 
+  if (fread(&tmemb, 8, 1, fd) != 1)
     return NULL;
-  if (fread(&zmemb, 8, 1, fd) != 1) 
+  if (fread(&zmemb, 8, 1, fd) != 1)
     return NULL;
-  if (fread(&epsm, 8, 1, fd) != 1) 
+  if (fread(&epsm, 8, 1, fd) != 1)
     return NULL;
 
-  // skip second Fortran length record for 
+  // skip second Fortran length record for
   // WRITE(UNIT) EPSW,EPSP,CONC,TMEMB,ZMEMB,EPSM
   if (fread(&trash, 4, 1, fd) != 1)
     return NULL;
@@ -186,7 +187,7 @@ static void *open_pbeq_read(const char *filepath, const char *filetype,
   pbeq->vol = NULL;
   *natoms = MOLFILE_NUMATOMS_NONE;
   pbeq->nsets = 1; /* this file contains only one data set */
-  pbeq->ndata = nclx*ncly*nclz;
+  pbeq->ndata = nclx * ncly * nclz;
   pbeq->nclx = nclx;
   pbeq->ncly = ncly;
   pbeq->nclz = nclz;
@@ -195,27 +196,25 @@ static void *open_pbeq_read(const char *filepath, const char *filetype,
   pbeq->vol = new molfile_volumetric_t[1];
   strcpy(pbeq->vol[0].dataname, "CHARMM PBEQ Potential Map");
 
-  pbeq->vol[0].origin[0] = -0.5*((nclx-1) * dcel) + xbcen;
-  pbeq->vol[0].origin[1] = -0.5*((ncly-1) * dcel) + ybcen;
-  pbeq->vol[0].origin[2] = -0.5*((nclz-1) * dcel) + zbcen;
+  pbeq->vol[0].origin[0] = -0.5 * ((nclx - 1) * dcel) + xbcen;
+  pbeq->vol[0].origin[1] = -0.5 * ((ncly - 1) * dcel) + ybcen;
+  pbeq->vol[0].origin[2] = -0.5 * ((nclz - 1) * dcel) + zbcen;
 
   // print origin info, for debuggin of early versions
-  printf("pbeqplugin) box LL origin: %g %g %g\n", 
-         pbeq->vol[0].origin[0],
-         pbeq->vol[0].origin[1],
-         pbeq->vol[0].origin[2]);
+  printf("pbeqplugin) box LL origin: %g %g %g\n", pbeq->vol[0].origin[0],
+      pbeq->vol[0].origin[1], pbeq->vol[0].origin[2]);
 
-  pbeq->vol[0].xaxis[0] = (nclx-1) * dcel;
+  pbeq->vol[0].xaxis[0] = (nclx - 1) * dcel;
   pbeq->vol[0].xaxis[1] = 0;
   pbeq->vol[0].xaxis[2] = 0;
 
   pbeq->vol[0].yaxis[0] = 0;
-  pbeq->vol[0].yaxis[1] = (ncly-1) * dcel;
+  pbeq->vol[0].yaxis[1] = (ncly - 1) * dcel;
   pbeq->vol[0].yaxis[2] = 0;
 
   pbeq->vol[0].zaxis[0] = 0;
   pbeq->vol[0].zaxis[1] = 0;
-  pbeq->vol[0].zaxis[2] = (nclz-1) * dcel;
+  pbeq->vol[0].zaxis[2] = (nclz - 1) * dcel;
 
   pbeq->vol[0].xsize = nclx;
   pbeq->vol[0].ysize = ncly;
@@ -226,39 +225,41 @@ static void *open_pbeq_read(const char *filepath, const char *filetype,
   return pbeq;
 }
 
-static int read_pbeq_metadata(void *v, int *nsets, 
-  molfile_volumetric_t **metadata) {
-  pbeq_t *pbeq = (pbeq_t *)v;
-  *nsets = pbeq->nsets; 
-  *metadata = pbeq->vol;  
+static int read_pbeq_metadata(
+    void* v, int* nsets, molfile_volumetric_t** metadata)
+{
+  pbeq_t* pbeq = (pbeq_t*) v;
+  *nsets = pbeq->nsets;
+  *metadata = pbeq->vol;
 
   return MOLFILE_SUCCESS;
 }
 
-static int read_pbeq_data(void *v, int set, float *datablock,
-                         float *colorblock) {
-  pbeq_t *pbeq = (pbeq_t *)v;
+static int read_pbeq_data(void* v, int set, float* datablock, float* colorblock)
+{
+  pbeq_t* pbeq = (pbeq_t*) v;
   int ndata = pbeq->ndata;
   int nclx = pbeq->nclx;
   int ncly = pbeq->ncly;
   int nclz = pbeq->nclz;
-  FILE *fd = pbeq->fd;
+  FILE* fd = pbeq->fd;
   int trash;
 
-  // skip first Fortran length record for 
+  // skip first Fortran length record for
   // WRITE(UNIT)(PHI(I),I=1,NCLX*NCLY*NCLZ)
   if (fread(&trash, 4, 1, fd) != 1)
     return MOLFILE_ERROR;
 
   /* Read the densities. Order for file is z fast, y medium, x slow */
   int x, y, z;
-  int count=0;
-  for (x=0; x<nclx; x++) {
-    for (y=0; y<ncly; y++) {
-      for (z=0; z<nclz; z++) {
-        int addr = z*nclx*ncly + y*nclx + x;
+  int count = 0;
+  for (x = 0; x < nclx; x++) {
+    for (y = 0; y < ncly; y++) {
+      for (z = 0; z < nclz; z++) {
+        int addr = z * nclx * ncly + y * nclx + x;
         if (fread(datablock + addr, 4, 1, fd) != 1) {
-          printf("pbeqplugin) Error reading potential map cell: %d,%d,%d\n", x, y, z);
+          printf("pbeqplugin) Error reading potential map cell: %d,%d,%d\n", x,
+              y, z);
           printf("pbeqplugin) offset: %d\n", (int) ftell(fd));
           return MOLFILE_ERROR;
         }
@@ -266,7 +267,6 @@ static int read_pbeq_data(void *v, int set, float *datablock,
       }
     }
   }
-
 
 #if 0
   // skip last Fortran length record for 
@@ -282,7 +282,7 @@ static int read_pbeq_data(void *v, int set, float *datablock,
       printf("pbeqplugin) read %d extra phi values past the end of the block\n", x);
       break;
     }
-  }   
+  }
 #endif
 
   if (pbeq->swap) {
@@ -292,12 +292,13 @@ static int read_pbeq_data(void *v, int set, float *datablock,
   return MOLFILE_SUCCESS;
 }
 
-static void close_pbeq_read(void *v) {
-  pbeq_t *pbeq = (pbeq_t *)v;
+static void close_pbeq_read(void* v)
+{
+  pbeq_t* pbeq = (pbeq_t*) v;
 
   fclose(pbeq->fd);
   if (pbeq->vol != NULL)
-    delete [] pbeq->vol; 
+    delete[] pbeq->vol;
   delete pbeq;
 }
 
@@ -306,7 +307,8 @@ static void close_pbeq_read(void *v) {
  */
 static molfile_plugin_t plugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) { 
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -321,13 +323,16 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   plugin.read_volumetric_metadata = read_pbeq_metadata;
   plugin.read_volumetric_data = read_pbeq_data;
   plugin.close_file_read = close_pbeq_read;
-  return VMDPLUGIN_SUCCESS; 
-}
-
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
+  return VMDPLUGIN_SUCCESS;
+}
 
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}

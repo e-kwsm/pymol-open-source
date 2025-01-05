@@ -1,57 +1,64 @@
 
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* Copyright (c) Schrodinger, LLC. 
+C* Copyright (c) Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_predef.h"
-#include"os_std.h"
+#include "os_predef.h"
+#include "os_std.h"
 
-#include"Base.h"
-#include"Vector.h"
-#include"Matrix.h"
+#include "Base.h"
+#include "Matrix.h"
+#include "Vector.h"
 
 #include <cassert>
 
-#define MASK_01010101 (((unsigned long)(-1))/3)
-#define MASK_00110011 (((unsigned long)(-1))/5)
-#define MASK_00001111 (((unsigned long)(-1))/17)
-#define MASK_11111111 (((unsigned long)(-1))/257)
+#define MASK_01010101 (((unsigned long) (-1)) / 3)
+#define MASK_00110011 (((unsigned long) (-1)) / 5)
+#define MASK_00001111 (((unsigned long) (-1)) / 17)
+#define MASK_11111111 (((unsigned long) (-1)) / 257)
 
 #define MASK_01010101010101010101010101010101 MASK_01010101
 #define MASK_00110011001100110011001100110011 MASK_00110011
 #define MASK_00001111000011110000111100001111 MASK_00001111
 #define MASK_00000000111111110000000011111111 MASK_11111111
-#define MASK_00000000000000001111111111111111 (((unsigned long)(-1))/65537)
+#define MASK_00000000000000001111111111111111 (((unsigned long) (-1)) / 65537)
 
-short countBits(unsigned long bits){
+short countBits(unsigned long bits)
+{
   unsigned long n = bits;
-  n = (n & MASK_01010101010101010101010101010101) + ((n >> 1) & MASK_01010101010101010101010101010101) ;
-  n = (n & MASK_00110011001100110011001100110011) + ((n >> 2) & MASK_00110011001100110011001100110011) ;
-  n = (n & MASK_00001111000011110000111100001111) + ((n >> 4) & MASK_00001111000011110000111100001111) ;
-  n = (n & MASK_00000000111111110000000011111111) + ((n >> 8) & MASK_00000000111111110000000011111111) ;
-  n = (n & MASK_00000000000000001111111111111111) + ((n >> 16) & MASK_00000000000000001111111111111111) ;
+  n = (n & MASK_01010101010101010101010101010101) +
+      ((n >> 1) & MASK_01010101010101010101010101010101);
+  n = (n & MASK_00110011001100110011001100110011) +
+      ((n >> 2) & MASK_00110011001100110011001100110011);
+  n = (n & MASK_00001111000011110000111100001111) +
+      ((n >> 4) & MASK_00001111000011110000111100001111);
+  n = (n & MASK_00000000111111110000000011111111) +
+      ((n >> 8) & MASK_00000000111111110000000011111111);
+  n = (n & MASK_00000000000000001111111111111111) +
+      ((n >> 16) & MASK_00000000000000001111111111111111);
   return (n % 255);
 }
-short countBitsInt(int bits){
-  /* This could be improved to not splitting 
+short countBitsInt(int bits)
+{
+  /* This could be improved to not splitting
      the bits into 4 variables in a loop which are 16 bits each */
   unsigned long n = bits & 65535;
   short nbits = 0;
-  n = (n & MASK_01010101) + ((n >> 1) & MASK_01010101) ;
-  n = (n & MASK_00110011) + ((n >> 2) & MASK_00110011) ;
-  n = (n & MASK_00001111) + ((n >> 4) & MASK_00001111) ;
+  n = (n & MASK_01010101) + ((n >> 1) & MASK_01010101);
+  n = (n & MASK_00110011) + ((n >> 2) & MASK_00110011);
+  n = (n & MASK_00001111) + ((n >> 4) & MASK_00001111);
   nbits += (n % 255);
   return nbits;
 }
@@ -69,7 +76,7 @@ static const float _1 = 1.0F;
 static const double _d0 = 0.0;
 static const double _d1 = 1.0;
 
-void mix3f(const float *v1, const float *v2, const float fxn, float *v3)
+void mix3f(const float* v1, const float* v2, const float fxn, float* v3)
 {
   float fxn_1 = 1.0F - fxn;
   v3[0] = v1[0] * fxn_1 + v2[0] * fxn;
@@ -77,7 +84,7 @@ void mix3f(const float *v1, const float *v2, const float fxn, float *v3)
   v3[2] = v1[2] * fxn_1 + v2[2] * fxn;
 }
 
-void mix3d(const double *v1, const double *v2, const double fxn, double *v3)
+void mix3d(const double* v1, const double* v2, const double fxn, double* v3)
 {
   double fxn_1 = 1.0F - fxn;
   v3[0] = v1[0] * fxn_1 + v2[0] * fxn;
@@ -97,40 +104,40 @@ float get_random0to1f()
 
 int pymol_roundf(float f)
 {
-  if(f > 0.0F)
+  if (f > 0.0F)
     return (int) (f + 0.49999F);
   else
     return (int) (f - 0.49999F);
 }
 
-void dump3i(const int *v, const char *prefix)
-{                               /* for debugging */
+void dump3i(const int* v, const char* prefix)
+{ /* for debugging */
   printf("%s %8i %8i %8i\n", prefix, v[0], v[1], v[2]);
 }
 
-void dump3f(const float *v, const char *prefix)
-{                               /* for debugging */
+void dump3f(const float* v, const char* prefix)
+{ /* for debugging */
   printf("%s %8.3f %8.3f %8.3f\n", prefix, v[0], v[1], v[2]);
 }
 
-void dump2f(const float *v, const char *prefix)
-{                               /* for debugging */
+void dump2f(const float* v, const char* prefix)
+{ /* for debugging */
   printf("%s %8.3f %8.3f\n", prefix, v[0], v[1]);
 }
 
-void dump3d(const double *v, const char *prefix)
-{                               /* for debugging */
+void dump3d(const double* v, const char* prefix)
+{ /* for debugging */
   printf("%s %8.3f %8.3f %8.3f\n", prefix, v[0], v[1], v[2]);
 }
 
-void dump4f(const float *v, const char *prefix)
-{                               /* for debugging */
+void dump4f(const float* v, const char* prefix)
+{ /* for debugging */
   printf("%s %8.3f %8.3f %8.3f %8.3f\n", prefix, v[0], v[1], v[2], v[3]);
 }
 
-void dump33f(const float *m, const char *prefix)
-{                               /* for debugging */
-  if(m) {
+void dump33f(const float* m, const char* prefix)
+{ /* for debugging */
+  if (m) {
     printf("%s:0 %8.3f %8.3f %8.3f\n", prefix, m[0], m[1], m[2]);
     printf("%s:1 %8.3f %8.3f %8.3f\n", prefix, m[3], m[4], m[5]);
     printf("%s:2 %8.3f %8.3f %8.3f\n", prefix, m[6], m[7], m[8]);
@@ -139,48 +146,50 @@ void dump33f(const float *m, const char *prefix)
   }
 }
 
-void dump44f(const float *m, const char *prefix)
-{                               /* for debugging */
-  if(m) {
-    if(prefix) {
+void dump44f(const float* m, const char* prefix)
+{ /* for debugging */
+  if (m) {
+    if (prefix) {
       printf("%s:0 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[0], m[1], m[2], m[3]);
       printf("%s:1 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[4], m[5], m[6], m[7]);
-      printf("%s:2 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[8], m[9], m[10], m[11]);
-      printf("%s:3 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[12], m[13], m[14], m[15]);
+      printf(
+          "%s:2 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[8], m[9], m[10], m[11]);
+      printf(
+          "%s:3 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[12], m[13], m[14], m[15]);
     } else {
     }
   } else {
     printf("%s: (null matrix pointer)\n", prefix);
   }
-
 }
 
-void dump44d(const double *m, const char *prefix)
-{                               /* for debugging */
-  if(m) {
+void dump44d(const double* m, const char* prefix)
+{ /* for debugging */
+  if (m) {
     printf("%s:0 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[0], m[1], m[2], m[3]);
     printf("%s:1 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[4], m[5], m[6], m[7]);
     printf("%s:2 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[8], m[9], m[10], m[11]);
-    printf("%s:3 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[12], m[13], m[14], m[15]);
+    printf(
+        "%s:3 %8.3f %8.3f %8.3f %8.3f\n", prefix, m[12], m[13], m[14], m[15]);
   } else {
     printf("%s: (null matrix pointer)\n", prefix);
   }
 }
 
-void dump33d(const double *m, const char *prefix)
-{                               /* for debugging */
+void dump33d(const double* m, const char* prefix)
+{ /* for debugging */
   printf("%s:0 %8.3f %8.3f %8.3f\n", prefix, m[0], m[1], m[2]);
   printf("%s:1 %8.3f %8.3f %8.3f\n", prefix, m[3], m[4], m[5]);
   printf("%s:2 %8.3f %8.3f %8.3f\n", prefix, m[6], m[7], m[8]);
 }
 
-void get_divergent3f(const float *src, float *dst)
+void get_divergent3f(const float* src, float* dst)
 {
-  if(src[0] != _0) {
+  if (src[0] != _0) {
     *(dst++) = -*(src++);
     *(dst++) = *(src++) + 0.1F;
     *(dst++) = *(src++);
-  } else if(src[1] != _0) {
+  } else if (src[1] != _0) {
     *(dst++) = *(src++) + 0.1F;
     *(dst++) = -*(src++);
     *(dst++) = *(src++);
@@ -191,22 +200,22 @@ void get_divergent3f(const float *src, float *dst)
   }
 }
 
-int equal3f(const float *v1, const float *v2)
+int equal3f(const float* v1, const float* v2)
 {
-  return ((fabs(v1[0] - v2[0]) < R_SMALL) &&
-          (fabs(v1[1] - v2[1]) < R_SMALL) && (fabs(v1[2] - v2[2]) < R_SMALL));
+  return ((fabs(v1[0] - v2[0]) < R_SMALL) && (fabs(v1[1] - v2[1]) < R_SMALL) &&
+          (fabs(v1[2] - v2[2]) < R_SMALL));
 }
 
-void get_random3f(float *x)
-{                               /* this needs to be fixed as in Tinker */
+void get_random3f(float* x)
+{ /* this needs to be fixed as in Tinker */
   x[0] = 0.5F - get_random0to1f();
   x[1] = 0.5F - get_random0to1f();
   x[2] = 0.5F - get_random0to1f();
   normalize3f(x);
 }
 
-void get_system3f(float *x, float *y, float *z)
-{                               /* make random system */
+void get_system3f(float* x, float* y, float* z)
+{ /* make random system */
   get_random3f(x);
   get_divergent3f(x, y);
   cross_product3f(x, y, z);
@@ -216,8 +225,8 @@ void get_system3f(float *x, float *y, float *z)
   normalize3f(x);
 }
 
-void get_system1f3f(float *x, float *y, float *z)
-{                               /* make system in direction of x */
+void get_system1f3f(float* x, float* y, float* z)
+{ /* make system in direction of x */
   get_divergent3f(x, y);
   cross_product3f(x, y, z);
   normalize3f(z);
@@ -226,8 +235,8 @@ void get_system1f3f(float *x, float *y, float *z)
   normalize3f(x);
 }
 
-void get_system2f3f(float *x, float *y, float *z)
-{                               /* make system in direction of x */
+void get_system2f3f(float* x, float* y, float* z)
+{ /* make system in direction of x */
   cross_product3f(x, y, z);
   normalize3f(z);
   cross_product3f(z, x, y);
@@ -235,17 +244,17 @@ void get_system2f3f(float *x, float *y, float *z)
   normalize3f(x);
 }
 
-void extrapolate3f(const float *v1, const float *unit, float *result)
+void extrapolate3f(const float* v1, const float* unit, float* result)
 {
   float lsq = lengthsq3f(v1);
   float dp = dot_product3f(v1, unit);
-  if(dp != 0.0F) {
+  if (dp != 0.0F) {
     float l2 = lsq / dp;
     scale3f(unit, l2, result);
   }
 }
 
-void scatter3f(float *v, float weight)
+void scatter3f(float* v, float weight)
 {
   float r[3];
   get_random3f(r);
@@ -254,7 +263,7 @@ void scatter3f(float *v, float weight)
   normalize3f(v);
 }
 
-void wiggle3f(float *v, const float *p, const float *s)
+void wiggle3f(float* v, const float* p, const float* s)
 {
   float q[3];
   q[0] = (float) cos((p[0] + p[1] + p[2]) * s[1]);
@@ -263,38 +272,37 @@ void wiggle3f(float *v, const float *p, const float *s)
   scale3f(q, s[0], q);
   add3f(q, v, v);
   normalize3f(v);
-
 }
 
-void copy3d3f(const double *v1, float *v2)
+void copy3d3f(const double* v1, float* v2)
 {
   v2[0] = (float) v1[0];
   v2[1] = (float) v1[1];
   v2[2] = (float) v1[2];
 }
 
-void copy3f3d(const float *v1, double *v2)
+void copy3f3d(const float* v1, double* v2)
 {
   v2[0] = (double) v1[0];
   v2[1] = (double) v1[1];
   v2[2] = (double) v1[2];
 }
 
-void min3f(const float *v1, const float *v2, float *v3)
+void min3f(const float* v1, const float* v2, float* v3)
 {
   (v3)[0] = ((v1)[0] < (v2)[0] ? (v1)[0] : (v2)[0]);
   (v3)[1] = ((v1)[1] < (v2)[1] ? (v1)[1] : (v2)[1]);
   (v3)[2] = ((v1)[2] < (v2)[2] ? (v1)[2] : (v2)[2]);
 }
 
-void max3f(const float *v1, const float *v2, float *v3)
+void max3f(const float* v1, const float* v2, float* v3)
 {
   (v3)[0] = ((v1)[0] > (v2)[0] ? (v1)[0] : (v2)[0]);
   (v3)[1] = ((v1)[1] > (v2)[1] ? (v1)[1] : (v2)[1]);
   (v3)[2] = ((v1)[2] > (v2)[2] ? (v1)[2] : (v2)[2]);
 }
 
-void identity33f(float *m)
+void identity33f(float* m)
 {
   m[0] = _1;
   m[1] = _0;
@@ -307,7 +315,7 @@ void identity33f(float *m)
   m[8] = _1;
 }
 
-void identity33d(double *m)
+void identity33d(double* m)
 {
   m[0] = _d1;
   m[1] = _d0;
@@ -320,28 +328,28 @@ void identity33d(double *m)
   m[8] = _d1;
 }
 
-void identity44f(float *m1)
+void identity44f(float* m1)
 {
   int a;
-  for(a = 0; a < 16; a++)
+  for (a = 0; a < 16; a++)
     m1[a] = _0;
-  for(a = 0; a < 16; a = a + 5)
+  for (a = 0; a < 16; a = a + 5)
     m1[a] = _1;
 }
 
-void identity44d(double *m1)
+void identity44d(double* m1)
 {
   int a;
-  for(a = 0; a < 16; a++)
+  for (a = 0; a < 16; a++)
     m1[a] = _d0;
-  for(a = 0; a < 16; a = a + 5)
+  for (a = 0; a < 16; a = a + 5)
     m1[a] = _d1;
 }
 
 /**
  * Check a nxn matrix for identity
  */
-bool is_identityf(int n, const float *m, float threshold)
+bool is_identityf(int n, const float* m, float threshold)
 {
   int n_sq = n * n, stride = n + 1;
   for (int a = 0; a < n_sq; a++) {
@@ -357,9 +365,8 @@ bool is_identityf(int n, const float *m, float threshold)
  * number of rows and columns, in that case only the overlaying upper left
  * (nrow x min(ncol1, ncol2)) submatrix is compared.
  */
-bool is_allclosef(int nrow,
-    const float *m1, int ncol1,
-    const float *m2, int ncol2, float threshold)
+bool is_allclosef(int nrow, const float* m1, int ncol1, const float* m2,
+    int ncol2, float threshold)
 {
   int ncol = (ncol1 < ncol2) ? ncol1 : ncol2;
   for (int i = 0; i < nrow; i++) {
@@ -375,8 +382,7 @@ bool is_allclosef(int nrow,
 /**
  * Check a nxm matrix is a diagonal matrix (non-diagonal elements are zero)
  */
-bool is_diagonalf(int nrow,
-    const float *m, int ncol, float threshold)
+bool is_diagonalf(int nrow, const float* m, int ncol, float threshold)
 {
   if (!ncol)
     ncol = nrow;
@@ -392,50 +398,47 @@ bool is_diagonalf(int nrow,
 /**
  * Determinant of the upper left 3x3 submatrix.
  */
-double determinant33f(const float *m, int ncol)
+double determinant33f(const float* m, int ncol)
 {
   int &a = ncol, b = ncol * 2;
-  return
-    m[0] * (m[a + 1] * (double) m[b + 2] - m[a + 2] * (double) m[b + 1]) -
-    m[1] * (m[a + 0] * (double) m[b + 2] - m[a + 2] * (double) m[b + 0]) +
-    m[2] * (m[a + 0] * (double) m[b + 1] - m[a + 1] * (double) m[b + 0]);
+  return m[0] * (m[a + 1] * (double) m[b + 2] - m[a + 2] * (double) m[b + 1]) -
+         m[1] * (m[a + 0] * (double) m[b + 2] - m[a + 2] * (double) m[b + 0]) +
+         m[2] * (m[a + 0] * (double) m[b + 1] - m[a + 1] * (double) m[b + 0]);
 }
 
-void glOrtho44f(float *m1, 
-		GLfloat left, GLfloat right, 
-		GLfloat bottom, GLfloat top,
-		GLfloat nearVal, GLfloat farVal){
+void glOrtho44f(float* m1, GLfloat left, GLfloat right, GLfloat bottom,
+    GLfloat top, GLfloat nearVal, GLfloat farVal)
+{
   int a;
   /* this is set in column major order */
-  for(a = 0; a < 16; a++)
+  for (a = 0; a < 16; a++)
     m1[a] = _0;
-  m1[0] = 2.f / (right-left);
-  m1[5] = 2.f / (top-bottom);
-  m1[10] = -2.f/(farVal-nearVal);
-  m1[12] = - (right+left) / (right-left);
-  m1[13] = - (top+bottom) / (top-bottom);
-  m1[14] = - (farVal+nearVal) / (farVal-nearVal);
+  m1[0] = 2.f / (right - left);
+  m1[5] = 2.f / (top - bottom);
+  m1[10] = -2.f / (farVal - nearVal);
+  m1[12] = -(right + left) / (right - left);
+  m1[13] = -(top + bottom) / (top - bottom);
+  m1[14] = -(farVal + nearVal) / (farVal - nearVal);
   m1[15] = _1;
 }
 
-void glFrustum44f(float *m1,
-		  GLfloat left, GLfloat right, 
-		  GLfloat bottom, GLfloat top,
-		  GLfloat nearVal, GLfloat farVal){
+void glFrustum44f(float* m1, GLfloat left, GLfloat right, GLfloat bottom,
+    GLfloat top, GLfloat nearVal, GLfloat farVal)
+{
   int a;
   /* this is set in column major order */
-  for(a = 0; a < 16; a++)
+  for (a = 0; a < 16; a++)
     m1[a] = _0;
-  m1[0] = 2.f * nearVal / (right-left);
-  m1[5] = 2.f * nearVal / (top-bottom);
-  m1[8] = (right+left) / (right-left);
-  m1[9] = (top+bottom) / (top-bottom);
-  m1[10] = -(farVal+nearVal) / (farVal-nearVal);
+  m1[0] = 2.f * nearVal / (right - left);
+  m1[5] = 2.f * nearVal / (top - bottom);
+  m1[8] = (right + left) / (right - left);
+  m1[9] = (top + bottom) / (top - bottom);
+  m1[10] = -(farVal + nearVal) / (farVal - nearVal);
   m1[11] = -1.f;
   m1[14] = -2.f * (farVal * nearVal) / (farVal - nearVal);
 }
 
-void copy44f(const float *src, float *dst)
+void copy44f(const float* src, float* dst)
 {
   *(dst++) = *(src++);
   *(dst++) = *(src++);
@@ -458,7 +461,7 @@ void copy44f(const float *src, float *dst)
   *(dst++) = *(src++);
 }
 
-void copy44d(const double *src, double *dst)
+void copy44d(const double* src, double* dst)
 {
   *(dst++) = *(src++);
   *(dst++) = *(src++);
@@ -481,7 +484,7 @@ void copy44d(const double *src, double *dst)
   *(dst++) = *(src++);
 }
 
-void copy44d33f(const double *src, float *dst)
+void copy44d33f(const double* src, float* dst)
 {
   *(dst++) = (float) *(src++);
   *(dst++) = (float) *(src++);
@@ -499,7 +502,7 @@ void copy44d33f(const double *src, float *dst)
   src++;
 }
 
-void copy44f33f(const float *src, float *dst)
+void copy44f33f(const float* src, float* dst)
 {
   *(dst++) = *(src++);
   *(dst++) = *(src++);
@@ -517,7 +520,7 @@ void copy44f33f(const float *src, float *dst)
   src++;
 }
 
-void copy44f44d(const float *src, double *dst)
+void copy44f44d(const float* src, double* dst)
 {
   *(dst++) = (double) *(src++);
   *(dst++) = (double) *(src++);
@@ -540,7 +543,7 @@ void copy44f44d(const float *src, double *dst)
   *(dst++) = (double) *(src++);
 }
 
-void copy44d44f(const double *src, float *dst)
+void copy44d44f(const double* src, float* dst)
 {
   *(dst++) = (float) *(src++);
   *(dst++) = (float) *(src++);
@@ -563,7 +566,7 @@ void copy44d44f(const double *src, float *dst)
   *(dst++) = (float) *(src++);
 }
 
-void copy33f44d(const float *src, double *dst)
+void copy33f44d(const float* src, double* dst)
 {
   const double _0 = 0.0;
   *(dst++) = (double) *(src++);
@@ -587,7 +590,7 @@ void copy33f44d(const float *src, double *dst)
   *(dst++) = _1;
 }
 
-void copy33f44f(const float *src, float *dst)
+void copy33f44f(const float* src, float* dst)
 {
   const float _0 = 0.0;
   *(dst++) = *(src++);
@@ -611,7 +614,7 @@ void copy33f44f(const float *src, float *dst)
   *(dst++) = _1;
 }
 /* Transformation: MatMult( (3x3), (3x1) = (3x1) ) */
-void transform33f3f(const float *m1, const float *m2, float *m3)
+void transform33f3f(const float* m1, const float* m2, float* m3)
 {
   float m2r0 = m2[0];
   float m2r1 = m2[1];
@@ -621,7 +624,7 @@ void transform33f3f(const float *m1, const float *m2, float *m3)
   m3[2] = m1[6] * m2r0 + m1[7] * m2r1 + m1[8] * m2r2;
 }
 
-void transpose33f33f(const float *m1, float *m2)
+void transpose33f33f(const float* m1, float* m2)
 {
   assert(m1 != m2);
 
@@ -636,7 +639,7 @@ void transpose33f33f(const float *m1, float *m2)
   m2[8] = m1[8];
 }
 
-void transpose33d33d(const double *m1, double *m2)
+void transpose33d33d(const double* m1, double* m2)
 {
   assert(m1 != m2);
 
@@ -651,7 +654,7 @@ void transpose33d33d(const double *m1, double *m2)
   m2[8] = m1[8];
 }
 
-void transpose44f44f(const float *m1, float *m2)
+void transpose44f44f(const float* m1, float* m2)
 {
   assert(m1 != m2);
 
@@ -676,7 +679,7 @@ void transpose44f44f(const float *m1, float *m2)
   m2[15] = m1[15];
 }
 
-void transpose44d44d(const double *m1, double *m2)
+void transpose44d44d(const double* m1, double* m2)
 {
   assert(m1 != m2);
 
@@ -701,7 +704,7 @@ void transpose44d44d(const double *m1, double *m2)
   m2[15] = m1[15];
 }
 
-void transform33Tf3f(const float *m1, const float *m2, float *m3)
+void transform33Tf3f(const float* m1, const float* m2, float* m3)
 {
   float m2r0 = m2[0];
   float m2r1 = m2[1];
@@ -712,7 +715,7 @@ void transform33Tf3f(const float *m1, const float *m2, float *m3)
 }
 /* multiply the upper-left 3x3 of a 4x4, m, by m2 and put result into m3:
  * m3 = A x m2 */
-void transform44f3f(const float *m1, const float *m2, float *m3)
+void transform44f3f(const float* m1, const float* m2, float* m3)
 {
   float m2r0 = m2[0];
   float m2r1 = m2[1];
@@ -721,8 +724,9 @@ void transform44f3f(const float *m1, const float *m2, float *m3)
   m3[1] = m1[4] * m2r0 + m1[5] * m2r1 + m1[6] * m2r2 + m1[7];
   m3[2] = m1[8] * m2r0 + m1[9] * m2r1 + m1[10] * m2r2 + m1[11];
 }
-/* Multi the upper left 3x3 of a 4x4 by a 3x1 vector; so effectively, [3x3]*[3x1] = [3x1] */
-void transform44d3f(const double *m1, const float *m2, float *m3)
+/* Multi the upper left 3x3 of a 4x4 by a 3x1 vector; so effectively,
+ * [3x3]*[3x1] = [3x1] */
+void transform44d3f(const double* m1, const float* m2, float* m3)
 {
   double m2r0 = m2[0];
   double m2r1 = m2[1];
@@ -732,7 +736,7 @@ void transform44d3f(const double *m1, const float *m2, float *m3)
   m3[2] = (float) (m1[8] * m2r0 + m1[9] * m2r1 + m1[10] * m2r2 + m1[11]);
 }
 
-void transform44d3d(const double *m1, const double *m2, double *m3)
+void transform44d3d(const double* m1, const double* m2, double* m3)
 {
   double m2r0 = m2[0];
   double m2r1 = m2[1];
@@ -742,7 +746,7 @@ void transform44d3d(const double *m1, const double *m2, double *m3)
   m3[2] = (float) (m1[8] * m2r0 + m1[9] * m2r1 + m1[10] * m2r2 + m1[11]);
 }
 
-void transform44d3fas33d3f(const double *m1, const float *m2, float *m3)
+void transform44d3fas33d3f(const double* m1, const float* m2, float* m3)
 {
   double m2r0 = m2[0];
   double m2r1 = m2[1];
@@ -753,7 +757,7 @@ void transform44d3fas33d3f(const double *m1, const float *m2, float *m3)
 }
 
 // same as MatrixInvTransformC44fAs33f3f
-void transform44f3fas33f3f(const float *m1, const float *m2, float *m3)
+void transform44f3fas33f3f(const float* m1, const float* m2, float* m3)
 {
   float m2r0 = m2[0];
   float m2r1 = m2[1];
@@ -763,7 +767,7 @@ void transform44f3fas33f3f(const float *m1, const float *m2, float *m3)
   m3[2] = (m1[8] * m2r0 + m1[9] * m2r1 + m1[10] * m2r2);
 }
 
-void inverse_transformC44f3f(const float *m1, const float *m2, float *m3)
+void inverse_transformC44f3f(const float* m1, const float* m2, float* m3)
 {
   float m2r0 = m2[0] - m1[12];
   float m2r1 = m2[1] - m1[13];
@@ -773,7 +777,7 @@ void inverse_transformC44f3f(const float *m1, const float *m2, float *m3)
   m3[2] = (float) (m1[8] * m2r0 + m1[9] * m2r1 + m1[10] * m2r2);
 }
 
-void inverse_transform44f3f(const float *m1, const float *m2, float *m3)
+void inverse_transform44f3f(const float* m1, const float* m2, float* m3)
 {
   float m2r0 = m2[0] - m1[3];
   float m2r1 = m2[1] - m1[7];
@@ -783,7 +787,7 @@ void inverse_transform44f3f(const float *m1, const float *m2, float *m3)
   m3[2] = (float) (m1[2] * m2r0 + m1[6] * m2r1 + m1[10] * m2r2);
 }
 
-void inverse_transform44d3f(const double *m1, const float *m2, float *m3)
+void inverse_transform44d3f(const double* m1, const float* m2, float* m3)
 {
   double m2r0 = m2[0] - m1[3];
   double m2r1 = m2[1] - m1[7];
@@ -793,7 +797,7 @@ void inverse_transform44d3f(const double *m1, const float *m2, float *m3)
   m3[2] = (float) (m1[2] * m2r0 + m1[6] * m2r1 + m1[10] * m2r2);
 }
 
-void inverse_transform44d3d(const double *m1, const double *m2, double *m3)
+void inverse_transform44d3d(const double* m1, const double* m2, double* m3)
 {
   double m2r0 = m2[0] - m1[3];
   double m2r1 = m2[1] - m1[7];
@@ -803,7 +807,7 @@ void inverse_transform44d3d(const double *m1, const double *m2, double *m3)
   m3[2] = (float) (m1[2] * m2r0 + m1[6] * m2r1 + m1[10] * m2r2);
 }
 
-void transform44f4f(const float *m1, const float *m2, float *m3)
+void transform44f4f(const float* m1, const float* m2, float* m3)
 {
   float m2r0 = m2[0];
   float m2r1 = m2[1];
@@ -815,28 +819,27 @@ void transform44f4f(const float *m1, const float *m2, float *m3)
   m3[3] = m1[12] * m2r0 + m1[13] * m2r1 + m1[14] * m2r2 + m1[15] * m2r3;
 }
 
-void initializeTTT44f(float *m)
+void initializeTTT44f(float* m)
 {
   int a;
-  for(a = 0; a < 16; a++)
+  for (a = 0; a < 16; a++)
     m[a] = _0;
-  for(a = 0; a < 4; a++)
+  for (a = 0; a < 4; a++)
     m[4 * a + a] = _1;
 }
 
-void combineTTT44f44f(const float *m1, const float *m2, float *m3)
-
+void combineTTT44f44f(const float* m1, const float* m2, float* m3)
 
 /* WARNING: this routine is ill-conceived and essentially broken */
 
 /* NOTE: this is NOT equivalent to 4x4 matrix multiplication.
-   TTTs are designed for easily creating movies of rotating 
+   TTTs are designed for easily creating movies of rotating
    bodies! */
 {
   float m1_homo[16];
   float m2_homo[16];
-  const float *src;
-  float *dst;
+  const float* src;
+  float* dst;
   float pre[3], post[3];
 
   /* convert the existing TTT into a homogenous transformation matrix */
@@ -863,12 +866,11 @@ void combineTTT44f44f(const float *m1, const float *m2, float *m3)
 
   copy3f(src, dst);
   copy44f(m2_homo, m3);
-
 }
 
-void convertTTTfR44d(const float *ttt, double *homo)
+void convertTTTfR44d(const float* ttt, double* homo)
 {
-  /* takes the PyMOL-specific TTT matrix and 
+  /* takes the PyMOL-specific TTT matrix and
      makes a homogenous 4x4 txf matrix homo of it */
 
   double ttt_3 = (double) ttt[3];
@@ -890,9 +892,12 @@ void convertTTTfR44d(const float *ttt, double *homo)
   homo[9] = (double) ttt[9];
   homo[10] = (double) ttt[10];
 
-  homo[3] = (homo[0] * ttt_12) + (homo[1] * ttt_13) + (homo[2] * ttt_14) + ttt_3;
-  homo[7] = (homo[4] * ttt_12) + (homo[5] * ttt_13) + (homo[6] * ttt_14) + ttt_7;
-  homo[11] = (homo[8] * ttt_12) + (homo[9] * ttt_13) + (homo[10] * ttt_14) + ttt_11;
+  homo[3] =
+      (homo[0] * ttt_12) + (homo[1] * ttt_13) + (homo[2] * ttt_14) + ttt_3;
+  homo[7] =
+      (homo[4] * ttt_12) + (homo[5] * ttt_13) + (homo[6] * ttt_14) + ttt_7;
+  homo[11] =
+      (homo[8] * ttt_12) + (homo[9] * ttt_13) + (homo[10] * ttt_14) + ttt_11;
 
   homo[12] = 0.0;
   homo[13] = 0.0;
@@ -900,12 +905,11 @@ void convertTTTfR44d(const float *ttt, double *homo)
   homo[15] = 1.0;
 
   /*  dump44d(homo, "homo"); */
-
 }
 
-void convertTTTfR44f(const float *ttt, float *homo)
+void convertTTTfR44f(const float* ttt, float* homo)
 {
-  /* takes the PyMOL-specific TTT matrix and 
+  /* takes the PyMOL-specific TTT matrix and
      makes a homogenous 4x4 txf matrix homo of it */
 
   float ttt_3 = ttt[3];
@@ -925,18 +929,20 @@ void convertTTTfR44f(const float *ttt, float *homo)
   homo[9] = ttt[9];
   homo[10] = ttt[10];
 
-  homo[3] = (homo[0] * ttt_12) + (homo[1] * ttt_13) + (homo[2] * ttt_14) + ttt_3;
-  homo[7] = (homo[4] * ttt_12) + (homo[5] * ttt_13) + (homo[6] * ttt_14) + ttt_7;
-  homo[11] = (homo[8] * ttt_12) + (homo[9] * ttt_13) + (homo[10] * ttt_14) + ttt_11;
+  homo[3] =
+      (homo[0] * ttt_12) + (homo[1] * ttt_13) + (homo[2] * ttt_14) + ttt_3;
+  homo[7] =
+      (homo[4] * ttt_12) + (homo[5] * ttt_13) + (homo[6] * ttt_14) + ttt_7;
+  homo[11] =
+      (homo[8] * ttt_12) + (homo[9] * ttt_13) + (homo[10] * ttt_14) + ttt_11;
 
   homo[12] = 0.0;
   homo[13] = 0.0;
   homo[14] = 0.0;
   homo[15] = 1.0;
-
 }
 
-void convert44d44f(const double *dbl, float *flt)
+void convert44d44f(const double* dbl, float* flt)
 {
   flt[0] = (float) dbl[0];
   flt[1] = (float) dbl[1];
@@ -956,7 +962,7 @@ void convert44d44f(const double *dbl, float *flt)
   flt[15] = (float) dbl[15];
 }
 
-void convert44f44d(const float *flt, double *dbl)
+void convert44f44d(const float* flt, double* dbl)
 {
   dbl[0] = (double) flt[0];
   dbl[1] = (double) flt[1];
@@ -976,14 +982,14 @@ void convert44f44d(const float *flt, double *dbl)
   dbl[15] = (double) flt[15];
 }
 
-void convertR44dTTTf(const double *homo, float *ttt)
+void convertR44dTTTf(const double* homo, float* ttt)
 {
   /* nowadays, homogeneous matrices with (0,0,0,1) in 4th row are TTT
      compatible */
   convert44d44f(homo, ttt);
 }
 
-void multiply44d44d44d(const double *left, const double *right, double *product)
+void multiply44d44d44d(const double* left, const double* right, double* product)
 {
   double rA = right[0];
   double rB = right[4];
@@ -1026,7 +1032,7 @@ void multiply44d44d44d(const double *left, const double *right, double *product)
   product[15] = left[12] * rA + left[13] * rB + left[14] * rC + left[15] * rD;
 }
 
-void left_multiply44d44d(const double *left, double *right)
+void left_multiply44d44d(const double* left, double* right)
 {
   double rA = right[0];
   double rB = right[4];
@@ -1069,7 +1075,7 @@ void left_multiply44d44d(const double *left, double *right)
   right[15] = left[12] * rA + left[13] * rB + left[14] * rC + left[15] * rD;
 }
 
-void right_multiply44d44d(double *left, const double *right)
+void right_multiply44d44d(double* left, const double* right)
 {
   double cA = left[0];
   double cB = left[1];
@@ -1110,10 +1116,9 @@ void right_multiply44d44d(double *left, const double *right)
   left[13] = cA * right[1] + cB * right[5] + cC * right[9] + cD * right[13];
   left[14] = cA * right[2] + cB * right[6] + cC * right[10] + cD * right[14];
   left[15] = cA * right[3] + cB * right[7] + cC * right[11] + cD * right[15];
-
 }
 
-void multiply44f44f44f(const float *left, const float *right, float *product)
+void multiply44f44f44f(const float* left, const float* right, float* product)
 {
   float rA = right[0];
   float rB = right[4];
@@ -1156,7 +1161,7 @@ void multiply44f44f44f(const float *left, const float *right, float *product)
   product[15] = left[12] * rA + left[13] * rB + left[14] * rC + left[15] * rD;
 }
 
-void left_multiply44f44f(const float *left, float *right)
+void left_multiply44f44f(const float* left, float* right)
 {
   float rA = right[0];
   float rB = right[4];
@@ -1199,7 +1204,7 @@ void left_multiply44f44f(const float *left, float *right)
   right[15] = left[12] * rA + left[13] * rB + left[14] * rC + left[15] * rD;
 }
 
-void right_multiply44f44f(float *left, const float *right)
+void right_multiply44f44f(float* left, const float* right)
 {
   float cA = left[0];
   float cB = left[1];
@@ -1240,10 +1245,9 @@ void right_multiply44f44f(float *left, const float *right)
   left[13] = cA * right[1] + cB * right[5] + cC * right[9] + cD * right[13];
   left[14] = cA * right[2] + cB * right[6] + cC * right[10] + cD * right[14];
   left[15] = cA * right[3] + cB * right[7] + cC * right[11] + cD * right[15];
-
 }
 
-void invert_special44d44d(const double *orig, double *inv)
+void invert_special44d44d(const double* orig, double* inv)
 {
   /* inverse of the rotation matrix */
 
@@ -1267,10 +1271,9 @@ void invert_special44d44d(const double *orig, double *inv)
   inv[13] = 0.0;
   inv[14] = 0.0;
   inv[15] = 1.0;
-
 }
 
-void invert_special44f44f(const float *orig, float *inv)
+void invert_special44f44f(const float* orig, float* inv)
 {
   assert(orig != inv);
 
@@ -1296,13 +1299,12 @@ void invert_special44f44f(const float *orig, float *inv)
   inv[13] = 0.0F;
   inv[14] = 0.0F;
   inv[15] = 1.0F;
-
 }
 
-static void normalize3dp(double *v1, double *v2, double *v3)
+static void normalize3dp(double* v1, double* v2, double* v3)
 {
   double vlen = sqrt1d((v1[0] * v1[0]) + (v2[0] * v2[0]) + (v3[0] * v3[0]));
-  if(vlen > R_SMALL) {
+  if (vlen > R_SMALL) {
     v1[0] /= vlen;
     v2[0] /= vlen;
     v3[0] /= vlen;
@@ -1314,14 +1316,14 @@ static void normalize3dp(double *v1, double *v2, double *v3)
   }
 }
 
-void reorient44d(double *matrix)
+void reorient44d(double* matrix)
 {
   double tmp[16];
   int a;
 
   /* restore orthogonality and recondition */
 
-  for(a = 0; a < 3; a++) {
+  for (a = 0; a < 3; a++) {
     normalize3d(matrix);
     normalize3d(matrix + 4);
     normalize3d(matrix + 8);
@@ -1357,10 +1359,9 @@ void reorient44d(double *matrix)
   copy3d(tmp, matrix);
   copy3d(tmp + 4, matrix + 4);
   copy3d(tmp + 8, matrix + 8);
-
 }
 
-void recondition33d(double *matrix)
+void recondition33d(double* matrix)
 {
   normalize3d(matrix);
   normalize3d(matrix + 3);
@@ -1379,7 +1380,7 @@ void recondition33d(double *matrix)
   normalize3d(matrix + 6);
 }
 
-void recondition44d(double *matrix)
+void recondition44d(double* matrix)
 {
   normalize3d(matrix);
   normalize3d(matrix + 4);
@@ -1398,7 +1399,7 @@ void recondition44d(double *matrix)
   normalize3d(matrix + 8);
 }
 
-void invert_rotation_only44d44d(const double *orig, double *inv)
+void invert_rotation_only44d44d(const double* orig, double* inv)
 {
   /* inverse of the rotation matrix */
 
@@ -1420,10 +1421,9 @@ void invert_rotation_only44d44d(const double *orig, double *inv)
   inv[13] = 0.0;
   inv[14] = 0.0;
   inv[15] = 1.0;
-
 }
 
-void transformTTT44f3f(const float *m1, const float *m2, float *m3)
+void transformTTT44f3f(const float* m1, const float* m2, float* m3)
 {
   float m2r0 = m2[0] + m1[12];
   float m2r1 = m2[1] + m1[13];
@@ -1433,7 +1433,7 @@ void transformTTT44f3f(const float *m1, const float *m2, float *m3)
   m3[2] = m1[8] * m2r0 + m1[9] * m2r1 + m1[10] * m2r2 + m1[11];
 }
 
-void transform_normalTTT44f3f(const float *m1, const float *m2, float *m3)
+void transform_normalTTT44f3f(const float* m1, const float* m2, float* m3)
 {
   float m2r0 = m2[0];
   float m2r1 = m2[1];
@@ -1450,11 +1450,11 @@ void transform_normalTTT44f3f(const float *m1, const float *m2, float *m3)
  *
  * m2 and m3 can be the same matrix (same memory buffer)
  */
-void multiply33f33f(const float *m1, const float *m2, float *m3)
+void multiply33f33f(const float* m1, const float* m2, float* m3)
 {
   int a;
   float m2r0, m2r1, m2r2;
-  for(a = 0; a < 3; a++) {
+  for (a = 0; a < 3; a++) {
     m2r0 = m2[a];
     m2r1 = m2[3 + a];
     m2r2 = m2[6 + a];
@@ -1464,11 +1464,11 @@ void multiply33f33f(const float *m1, const float *m2, float *m3)
   }
 }
 
-void multiply33d33d(const double *m1, const double *m2, double *m3)
-{                               /* m2 and m3 can be the same matrix */
+void multiply33d33d(const double* m1, const double* m2, double* m3)
+{ /* m2 and m3 can be the same matrix */
   int a;
   double m2r0, m2r1, m2r2;
-  for(a = 0; a < 3; a++) {
+  for (a = 0; a < 3; a++) {
     m2r0 = m2[a];
     m2r1 = m2[3 + a];
     m2r2 = m2[6 + a];
@@ -1480,12 +1480,12 @@ void multiply33d33d(const double *m1, const double *m2, double *m3)
 
 void matrix_multiply33f33f(Matrix33f m1, Matrix33f m2, Matrix33f m3)
 {
-  multiply33f33f((float *) m1, (float *) m2, (float *) m3);
+  multiply33f33f((float*) m1, (float*) m2, (float*) m3);
 }
 
 void matrix_multiply33d33d(Matrix33d m1, Matrix33d m2, Matrix33d m3)
 {
-  multiply33d33d((double *) m1[0], (double *) m2, (double *) m3);
+  multiply33d33d((double*) m1[0], (double*) m2, (double*) m3);
 }
 
 float deg_to_rad(float angle)
@@ -1498,7 +1498,8 @@ float rad_to_deg(float angle)
   return ((float) (180.0 * (angle / cPI)));
 }
 
-void get_rotation_about3f3fTTTf(float angle, const float *dir, const float *origin, float *ttt)
+void get_rotation_about3f3fTTTf(
+    float angle, const float* dir, const float* origin, float* ttt)
 {
   float rot[9];
   rotation_matrix3f(angle, dir[0], dir[1], dir[2], rot);
@@ -1520,12 +1521,12 @@ void get_rotation_about3f3fTTTf(float angle, const float *dir, const float *orig
   ttt[15] = 1.0F;
 }
 
-void rotation_to_matrix33f(const float *axis, float angle, Matrix33f mat)
+void rotation_to_matrix33f(const float* axis, float angle, Matrix33f mat)
 {
   rotation_matrix3f(angle, axis[0], axis[1], axis[2], &mat[0][0]);
 }
 
-void rotation_matrix3f(float angle, float x, float y, float z, float *m)
+void rotation_matrix3f(float angle, float x, float y, float z, float* m)
 {
   /* returns a row-major rotation matrix */
 
@@ -1539,12 +1540,12 @@ void rotation_matrix3f(float angle, float x, float y, float z, float *m)
   c = (float) cos(angle);
 
   mag = (float) sqrt1f(x * x + y * y + z * z);
-  if(mag >= R_SMALL) {
+  if (mag >= R_SMALL) {
     x /= mag;
     y /= mag;
     z /= mag;
 
-#define M(row,col)  m[row*3+col]
+#define M(row, col) m[row * 3 + col]
 
     xx = x * x;
     yy = y * y;
@@ -1569,19 +1570,19 @@ void rotation_matrix3f(float angle, float x, float y, float z, float *m)
     M(2, 1) = (one_c * yz) + xs;
     M(2, 2) = (one_c * zz) + c;
   } else {
-    for(a = 0; a < 3; a++)
-      for(b = 0; b < 3; b++)
+    for (a = 0; a < 3; a++)
+      for (b = 0; b < 3; b++)
         M(a, b) = 0;
     M(0, 0) = _1;
     M(1, 1) = _1;
     M(2, 2) = _1;
   }
-
 }
 
 #define get_angle USED_TO_RETURN_DEGREES
 
-float get_dihedral3f(const float *v0, const float *v1, const float *v2, const float *v3)
+float get_dihedral3f(
+    const float* v0, const float* v1, const float* v2, const float* v3)
 {
   Vector3f d01, d21, d32, dd1, dd3, pos_d;
   float result = _0;
@@ -1589,50 +1590,54 @@ float get_dihedral3f(const float *v0, const float *v1, const float *v2, const fl
   subtract3f(v2, v1, d21);
   subtract3f(v0, v1, d01);
   subtract3f(v3, v2, d32);
-  if(length3f(d21) < R_SMALL) {
+  if (length3f(d21) < R_SMALL) {
     result = get_angle3f(d01, d32);
   } else {
     cross_product3f(d21, d01, dd1);
     cross_product3f(d21, d32, dd3);
-    if((length3f(dd1) < R_SMALL) || (length3f(dd3) < R_SMALL)) {        /* degenerate cases */
-      result = get_angle3f(d01, d32);   /* fall back to angle between vectors */
+    if ((length3f(dd1) < R_SMALL) ||
+        (length3f(dd3) < R_SMALL)) {  /* degenerate cases */
+      result = get_angle3f(d01, d32); /* fall back to angle between vectors */
     } else {
       result = get_angle3f(dd1, dd3);
       cross_product3f(d21, dd1, pos_d);
-      if(dot_product3f(dd3, pos_d) < _0)
+      if (dot_product3f(dd3, pos_d) < _0)
         result = -result;
     }
   }
   return (result);
 }
 
-float get_angle3f(const float *v1, const float *v2)
+float get_angle3f(const float* v1, const float* v2)
 {
   double denom;
   double result;
   double arg1, arg2;
-  arg1 = ((v1[0] * (double)v1[0]) + (v1[1] * (double)v1[1]) + (v1[2] * (double)v1[2]));
-  arg2 = ((v2[0] * (double)v2[0]) + (v2[1] * (double)v2[1]) + (v2[2] * (double)v2[2]));
+  arg1 = ((v1[0] * (double) v1[0]) + (v1[1] * (double) v1[1]) +
+          (v1[2] * (double) v1[2]));
+  arg2 = ((v2[0] * (double) v2[0]) + (v2[1] * (double) v2[1]) +
+          (v2[2] * (double) v2[2]));
   denom = sqrt1d(arg1) * sqrt1d(arg2);
 
-  if(denom > R_SMALL){
-    arg1 = (v1[0] * (double)v2[0] + v1[1] * (double)v2[1] + v1[2] * (double)v2[2]);
+  if (denom > R_SMALL) {
+    arg1 = (v1[0] * (double) v2[0] + v1[1] * (double) v2[1] +
+            v1[2] * (double) v2[2]);
     result = arg1 / denom;
   } else
     result = _0;
-  if(result < -_1)
+  if (result < -_1)
     result = -_1;
-  else if(result > _1)
+  else if (result > _1)
     result = _1;
 
   return acosf(result);
 }
 
-void normalize23f(const float *v1, float *v2)
+void normalize23f(const float* v1, float* v2)
 {
   double vlen;
   vlen = length3f(v1);
-  if(vlen > R_SMALL) {
+  if (vlen > R_SMALL) {
     v2[0] = (float) (v1[0] / vlen);
     v2[1] = (float) (v1[1] / vlen);
     v2[2] = (float) (v1[2] / vlen);
@@ -1643,27 +1648,27 @@ void normalize23f(const float *v1, float *v2)
   }
 }
 
-void clamp3f(float *v1)
+void clamp3f(float* v1)
 {
-  if(v1[0] < _0)
+  if (v1[0] < _0)
     v1[0] = _0;
-  if(v1[0] > _1)
+  if (v1[0] > _1)
     v1[0] = _1;
-  if(v1[1] < _0)
+  if (v1[1] < _0)
     v1[1] = _0;
-  if(v1[1] > _1)
+  if (v1[1] > _1)
     v1[1] = _1;
-  if(v1[2] < _0)
+  if (v1[2] < _0)
     v1[2] = _0;
-  if(v1[2] > _1)
+  if (v1[2] > _1)
     v1[2] = _1;
 }
 
-void normalize2f(float *v1)
+void normalize2f(float* v1)
 {
   double vlen;
   vlen = length2f(v1);
-  if(vlen > R_SMALL) {
+  if (vlen > R_SMALL) {
     v1[0] /= vlen;
     v1[1] /= vlen;
   } else {
@@ -1672,7 +1677,7 @@ void normalize2f(float *v1)
   }
 }
 
-void normalize4f(float *v1)
+void normalize4f(float* v1)
 {
   v1[0] /= v1[3];
   v1[1] /= v1[3];
@@ -1680,8 +1685,8 @@ void normalize4f(float *v1)
   v1[3] = 1.f;
 }
 
-double distance_line2point3f(const float *base, const float *normal, const float *point,
-                             float *alongNormalSq)
+double distance_line2point3f(const float* base, const float* normal,
+    const float* point, float* alongNormalSq)
 {
   float hyp[3], adj[3];
   double result;
@@ -1692,18 +1697,18 @@ double distance_line2point3f(const float *base, const float *normal, const float
 
   project3f(hyp, normal, adj);
 
-  (*alongNormalSq) = ((adj[0] * adj[0]) + (adj[1] * adj[1]) + (adj[2] * adj[2]));
-  result = ((hyp[0] * hyp[0]) + (hyp[1] * hyp[1]) + (hyp[2] * hyp[2]))
-    - (*alongNormalSq);
-  if(result <= _0)
+  (*alongNormalSq) =
+      ((adj[0] * adj[0]) + (adj[1] * adj[1]) + (adj[2] * adj[2]));
+  result = ((hyp[0] * hyp[0]) + (hyp[1] * hyp[1]) + (hyp[2] * hyp[2])) -
+           (*alongNormalSq);
+  if (result <= _0)
     return (_0);
   else
     return (sqrt1d(result));
-
 }
 
-double distance_halfline2point3f(const float *base, const float *normal, const float *point,
-                                 float *alongNormalSq)
+double distance_halfline2point3f(const float* base, const float* normal,
+    const float* point, float* alongNormalSq)
 {
   float hyp[3], adj[3];
   double result;
@@ -1712,11 +1717,12 @@ double distance_halfline2point3f(const float *base, const float *normal, const f
   hyp[1] = point[1] - base[1];
   hyp[2] = point[2] - base[2];
 
-  if(project3f(hyp, normal, adj) > _0) {
-    (*alongNormalSq) = ((adj[0] * adj[0]) + (adj[1] * adj[1]) + (adj[2] * adj[2]));
-    result = ((hyp[0] * hyp[0]) + (hyp[1] * hyp[1]) + (hyp[2] * hyp[2]))
-      - (*alongNormalSq);
-    if(result <= _0)
+  if (project3f(hyp, normal, adj) > _0) {
+    (*alongNormalSq) =
+        ((adj[0] * adj[0]) + (adj[1] * adj[1]) + (adj[2] * adj[2]));
+    result = ((hyp[0] * hyp[0]) + (hyp[1] * hyp[1]) + (hyp[2] * hyp[2])) -
+             (*alongNormalSq);
+    if (result <= _0)
       return (_0);
     else
       return (sqrt1d(result));
@@ -1725,14 +1731,15 @@ double distance_halfline2point3f(const float *base, const float *normal, const f
   }
 }
 
-void matrix_transform33f3f(const Matrix33f m1, const float *v1, float *v2)
+void matrix_transform33f3f(const Matrix33f m1, const float* v1, float* v2)
 {
   v2[0] = m1[0][0] * v1[0] + m1[0][1] * v1[1] + m1[0][2] * v1[2];
   v2[1] = m1[1][0] * v1[0] + m1[1][1] * v1[1] + m1[1][2] * v1[2];
   v2[2] = m1[2][0] * v1[0] + m1[2][1] * v1[1] + m1[2][2] * v1[2];
 }
 
-void matrix_inverse_transform33f3f(const Matrix33f m1, const float *v1, float *v2)
+void matrix_inverse_transform33f3f(
+    const Matrix33f m1, const float* v1, float* v2)
 {
   v2[0] = m1[0][0] * v1[0] + m1[1][0] * v1[1] + m1[2][0] * v1[2];
   v2[1] = m1[0][1] * v1[0] + m1[1][1] * v1[1] + m1[2][1] * v1[2];
@@ -1762,7 +1769,7 @@ double matdiffsq(float *v1, oMatrix5f m, float *v2)
 }
 #endif
 
-void transform5f3f(const oMatrix5f m, const float *v1, float *v2)
+void transform5f3f(const oMatrix5f m, const float* v1, float* v2)
 {
   double dx, dy, dz;
   double vx, vy, vz;
@@ -1778,23 +1785,21 @@ void transform5f3f(const oMatrix5f m, const float *v1, float *v2)
   v2[0] = (((float) vx) + m[4][0]);
   v2[1] = (((float) vy) + m[4][1]);
   v2[2] = (((float) vz) + m[4][2]);
-
 }
 
-void transform3d3f(const oMatrix3d m1, const float *v1, float *v2)
+void transform3d3f(const oMatrix3d m1, const float* v1, float* v2)
 {
   int b;
-  for(b = 0; b < 3; b++)
+  for (b = 0; b < 3; b++)
     v2[b] = m1[b][0] * v1[0] + m1[b][1] * v1[1] + m1[b][2] * v1[2];
 }
 
-void transform33d3f(const Matrix33d m1, const float *v1, float *v2)
+void transform33d3f(const Matrix33d m1, const float* v1, float* v2)
 {
   int b;
-  for(b = 0; b < 3; b++)
+  for (b = 0; b < 3; b++)
     v2[b] = (float) (m1[b][0] * v1[0] + m1[b][1] * v1[1] + m1[b][2] * v1[2]);
 }
-
 
 /*
 
@@ -1802,8 +1807,8 @@ void matcopy  ( oMatrix5f to,oMatrix5f from )
 {
   int a,b;
   for(a=0;a<5;a++)
-	 for(b=0;b<3;b++)
-		to[a][b] = from[a][b];
+         for(b=0;b<3;b++)
+                to[a][b] = from[a][b];
 }
 
 void mattran ( oMatrix5f nm, oMatrix5f om, int axis, float dist )
@@ -1823,34 +1828,34 @@ void matrot ( oMatrix5f nm, oMatrix5f om, int axis, float angle )
   sa = sin(angle);
 
   switch(axis)
-	 {
-	 case 0:
-		rm[0][0] = _1;		rm[0][1] = _0;		rm[0][2] = _0;
-		rm[1][0] = _0;		rm[1][1] =  ca;		rm[1][2] =  sa;
-		rm[2][0] = _0;		rm[2][1] = -sa;		rm[2][2] =  ca;
-		break;
-	 case 1:
-		rm[0][0] =  ca;		rm[0][1] = _0;		rm[0][2] = -sa;
-		rm[1][0] = _0;		rm[1][1] = _1;		rm[1][2] = _0;
-		rm[2][0] =  sa;		rm[2][1] = _0;		rm[2][2] =  ca;
-		break;
-	 case 2:
-		rm[0][0] =  ca;		rm[0][1] =  sa;		rm[0][2] = _0;
-		rm[1][0] = -sa;		rm[1][1] =  ca;		rm[1][2] = _0;
-		rm[2][0] = _0;		rm[2][1] = _0;		rm[2][2] = _1;
-		break;
-	 }
+         {
+         case 0:
+                rm[0][0] = _1;		rm[0][1] = _0;		rm[0][2] = _0;
+                rm[1][0] = _0;		rm[1][1] =  ca;		rm[1][2] =  sa;
+                rm[2][0] = _0;		rm[2][1] = -sa;		rm[2][2] =  ca;
+                break;
+         case 1:
+                rm[0][0] =  ca;		rm[0][1] = _0;		rm[0][2] = -sa;
+                rm[1][0] = _0;		rm[1][1] = _1;		rm[1][2] = _0;
+                rm[2][0] =  sa;		rm[2][1] = _0;		rm[2][2] =  ca;
+                break;
+         case 2:
+                rm[0][0] =  ca;		rm[0][1] =  sa;		rm[0][2] = _0;
+                rm[1][0] = -sa;		rm[1][1] =  ca;		rm[1][2] = _0;
+                rm[2][0] = _0;		rm[2][1] = _0;		rm[2][2] = _1;
+                break;
+         }
   for(a=0;a<3;a++)
-	 {
-		nm[3][a] = om[3][a];
-		nm[4][a] = om[4][a];
-		for(b=0;b<3;b++)
-		  nm[a][b] = 
-			 rm[a][0]*om[0][b] + 
-			 rm[a][1]*om[1][b] +
-			 rm[a][2]*om[2][b];
-	 }
-  
+         {
+                nm[3][a] = om[3][a];
+                nm[4][a] = om[4][a];
+                for(b=0;b<3;b++)
+                  nm[a][b] =
+                         rm[a][0]*om[0][b] +
+                         rm[a][1]*om[1][b] +
+                         rm[a][2]*om[2][b];
+         }
+
   normalize3f(nm[0]);
   normalize3f(nm[1]);
   normalize3f(nm[2]);
@@ -1858,22 +1863,22 @@ void matrot ( oMatrix5f nm, oMatrix5f om, int axis, float angle )
 }
 */
 
-void rotation_to_matrix(Matrix53f rot, const float *axis, float angle)
+void rotation_to_matrix(Matrix53f rot, const float* axis, float angle)
 {
   rotation_matrix3f(angle, axis[0], axis[1], axis[2], &rot[0][0]);
 }
 
-static void find_axis(Matrix33d a, float *axis)
+static void find_axis(Matrix33d a, float* axis)
 {
   double at[3][3], v[3][3], vt[3][3];
   double wr[3], wi[3];
   /*p[3][3]; */
   int x, y;
 
-  recondition33d(&a[0][0]);     /* IMPORTANT! */
+  recondition33d(&a[0][0]); /* IMPORTANT! */
 
-  for(x = 0; x < 3; x++) {
-    for(y = 0; y < 3; y++) {
+  for (x = 0; x < 3; x++) {
+    for (y = 0; y < 3; y++) {
       at[y][x] = a[x][y];
     }
   }
@@ -1884,8 +1889,8 @@ static void find_axis(Matrix33d a, float *axis)
       wi,         // out: imag component of eigenvalues
       &vt[0][0]); // out: eigenvectors
 
-  for(x = 0; x < 3; x++) {
-    for(y = 0; y < 3; y++) {
+  for (x = 0; x < 3; x++) {
+    for (y = 0; y < 3; y++) {
       v[y][x] = vt[x][y];
     }
   }
@@ -1899,23 +1904,24 @@ static void find_axis(Matrix33d a, float *axis)
     double min_imag = 1.0F, test_imag;
     float test_inp[3], test_out[3];
 
-    for(x = 0; x < 3; x++) {    /* looking for an eigvalue of (1,0) */
+    for (x = 0; x < 3; x++) { /* looking for an eigvalue of (1,0) */
       /*      printf("wr %8.3f wi %8.3f\n",wr[x],wi[x]);
          printf("%8.3f %8.3f %8.3f\n",
          v[0][x],v[1][x],v[2][x]); */
       test_real = fabs(wr[x]);
       test_imag = fabs(wi[x]);
 
-      if((test_real >= max_real) && (test_imag <= min_imag)) {
-        for(y = 0; y < 3; y++)
+      if ((test_real >= max_real) && (test_imag <= min_imag)) {
+        for (y = 0; y < 3; y++)
           test_inp[y] = (float) v[y][x];
-        transform33d3f(a, test_inp, test_out);  /* confirm that axis is invariant to rotation */
+        transform33d3f(a, test_inp,
+            test_out); /* confirm that axis is invariant to rotation */
         test_out[0] -= test_inp[0];
         test_out[1] -= test_inp[1];
         test_out[2] -= test_inp[2];
-        if((test_out[0] * test_out[0] +
-            test_out[1] * test_out[1] + test_out[2] * test_out[2]) < 0.1) {
-          for(y = 0; y < 3; y++)
+        if ((test_out[0] * test_out[0] + test_out[1] * test_out[1] +
+                test_out[2] * test_out[2]) < 0.1) {
+          for (y = 0; y < 3; y++)
             axis[y] = test_inp[y];
           max_real = test_real;
           min_imag = test_imag;
@@ -1942,10 +1948,9 @@ static void find_axis(Matrix33d a, float *axis)
      printf("%8.3f %8.3f %8.3f\n",p[1][0],p[1][1],p[1][2]);
      printf("%8.3f %8.3f %8.3f\n",p[2][0],p[2][1],p[2][2]);
    */
-
 }
 
-void matrix_to_rotation(Matrix53f rot, float *axis, float *angle)
+void matrix_to_rotation(Matrix53f rot, float* axis, float* angle)
 {
   float perp[3], tmp[3], rperp[3], dirck[3];
   Matrix33d rot3d;
@@ -1954,12 +1959,12 @@ void matrix_to_rotation(Matrix53f rot, float *axis, float *angle)
 
 #ifdef MATCHK
   printf("starting matrix\n");
-  for(a = 0; a < 3; a++)
+  for (a = 0; a < 3; a++)
     printf("%8.3f %8.3f %8.3f\n", rot[a][0], rot[a][1], rot[a][2]);
 #endif
 
-  for(a = 0; a < 3; a++)
-    for(b = 0; b < 3; b++)
+  for (a = 0; a < 3; a++)
+    for (b = 0; b < 3; b++)
       rot3d[a][b] = (double) rot[a][b];
 
   find_axis(rot3d, axis);
@@ -1970,7 +1975,7 @@ void matrix_to_rotation(Matrix53f rot, float *axis, float *angle)
   perp[1] = axis[2] * axis[1] - axis[0] * axis[0];
   perp[2] = axis[0] * axis[2] - axis[1] * axis[1];
 
-  if(length3f(perp) < R_SMALL) {
+  if (length3f(perp) < R_SMALL) {
     tmp[0] = axis[0];
     tmp[1] = -2 * axis[1];
     tmp[2] = axis[2];
@@ -1984,7 +1989,7 @@ void matrix_to_rotation(Matrix53f rot, float *axis, float *angle)
   *angle = get_angle3f(perp, rperp);
 
   cross_product3f(perp, rperp, dirck);
-  if(((dirck[0] * axis[0]) + (dirck[1] * axis[1]) + (dirck[2] * axis[2])) < _0)
+  if (((dirck[0] * axis[0]) + (dirck[1] * axis[1]) + (dirck[2] * axis[2])) < _0)
     *angle = -*angle;
 
   /*  printf("angle %8.3f \n",*angle); */
@@ -1993,54 +1998,59 @@ void matrix_to_rotation(Matrix53f rot, float *axis, float *angle)
 
 #ifdef MATCHK
   printf("reconstructed matrix: \n");
-  for(a = 0; a < 3; a++)
+  for (a = 0; a < 3; a++)
     printf("%8.3f %8.3f %8.3f\n", rotck[a][0], rotck[a][1], rotck[a][2]);
   printf("\n");
 #endif
-
 }
-void mult3f(const float *vsrc, const float val, float *vdest){
+void mult3f(const float* vsrc, const float val, float* vdest)
+{
   vdest[0] = vsrc[0] * val;
   vdest[1] = vsrc[1] * val;
   vdest[2] = vsrc[2] * val;
 }
 
-void mult4f(const float *vsrc, const float val, float *vdest){
+void mult4f(const float* vsrc, const float val, float* vdest)
+{
   vdest[0] = vsrc[0] * val;
   vdest[1] = vsrc[1] * val;
   vdest[2] = vsrc[2] * val;
   vdest[3] = vsrc[3] * val;
 }
 
-float max3(float val1, float val2, float val3){
-  if (val1>val2){
-    if (val1>val3){
+float max3(float val1, float val2, float val3)
+{
+  if (val1 > val2) {
+    if (val1 > val3) {
       return val1;
     } else {
       return val3;
     }
   } else {
-    if (val2>val3){
+    if (val2 > val3) {
       return val2;
     } else {
       return val3;
     }
   }
 }
-float ave3(float val1, float val2, float val3){
-  return ((val1+val2+val3)/3.f);
+float ave3(float val1, float val2, float val3)
+{
+  return ((val1 + val2 + val3) / 3.f);
 }
-float ave2(float val1, float val2){
-  return ((val1+val2)/2.f);
+float ave2(float val1, float val2)
+{
+  return ((val1 + val2) / 2.f);
 }
 
-void white4f(float *rgba, float value){
+void white4f(float* rgba, float value)
+{
   rgba[0] = value;
   rgba[1] = value;
   rgba[2] = value;
   rgba[3] = 1.0F;
 }
-void add4f(const float *v1, const float *v2, float *v3)
+void add4f(const float* v1, const float* v2, float* v3)
 {
   v3[0] = v1[0] + v2[0];
   v3[1] = v1[1] + v2[1];
@@ -2048,10 +2058,11 @@ void add4f(const float *v1, const float *v2, float *v3)
   v3[3] = v1[3] + v2[3];
 }
 
-int countchrs(const char *str, char ch){
+int countchrs(const char* str, char ch)
+{
   int cnt = 0;
-  const char *tmp = str;
-  while((tmp = strchr(tmp, ch))) {
+  const char* tmp = str;
+  while ((tmp = strchr(tmp, ch))) {
     cnt++;
     tmp++;
   }
@@ -2068,12 +2079,12 @@ int countchrs(const char *str, char ch){
 float smooth(float x, float power)
 {
 
-  if(x <= 0.5F) {
-    if(x <= 0.0F)
+  if (x <= 0.5F) {
+    if (x <= 0.0F)
       return 0.0F;
     return 0.5F * powf(2.0F * x, power);
   }
-  if(x >= 1.0F)
+  if (x >= 1.0F)
     return 1.0F;
   return 1.0F - (0.5F * powf(2.0F * (1.0F - x), power));
 }
@@ -2081,19 +2092,20 @@ float smooth(float x, float power)
 /**
  * Divides the unit circle radially into n segments with n >= 3.
  */
-void subdivide(int n, float *x, float *y)
+void subdivide(int n, float* x, float* y)
 {
   int a;
-  if(n < 3) {
+  if (n < 3) {
     n = 3;
   }
-  for(a = 0; a <= n; a++) {
+  for (a = 0; a <= n; a++) {
     x[a] = (float) cos(a * 2 * PI / n);
     y[a] = (float) sin(a * 2 * PI / n);
   }
 }
 
-namespace pymol {
+namespace pymol
+{
 /**
  * Compute the arithmetic mean of an Nx3 array along the first axis.
  * @param data Flat array data with N*3 elements
@@ -2107,4 +2119,4 @@ void meanNx3(float const* data, size_t N, float* out)
   }
   pymol::scale3(accum, 1.0 / N, out);
 }
-}
+} // namespace pymol

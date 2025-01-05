@@ -1,38 +1,38 @@
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
 C* copyright Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
 -*
--* 
+-*
 -*
 Z* -------------------------------------------------------------------
 */
 
-#include "os_gl.h"
-#include "os_python.h"
-#include <string.h>
-#include <iostream>
 #include "ShaderMgr.h"
-#include "ListMacros.h"
-#include "PyMOLOptions.h"
-#include "Feedback.h"
-#include "MemoryDebug.h"
-#include "Setting.h"
-#include "Scene.h"
 #include "Color.h"
-#include "Vector.h"
+#include "Feedback.h"
+#include "FileStream.h"
+#include "ListMacros.h"
+#include "Matrix.h"
+#include "MemoryDebug.h"
+#include "Parse.h"
+#include "PyMOLOptions.h"
+#include "Scene.h"
+#include "Setting.h"
+#include "Texture.h"
 #include "Util.h"
 #include "Util2.h"
-#include "Texture.h"
-#include "FileStream.h"
-#include "Matrix.h"
-#include "Parse.h"
+#include "Vector.h"
+#include "os_gl.h"
+#include "os_python.h"
+#include <iostream>
+#include <string.h>
 
 #ifndef _PYMOL_NO_AA_SHADERS
 #endif
@@ -45,28 +45,21 @@ Z* -------------------------------------------------------------------
 #define MAX_LOG_LEN 1024
 
 #include <algorithm>
+#include <functional>
 #include <sstream>
 #include <stack>
 #include <vector>
-#include <functional>
 /*  Texture Usage:
 
     0 - for not-PURE_OPENGL_ES_2: ObjectVolume: volumeTex
         for WEBGL: SCHRODINGER logo
     1 - for not-PURE_OPENGL_ES_2: Volume: either colorTex1D or colorTex2D
-        for _PYMOL_PRECOMPUTED_LIGHTING: Lighting Texture (ShaderMgr->lightingTexture)
-    2 - FXAA - color_texture
-        SMAA1 - colorTex
-        SMAA3 - colorTex
-    3 - SMAA3 - blendTex
-        Label/Indicator Shader : textureMap (both PURE_OPENGL_ES_2 and non-PURE_OPENGL_ES_2
-    4 - Background Texture: bgTextureMap
-    5 - OIT - 2nd pass : accumTex
-        Volumes - carvemask
-    6 - OIT - 2nd pass : revealageTex
-        SMAA2 - edgesTex
-    7 - SMAA2 - areaTex
-        OIT Copy - colorTex
+        for _PYMOL_PRECOMPUTED_LIGHTING: Lighting Texture
+   (ShaderMgr->lightingTexture) 2 - FXAA - color_texture SMAA1 - colorTex SMAA3
+   - colorTex 3 - SMAA3 - blendTex Label/Indicator Shader : textureMap (both
+   PURE_OPENGL_ES_2 and non-PURE_OPENGL_ES_2 4 - Background Texture:
+   bgTextureMap 5 - OIT - 2nd pass : accumTex Volumes - carvemask 6 - OIT - 2nd
+   pass : revealageTex SMAA2 - edgesTex 7 - SMAA2 - areaTex OIT Copy - colorTex
     8 - SMAA2 - searchTex
 
  */
@@ -76,32 +69,36 @@ Z* -------------------------------------------------------------------
 #define SUPPRESS_TESSELLATION_SHADER_ERRORS
 #endif
 
-#define CONNECTOR_GS_NUM_VERTICES  31
+#define CONNECTOR_GS_NUM_VERTICES 31
 
 #define SCENEGETIMAGESIZE SceneGetWidthHeight
 
 #include "ShaderText.h"
 
-#define WARNING_IF_GLERROR(msg) {		\
-  GLenum err; \
-  if ((err = glGetError())){ \
-    PRINTFB(G, FB_ShaderMgr, FB_Warnings) "GLERROR 0x%04x: %s\n", err, msg ENDFB(G); \
-  } \
+#define WARNING_IF_GLERROR(msg)                                                \
+  {                                                                            \
+    GLenum err;                                                                \
+    if ((err = glGetError())) {                                                \
+      PRINTFB(G, FB_ShaderMgr, FB_Warnings)                                    \
+      "GLERROR 0x%04x: %s\n", err, msg ENDFB(G);                               \
+    }                                                                          \
+  }
+
+static void glShaderSource1String(GLuint shad, const std::string& strobj)
+{
+  const GLchar* str = (const GLchar*) strobj.c_str();
+  glShaderSource(shad, 1, (const GLchar**) &str, nullptr);
 }
 
-static void glShaderSource1String(GLuint shad, const std::string &strobj){
-  const GLchar *str = (const GLchar *)strobj.c_str();
-  glShaderSource(shad, 1, (const GLchar **)&str, nullptr);
-}
-
-bool CShaderPrg::reload(){
+bool CShaderPrg::reload()
+{
   // skip programs with empty file names, assume their code is managed
   // outside of the reload logic (like ARB shaders).
   if (is_valid || vertfile.empty())
     return true;
 
   std::string gs, vs, fs, ts_ctrl, ts_eval;
-  CShaderMgr *I = G->ShaderMgr;
+  CShaderMgr* I = G->ShaderMgr;
   GLint status;
 
   if (geomParams) {
@@ -119,8 +116,7 @@ bool CShaderPrg::reload(){
   WARNING_IF_GLERROR("CShaderPrg::reload begin");
 
   PRINTFB(G, FB_ShaderMgr, FB_Blather)
-    "Loading shader named: %s\n", name.c_str()
-    ENDFB(G);
+  "Loading shader named: %s\n", name.c_str() ENDFB(G);
 
   if (!id) {
     id = glCreateProgram();
@@ -132,9 +128,10 @@ bool CShaderPrg::reload(){
       geomParams->id = glCreateShader(GL_GEOMETRY_SHADER);
 
       GLenum err;
-      if ((err=glGetError()) || !geomParams->id) {
+      if ((err = glGetError()) || !geomParams->id) {
         PRINTFB(G, FB_ShaderMgr, FB_Errors)
-          " Error: geometry shader creation failed. name=%s err=0x%x\n", name.c_str(), err ENDFB(G);
+        " Error: geometry shader creation failed. name=%s err=0x%x\n",
+            name.c_str(), err ENDFB(G);
         return false;
       }
 
@@ -147,7 +144,8 @@ bool CShaderPrg::reload(){
 
     if (!status) {
 #ifndef SUPPRESS_GEOMETRY_SHADER_ERRORS
-      ErrorMsgWithShaderInfoLog(geomParams->id, "geometry shader compilation failed.");
+      ErrorMsgWithShaderInfoLog(
+          geomParams->id, "geometry shader compilation failed.");
 #endif
       glDetachShader(id, geomParams->id);
       glDeleteShader(geomParams->id);
@@ -157,12 +155,14 @@ bool CShaderPrg::reload(){
 
     glProgramParameteriEXT(id, GL_GEOMETRY_INPUT_TYPE_EXT, geomParams->input);
     glProgramParameteriEXT(id, GL_GEOMETRY_OUTPUT_TYPE_EXT, geomParams->output);
-    glProgramParameteriEXT(id, GL_GEOMETRY_VERTICES_OUT_EXT, geomParams->numVertsOut);
+    glProgramParameteriEXT(
+        id, GL_GEOMETRY_VERTICES_OUT_EXT, geomParams->numVertsOut);
 
     PRINTFB(G, FB_ShaderMgr, FB_Debugging)
-      " ShaderPrg-Debug: geometry shader compiled.\n" ENDFB(G);
+    " ShaderPrg-Debug: geometry shader compiled.\n" ENDFB(G);
   } else if (geomParams && geomParams->id) {
-    // for manually switching off geometry shaders (set use_geometry_shaders, off)
+    // for manually switching off geometry shaders (set use_geometry_shaders,
+    // off)
     glDetachShader(id, geomParams->id);
     glDeleteShader(geomParams->id);
     geomParams->id = 0;
@@ -258,8 +258,9 @@ bool CShaderPrg::reload(){
   uniforms.clear();
   uniform_set = 0;
 
-  // it is valid to bind unused names, and to bind multiple names to the same index
-  if (!name.compare(0, 8, "cylinder")){
+  // it is valid to bind unused names, and to bind multiple names to the same
+  // index
+  if (!name.compare(0, 8, "cylinder")) {
     glBindAttribLocation(id, CYLINDER_VERTEX1, "attr_vertex1");
     glBindAttribLocation(id, CYLINDER_VERTEX2, "attr_vertex2");
     glBindAttribLocation(id, CYLINDER_COLOR, "a_Color");
@@ -284,27 +285,29 @@ bool CShaderPrg::reload(){
 #define MASK_SHADERS_PRESENT_SMAA 0x4;
 #define MASK_SHADERS_PRESENT_TESSELLATION 0x8;
 
-static void getGLVersion(PyMOLGlobals * G, int *major, int* minor);
-static void getGLSLVersion(PyMOLGlobals * G, int* major, int* minor);
+static void getGLVersion(PyMOLGlobals* G, int* major, int* minor);
+static void getGLSLVersion(PyMOLGlobals* G, int* major, int* minor);
 
-static void disableShaders(PyMOLGlobals * G);
+static void disableShaders(PyMOLGlobals* G);
 
 /**
  * Use this to turn off shaders if the renderer cannot use them.
  */
-void disableShaders(PyMOLGlobals * G) {
-    /* Auto-disable shader-based rendering */
-    SettingSetGlobal_b(G, cSetting_use_shaders, false);
+void disableShaders(PyMOLGlobals* G)
+{
+  /* Auto-disable shader-based rendering */
+  SettingSetGlobal_b(G, cSetting_use_shaders, false);
 }
 
-static void disableGeometryShaders(PyMOLGlobals * G) {
+static void disableGeometryShaders(PyMOLGlobals* G)
+{
   SettingSetGlobal_b(G, cSetting_use_geometry_shaders, false);
-  if(G->ShaderMgr)
+  if (G->ShaderMgr)
     G->ShaderMgr->SetPreprocVar("use_geometry_shaders", false);
 
   if (G->Option && !G->Option->quiet)
     PRINTFB(G, FB_ShaderMgr, FB_Warnings)
-      " Geometry shaders not available\n" ENDFB(G);
+  " Geometry shaders not available\n" ENDFB(G);
 }
 
 static void disableTessellationShaders(PyMOLGlobals* G)
@@ -328,14 +331,16 @@ static void disableTessellationShaders(PyMOLGlobals* G)
  *                 array like {from1, to1, from2, to2, ..., ""}
  * returns: new string
  */
-static std::string stringReplaceAll(const std::string &src, const std::string * replaceStrings) {
+static std::string stringReplaceAll(
+    const std::string& src, const std::string* replaceStrings)
+{
   std::string dest = src;
   for (int i = 0; !replaceStrings[i].empty(); i += 2) {
     int slen1 = replaceStrings[i].length();
     int slen2 = replaceStrings[i + 1].length();
     for (size_t pl = 0;
-        (pl = dest.find(replaceStrings[i], pl)) != std::string::npos;
-        pl += slen2) {
+         (pl = dest.find(replaceStrings[i], pl)) != std::string::npos;
+         pl += slen2) {
       dest.replace(pl, slen1, replaceStrings[i + 1]);
     }
   }
@@ -345,7 +350,8 @@ static std::string stringReplaceAll(const std::string &src, const std::string * 
 /**
  * Reload "CallComputeColorForLight" shader replacement string
  */
-void CShaderMgr::Reload_CallComputeColorForLight(){
+void CShaderMgr::Reload_CallComputeColorForLight()
+{
   if ((reload_bits & RELOAD_CALLCOMPUTELIGHTING)) {
     reload_bits &= ~RELOAD_CALLCOMPUTELIGHTING;
   } else {
@@ -363,25 +369,21 @@ void CShaderMgr::Reload_CallComputeColorForLight(){
 
   std::string rawtemplate = GetShaderSource("call_compute_color_for_light.fs");
 
-  std::string lightstrings[] = {
-    "`light`", "0",
-    "`postfix`", "_0",
-    ""
-  };
+  std::string lightstrings[] = {"`light`", "0", "`postfix`", "_0", ""};
 
   accstr << stringReplaceAll(rawtemplate, lightstrings);
 
-  if (light_count > 8){
+  if (light_count > 8) {
     PRINTFB(G, FB_ShaderMgr, FB_Details)
-      " ShaderMgr-Detail: using 8 lights (use precomputed_lighting for light_count > 8)\n"
-      ENDFB(G);
+    " ShaderMgr-Detail: using 8 lights (use precomputed_lighting for "
+    "light_count > 8)\n" ENDFB(G);
     light_count = 8;
   }
 
   // no postfix for 1..light_count
   lightstrings[3] = "";
 
-  for (int i=1; i<light_count; i++){
+  for (int i = 1; i < light_count; i++) {
     std::ostringstream lstr;
     lstr << i;
     lightstrings[1] = lstr.str(); // std::to_string(i)
@@ -397,13 +399,15 @@ void CShaderMgr::Reload_CallComputeColorForLight(){
   SetShaderSource("CallComputeColorForLight", accstr.str());
 }
 
-void CShaderMgr::Invalidate_All_Shaders(){
+void CShaderMgr::Invalidate_All_Shaders()
+{
   for (auto& prog : programs) {
     prog.second->Invalidate();
   }
 }
 
-void CShaderMgr::Reload_All_Shaders(){
+void CShaderMgr::Reload_All_Shaders()
+{
   Reload_Shader_Variables();
   Reload_CallComputeColorForLight();
 
@@ -420,15 +424,15 @@ void CShaderMgr::Reload_All_Shaders(){
 static bool shader_cache_initialized = false;
 
 // filename -> contents (static filesystem)
-static std::map<std::string, const char *> shader_cache_raw;
+static std::map<std::string, const char*> shader_cache_raw;
 
 // preproc variable -> nullptr terminated list of filenames ("used by")
-std::map<std::string, const char **> ifdef_deps;
+std::map<std::string, const char**> ifdef_deps;
 
 // filename -> nullptr terminated list of filenames ("included by")
-std::map<std::string, const char **> include_deps;
+std::map<std::string, const char**> include_deps;
 
-std::string CShaderMgr::GetShaderSource(const std::string &filename)
+std::string CShaderMgr::GetShaderSource(const std::string& filename)
 {
   return m_shaderPreprocessor.getSource(filename);
 }
@@ -438,27 +442,35 @@ std::map<std::string, const char*>* CShaderMgr::GetRawShaderCache()
   return &shader_cache_raw;
 }
 
-#define FREE_AND_REPLACE_WITH(var, with) if (var) free(var);  var = with;
+#define FREE_AND_REPLACE_WITH(var, with)                                       \
+  if (var)                                                                     \
+    free(var);                                                                 \
+  var = with;
 
-void CShaderMgr::Reload_Shader_Variables() {
+void CShaderMgr::Reload_Shader_Variables()
+{
   if ((reload_bits & RELOAD_VARIABLES)) {
     reload_bits &= ~RELOAD_VARIABLES;
   } else {
     return;
   }
 
-  int bg_image_mode = SettingGetGlobal_i(G, cSetting_bg_image_mode);  
-  int bg_gradient = SettingGetGlobal_b(G, cSetting_bg_gradient);  
+  int bg_image_mode = SettingGetGlobal_i(G, cSetting_bg_image_mode);
+  int bg_gradient = SettingGetGlobal_b(G, cSetting_bg_gradient);
   int bg_image_mode_solid;
   int stereo, stereo_mode;
-  const char * bg_image_filename = SettingGet_s(G, nullptr, nullptr, cSetting_bg_image_filename);
+  const char* bg_image_filename =
+      SettingGet_s(G, nullptr, nullptr, cSetting_bg_image_filename);
   short bg_image = bg_image_filename && bg_image_filename[0];
-  bg_image_mode_solid = !(bg_gradient || bg_image || OrthoBackgroundDataIsSet(*G->Ortho));
+  bg_image_mode_solid =
+      !(bg_gradient || bg_image || OrthoBackgroundDataIsSet(*G->Ortho));
 
   SetPreprocVar("bg_image_mode_solid", bg_image_mode_solid);
   if (!bg_image_mode_solid) {
-    SetPreprocVar("bg_image_mode_1_or_3", (bg_image_mode == 1 || bg_image_mode == 3));
-    SetPreprocVar("bg_image_mode_2_or_3", (bg_image_mode == 2 || bg_image_mode == 3));
+    SetPreprocVar(
+        "bg_image_mode_1_or_3", (bg_image_mode == 1 || bg_image_mode == 3));
+    SetPreprocVar(
+        "bg_image_mode_2_or_3", (bg_image_mode == 2 || bg_image_mode == 3));
   }
 
 #ifdef _PYMOL_IP_EXTRAS
@@ -466,11 +478,12 @@ void CShaderMgr::Reload_Shader_Variables() {
 #endif
 
   SetPreprocVar("ortho", SettingGetGlobal_i(G, cSetting_ortho));
-  SetPreprocVar("depth_cue", SettingGetGlobal_b(G, cSetting_depth_cue)
-      && SettingGetGlobal_b(G, cSetting_fog) != 0.0F);
+  SetPreprocVar("depth_cue", SettingGetGlobal_b(G, cSetting_depth_cue) &&
+                                 SettingGetGlobal_b(G, cSetting_fog) != 0.0F);
 
 #ifndef PURE_OPENGL_ES_2
-  SetPreprocVar("use_geometry_shaders", SettingGetGlobal_b(G, cSetting_use_geometry_shaders));
+  SetPreprocVar("use_geometry_shaders",
+      SettingGetGlobal_b(G, cSetting_use_geometry_shaders));
 #endif
 
   SetPreprocVar("line_smooth", SettingGetGlobal_b(G, cSetting_line_smooth));
@@ -483,14 +496,18 @@ void CShaderMgr::Reload_Shader_Variables() {
 #endif
 
   SetPreprocVar("ANAGLYPH", stereo && stereo_mode == cStereo_anaglyph);
-  SetPreprocVar("ray_trace_mode_3", SettingGetGlobal_i(G, cSetting_ray_trace_mode) == 3);
-  SetPreprocVar("transparency_mode_3", SettingGetGlobal_i(G, cSetting_transparency_mode)==3);
+  SetPreprocVar(
+      "ray_trace_mode_3", SettingGetGlobal_i(G, cSetting_ray_trace_mode) == 3);
+  SetPreprocVar("transparency_mode_3",
+      SettingGetGlobal_i(G, cSetting_transparency_mode) == 3);
 
 #ifndef _PYMOL_NO_AA_SHADERS
 #endif
 
-  SetPreprocVar("precomputed_lighting", SettingGetGlobal_b(G, cSetting_precomputed_lighting));
-  SetPreprocVar("ray_transparency_oblique", SettingGetGlobal_f(G, cSetting_ray_transparency_oblique) > R_SMALL4);
+  SetPreprocVar("precomputed_lighting",
+      SettingGetGlobal_b(G, cSetting_precomputed_lighting));
+  SetPreprocVar("ray_transparency_oblique",
+      SettingGetGlobal_f(G, cSetting_ray_transparency_oblique) > R_SMALL4);
 
   int chromadepth = SettingGetGlobal_i(G, cSetting_chromadepth);
   SetPreprocVar("chromadepth", chromadepth != 0);
@@ -501,32 +518,35 @@ void CShaderMgr::Reload_Shader_Variables() {
  * ShaderMgrInit is called from PyMOL.c during start up; it just allocates
  * the global ShaderMgr
  */
-bool ShaderMgrInit(PyMOLGlobals * G) {
+bool ShaderMgrInit(PyMOLGlobals* G)
+{
   // initialize some globals (do this only once)
   if (!shader_cache_initialized) {
     shader_cache_initialized = true;
 
     // make #include dependency map from flat array
-    for (const char ** ptr = _include_deps; *ptr; ++ptr) {
+    for (const char** ptr = _include_deps; *ptr; ++ptr) {
       include_deps[ptr[0]] = ptr + 1;
-      while (*(++ptr)) {}
+      while (*(++ptr)) {
+      }
     }
 
     // make #ifdef dependency map from flat array
-    for (const char ** ptr = _ifdef_deps; *ptr; ++ptr) {
+    for (const char** ptr = _ifdef_deps; *ptr; ++ptr) {
       ifdef_deps[ptr[0]] = ptr + 1;
-      while (*(++ptr)) {}
+      while (*(++ptr)) {
+      }
     }
 
     // make shader file cache from flat array
-    for (const char ** ptr = _shader_cache_raw; *ptr; ptr += 2) {
+    for (const char** ptr = _shader_cache_raw; *ptr; ptr += 2) {
       shader_cache_raw[ptr[0]] = *(ptr + 1);
     }
   }
 
   G->ShaderMgr = new CShaderMgr(G);
 
-  if(!G->ShaderMgr)
+  if (!G->ShaderMgr)
     return false;
 
   return true;
@@ -535,7 +555,8 @@ bool ShaderMgrInit(PyMOLGlobals * G) {
 /**
  * Print the given message as ShaderMgr-Error, followed by the shader info log.
  */
-void CShaderPrg::ErrorMsgWithShaderInfoLog(const GLuint sid, const char * msg) {
+void CShaderPrg::ErrorMsgWithShaderInfoLog(const GLuint sid, const char* msg)
+{
   if (!G->Option || G->Option->quiet)
     return;
 
@@ -544,19 +565,20 @@ void CShaderPrg::ErrorMsgWithShaderInfoLog(const GLuint sid, const char * msg) {
   std::vector<GLchar> infoLog(infoLogLength);
   glGetShaderInfoLog(sid, infoLogLength, nullptr, infoLog.data());
 
-  PRINTFB(G, FB_ShaderPrg, FB_Errors) " ShaderPrg-Error: %s; name='%s'\n",
-    msg, name.c_str() ENDFB(G);
+  PRINTFB(G, FB_ShaderPrg, FB_Errors)
+  " ShaderPrg-Error: %s; name='%s'\n", msg, name.c_str() ENDFB(G);
 
-  PRINTFB(G, FB_ShaderPrg, FB_Errors) " ShaderPrg-Error-InfoLog:\n%s\n",
-    infoLog.data() ENDFB(G);
+  PRINTFB(G, FB_ShaderPrg, FB_Errors)
+  " ShaderPrg-Error-InfoLog:\n%s\n", infoLog.data() ENDFB(G);
 }
 
 /* ShaderMgrConfig -- Called from PyMOL.c, configures the global ShaderMgr
- * This needs to be called once the OpenGL context has been created, it is 
+ * This needs to be called once the OpenGL context has been created, it is
  * called from MainInit() for PyMol, and from PyMOL_ConfigureShadersGL() for
  * other programs (i.e., JyMOL, AxPyMOL, etc.).
  */
-void CShaderMgr::Config() {
+void CShaderMgr::Config()
+{
   if (!G || !G->HaveGUI) /* && G->ValidContext); */
     return;
 
@@ -571,25 +593,24 @@ void CShaderMgr::Config() {
   }
 #endif
 
-  if (GLEW_OK==err) {
+  if (GLEW_OK == err) {
     GLint gl_major = 0, gl_minor = 0;
     getGLVersion(G, &gl_major, &gl_minor);
 
     PRINTFB(G, FB_ShaderMgr, FB_Details)
-      " Detected OpenGL version %d.%d.", gl_major, gl_minor ENDFB(G);
+    " Detected OpenGL version %d.%d.", gl_major, gl_minor ENDFB(G);
 
     if (GLEW_VERSION_2_0) {
       G->Feedback->add(" Shaders available.\n");
-    }
-    else { 
+    } else {
       G->Feedback->add(" Shaders and volumes unavailable.\n");
       disableShaders(G);
       return;
     }
-  } 
-  else {
+  } else {
     /* print info on glew error? */
-    G->Feedback->add(" There was an error intializing GLEW.  Basic graphics, including\n shaders and volumes may be unavailable.\n");
+    G->Feedback->add(" There was an error intializing GLEW.  Basic graphics, "
+                     "including\n shaders and volumes may be unavailable.\n");
     disableShaders(G);
     fprintf(stderr, " GLEW-Error: %s\n", glewGetErrorString(err));
     return;
@@ -597,8 +618,9 @@ void CShaderMgr::Config() {
 #endif
 
   // static preprocessor values
-  m_shaderPreprocessor.setVar("GLEW_VERSION_3_0", GLEW_VERSION_3_0 ? true : false);
-  if (TM3_IS_ONEBUF){
+  m_shaderPreprocessor.setVar(
+      "GLEW_VERSION_3_0", GLEW_VERSION_3_0 ? true : false);
+  if (TM3_IS_ONEBUF) {
     m_shaderPreprocessor.setVar("ONE_DRAW_BUFFER", true);
   }
 #ifdef PURE_OPENGL_ES_2
@@ -610,7 +632,8 @@ void CShaderMgr::Config() {
 #endif
 
   // shaders
-#define make_program(name, ...) programs[name] = new CShaderPrg(G, name, __VA_ARGS__)
+#define make_program(name, ...)                                                \
+  programs[name] = new CShaderPrg(G, name, __VA_ARGS__)
 
   make_program("bg", "bg.vs", "bg.fs");
   make_program("indicator", "indicator.vs", "indicator.fs");
@@ -627,7 +650,7 @@ void CShaderMgr::Config() {
 
   make_program("screen", "screen.vs", "screen.fs");
 
-  if (GLEW_EXT_geometry_shader4 && GLEW_EXT_gpu_shader4){
+  if (GLEW_EXT_geometry_shader4 && GLEW_EXT_gpu_shader4) {
     auto geoParams = pymol::make_copyable<CShaderPrg::GeometryShaderParams>(
         CShaderPrg::GeometryShaderParams{"connector.gs", GL_POINTS,
             GL_TRIANGLE_STRIP, CONNECTOR_GS_NUM_VERTICES});
@@ -648,7 +671,7 @@ void CShaderMgr::Config() {
   if (GET_FRAGDEPTH_SUPPORT()) {
     make_program("cylinder", "cylinder.vs", "cylinder.fs");
     make_program("sphere", "sphere.vs", "sphere.fs");
-  }  
+  }
 
   make_program("ramp", "ramp.vs", "ramp.fs");
   programs["ramp"]->uniformLocations[RAMP_OFFSETPT] = "offsetPt";
@@ -695,15 +718,17 @@ void CShaderMgr::Config() {
   SettingSet<bool>(G, cSetting_use_tessellation_shaders, 0);
 #endif
 
-#define check_program(name, setting, value) {   \
-    if (!programs[name]->reload()) {            \
-      SettingSetGlobal_i(G, setting, value);    \
-      programs.erase(name);                     \
-    }}                                          \
+#define check_program(name, setting, value)                                    \
+  {                                                                            \
+    if (!programs[name]->reload()) {                                           \
+      SettingSetGlobal_i(G, setting, value);                                   \
+      programs.erase(name);                                                    \
+    }                                                                          \
+  }                                                                            \
   // other shader compilation tests
   if (GET_FRAGDEPTH_SUPPORT()) {
-  check_program("cylinder", cSetting_render_as_cylinders, 0);
-  check_program("sphere", cSetting_sphere_mode, 0);
+    check_program("cylinder", cSetting_render_as_cylinders, 0);
+    check_program("sphere", cSetting_sphere_mode, 0);
   }
 
 #ifndef _PYMOL_NO_AA_SHADERS
@@ -746,18 +771,18 @@ ok_except1:
  * RETURNS
  * nothing; writes to major and minor
  */
-void getGLVersion(PyMOLGlobals * G, int *major, int* minor) {
+void getGLVersion(PyMOLGlobals* G, int* major, int* minor)
+{
   /* query the version string */
   const char* verstr = (const char*) glGetString(GL_VERSION);
   /* attempt to store the values into major and minor */
   if (!verstr || sscanf(verstr, "%d.%d", major, minor) != 2) {
     *major = *minor = 0;
     /* Use PyMOL FB system, instead of fprintf */
-    PRINTFD(G, FB_ObjectVolume) 
-      "Invalid GL_VERSION format.\n" ENDFD;
+    PRINTFD(G, FB_ObjectVolume)
+    "Invalid GL_VERSION format.\n" ENDFD;
   }
 }
-
 
 /* getGLSLVersion -- determine user's GLSL version
  * PARAMS
@@ -765,7 +790,8 @@ void getGLVersion(PyMOLGlobals * G, int *major, int* minor) {
  * minor, rval for minor
  */
 #ifndef PURE_OPENGL_ES_2
-void getGLSLVersion(PyMOLGlobals * G, int* major, int* minor) {
+void getGLSLVersion(PyMOLGlobals* G, int* major, int* minor)
+{
   int gl_major, gl_minor;
   *major = *minor = 0;
 
@@ -773,7 +799,7 @@ void getGLSLVersion(PyMOLGlobals * G, int* major, int* minor) {
   getGLVersion(G, &gl_major, &gl_minor);
 
   /* GL version 1 */
-  if (1==gl_major) {
+  if (1 == gl_major) {
     const char* extstr = (const char*) glGetString(GL_EXTENSIONS);
     if (extstr && strstr(extstr, "GL_ARB_shading_language_100")) {
       *major = 1;
@@ -781,28 +807,26 @@ void getGLSLVersion(PyMOLGlobals * G, int* major, int* minor) {
     }
   }
   /* GL > version 1 */
-  else if (gl_major>=2) {
+  else if (gl_major >= 2) {
     const char* verstr = (const char*) glGetString(GL_SHADING_LANGUAGE_VERSION);
 
     if (!verstr || sscanf(verstr, "%d.%d", major, minor) != 2) {
       *major = *minor = 0;
 
       if (G && G->Option && !G->Option->quiet) {
-        PRINTFD(G, FB_ObjectVolume) 
-          "Invalid GL_SHADING_LANGUAGE_VERSION format.\n" ENDFD;
+        PRINTFD(G, FB_ObjectVolume)
+        "Invalid GL_SHADING_LANGUAGE_VERSION format.\n" ENDFD;
       }
     }
   }
 }
 #endif
 
-
-
 /* ============================================================================
  * CShaderMgr -- Simple Shader Manager class
  */
-CShaderMgr::CShaderMgr(PyMOLGlobals * G_)
-  : m_shaderPreprocessor(G_, CShaderMgr::GetRawShaderCache())
+CShaderMgr::CShaderMgr(PyMOLGlobals* G_)
+    : m_shaderPreprocessor(G_, CShaderMgr::GetRawShaderCache())
 {
   G = G_;
   current_shader = nullptr;
@@ -824,7 +848,8 @@ CShaderMgr::CShaderMgr(PyMOLGlobals * G_)
 #endif
 }
 
-CShaderMgr::~CShaderMgr() {
+CShaderMgr::~CShaderMgr()
+{
   for (auto& prog : programs) {
     delete prog.second;
   }
@@ -837,19 +862,21 @@ CShaderMgr::~CShaderMgr() {
   FreeAllVBOs();
 }
 
-int CShaderMgr::AddShaderPrg(CShaderPrg * s) {
+int CShaderMgr::AddShaderPrg(CShaderPrg* s)
+{
   if (!s)
     return 0;
   const std::string& name = s->name;
-  if (programs.find(name)!=programs.end()){
+  if (programs.find(name) != programs.end()) {
     delete programs[name];
   }
   programs[name] = s;
   return 1;
 }
 
-int CShaderMgr::RemoveShaderPrg(const std::string& name) {
-  if (programs.find(name) != programs.end()){
+int CShaderMgr::RemoveShaderPrg(const std::string& name)
+{
+  if (programs.find(name) != programs.end()) {
     delete programs[name];
   }
   return 1;
@@ -860,8 +887,11 @@ int CShaderMgr::RemoveShaderPrg(const std::string& name) {
  * shader manager. If `pass` is provided and is less than zero, and we are
  * in transparency_mode 3, then look up the NO_ORDER_TRANSP derivative.h
  */
-CShaderPrg * CShaderMgr::GetShaderPrg(std::string name, short set_current_shader, RenderPass pass) {
-  if (pass == RenderPass::Transparent && SettingGetGlobal_i(G, cSetting_transparency_mode) == 3) {
+CShaderPrg* CShaderMgr::GetShaderPrg(
+    std::string name, short set_current_shader, RenderPass pass)
+{
+  if (pass == RenderPass::Transparent &&
+      SettingGetGlobal_i(G, cSetting_transparency_mode) == 3) {
     name += "_t";
   }
 
@@ -875,22 +905,26 @@ CShaderPrg * CShaderMgr::GetShaderPrg(std::string name, short set_current_shader
   return it->second;
 }
 
-int CShaderMgr::ShaderPrgExists(const char * name){
+int CShaderMgr::ShaderPrgExists(const char* name)
+{
   return (programs.find(name) != programs.end());
 }
 
-int CShaderMgr::ShadersPresent() {
+int CShaderMgr::ShadersPresent()
+{
   return shaders_present;
 }
 
-int CShaderMgr::GeometryShadersPresent() {
+int CShaderMgr::GeometryShadersPresent()
+{
   return shaders_present & MASK_SHADERS_PRESENT_GEOMETRY;
 }
 
 /**
  * glDeleteBuffers for vbos_to_free
  */
-void CShaderMgr::FreeAllVBOs() {
+void CShaderMgr::FreeAllVBOs()
+{
 #ifndef _WEBGL
   freeAllGPUBuffers();
 
@@ -905,23 +939,26 @@ void CShaderMgr::FreeAllVBOs() {
 #endif
 }
 
-void CShaderMgr::AddVBOsToFree(GLuint *vboid, int nvbos){
+void CShaderMgr::AddVBOsToFree(GLuint* vboid, int nvbos)
+{
   int i;
-  for (i=0; i<nvbos; i++){
-    if (vboid[i]>0)
-        AddVBOToFree(vboid[i]);
+  for (i = 0; i < nvbos; i++) {
+    if (vboid[i] > 0)
+      AddVBOToFree(vboid[i]);
   }
 }
 
 /**
  * thread-safe deferred glDeleteBuffers(1, &vboid)
  */
-void CShaderMgr::AddVBOToFree(GLuint vboid){
+void CShaderMgr::AddVBOToFree(GLuint vboid)
+{
 #ifdef _WEBGL // No threads, immediately delete
   if (glIsBuffer(vboid)) {
     glDeleteBuffers(1, &vboid);
   } else {
-    PRINTFB(G, FB_ShaderMgr, FB_Warnings) "WARNING: CShaderMgr_AddVBOToFree() buffer is not a VBO %d", vboid ENDFB(G);
+    PRINTFB(G, FB_ShaderMgr, FB_Warnings)
+    "WARNING: CShaderMgr_AddVBOToFree() buffer is not a VBO %d", vboid ENDFB(G);
   }
 #else
   LOCK_GUARD_MUTEX(lock, vbos_to_free_mutex);
@@ -929,30 +966,34 @@ void CShaderMgr::AddVBOToFree(GLuint vboid){
 #endif
 }
 
-CShaderPrg *CShaderMgr::Enable_DefaultShaderWithSettings(
-    const CSetting *set1,
-    const CSetting *set2, RenderPass pass) {
-  CShaderPrg * shaderPrg = Get_DefaultShader(pass);
+CShaderPrg* CShaderMgr::Enable_DefaultShaderWithSettings(
+    const CSetting* set1, const CSetting* set2, RenderPass pass)
+{
+  CShaderPrg* shaderPrg = Get_DefaultShader(pass);
   return Setup_DefaultShader(shaderPrg, set1, set2);
 }
 
-CShaderPrg *CShaderMgr::Enable_DefaultShader(RenderPass pass){
-  CShaderPrg * shaderPrg = Get_DefaultShader(pass);
+CShaderPrg* CShaderMgr::Enable_DefaultShader(RenderPass pass)
+{
+  CShaderPrg* shaderPrg = Get_DefaultShader(pass);
   return Setup_DefaultShader(shaderPrg, nullptr, nullptr);
 }
 
-CShaderPrg *CShaderMgr::Enable_LineShader(RenderPass pass){
-  CShaderPrg * shaderPrg = Get_LineShader(pass);
+CShaderPrg* CShaderMgr::Enable_LineShader(RenderPass pass)
+{
+  CShaderPrg* shaderPrg = Get_LineShader(pass);
   return Setup_DefaultShader(shaderPrg, nullptr, nullptr);
 }
 
-CShaderPrg *CShaderMgr::Enable_SurfaceShader(RenderPass pass){
-  CShaderPrg * shaderPrg = Get_SurfaceShader(pass);
+CShaderPrg* CShaderMgr::Enable_SurfaceShader(RenderPass pass)
+{
+  CShaderPrg* shaderPrg = Get_SurfaceShader(pass);
   return Setup_DefaultShader(shaderPrg, nullptr, nullptr);
 }
 
-CShaderPrg *CShaderMgr::Enable_ConnectorShader(RenderPass pass){
-  CShaderPrg * shaderPrg = Get_ConnectorShader(pass);
+CShaderPrg* CShaderMgr::Enable_ConnectorShader(RenderPass pass)
+{
+  CShaderPrg* shaderPrg = Get_ConnectorShader(pass);
   if (!shaderPrg)
     return nullptr;
   shaderPrg = Setup_DefaultShader(shaderPrg, nullptr, nullptr);
@@ -970,38 +1011,42 @@ CShaderPrg *CShaderMgr::Enable_ConnectorShader(RenderPass pass){
 
   {
     float v_scale = SceneGetScreenVertexScale(G, nullptr);
-    shaderPrg->Set1f("screenOriginVertexScale", v_scale/2.f);
+    shaderPrg->Set1f("screenOriginVertexScale", v_scale / 2.f);
   }
 
   return shaderPrg;
 }
 
-CShaderPrg *CShaderMgr::Setup_DefaultShader(CShaderPrg * shaderPrg,
-    const CSetting *set1,
-    const CSetting *set2) {
-  if (!shaderPrg){
-    current_shader = nullptr; 
+CShaderPrg* CShaderMgr::Setup_DefaultShader(
+    CShaderPrg* shaderPrg, const CSetting* set1, const CSetting* set2)
+{
+  if (!shaderPrg) {
+    current_shader = nullptr;
     return shaderPrg;
   }
   shaderPrg->Enable();
   shaderPrg->SetBgUniforms();
   shaderPrg->Set_Stereo_And_AnaglyphMode();
 
-  bool two_sided_lighting_enabled = SceneGetTwoSidedLightingSettings(G, set1, set2);
+  bool two_sided_lighting_enabled =
+      SceneGetTwoSidedLightingSettings(G, set1, set2);
 
   shaderPrg->SetLightingEnabled(1); // lighting on by default
   shaderPrg->Set1i("two_sided_lighting_enabled", two_sided_lighting_enabled);
   shaderPrg->Set1f("ambient_occlusion_scale", 0.f);
-  shaderPrg->Set1i("accessibility_mode", SettingGetGlobal_i(G, cSetting_ambient_occlusion_mode) / 4);
-  shaderPrg->Set1f("accessibility_mode_on", SettingGetGlobal_i(G, cSetting_ambient_occlusion_mode) ? 1.f : 0.f);
+  shaderPrg->Set1i("accessibility_mode",
+      SettingGetGlobal_i(G, cSetting_ambient_occlusion_mode) / 4);
+  shaderPrg->Set1f("accessibility_mode_on",
+      SettingGetGlobal_i(G, cSetting_ambient_occlusion_mode) ? 1.f : 0.f);
 
   // interior_color
   {
-    int interior_color = SettingGet_i(G, set1, set2, cSetting_ray_interior_color);
+    int interior_color =
+        SettingGet_i(G, set1, set2, cSetting_ray_interior_color);
     if (interior_color == cColorDefault || two_sided_lighting_enabled) {
       shaderPrg->Set1i("use_interior_color", 0);
     } else {
-      float inter[] = { 0.f, 0.f, 0.f };
+      float inter[] = {0.f, 0.f, 0.f};
       ColorGetEncoded(G, interior_color, inter);
       shaderPrg->Set1i("use_interior_color", 1);
       shaderPrg->Set4f("interior_color", inter[0], inter[1], inter[2], 1.f);
@@ -1012,17 +1057,20 @@ CShaderPrg *CShaderMgr::Setup_DefaultShader(CShaderPrg * shaderPrg,
   shaderPrg->Set_Matrices();
   return (shaderPrg);
 }
-CShaderPrg *CShaderMgr::Enable_CylinderShader(RenderPass pass){
+CShaderPrg* CShaderMgr::Enable_CylinderShader(RenderPass pass)
+{
   return Enable_CylinderShader("cylinder", pass);
 }
 
-CShaderPrg *CShaderMgr::Enable_CylinderShader(const char *shader_name, RenderPass pass){
-  CShaderPrg *shaderPrg;
+CShaderPrg* CShaderMgr::Enable_CylinderShader(
+    const char* shader_name, RenderPass pass)
+{
+  CShaderPrg* shaderPrg;
 
   auto extent = SceneGetExtentStereo(G);
   shaderPrg = GetShaderPrg(shader_name, 1, pass);
   if (!shaderPrg)
-      return nullptr;
+    return nullptr;
   shaderPrg->Enable();
 
   shaderPrg->SetLightingEnabled(1); // lighting on by default
@@ -1034,7 +1082,8 @@ CShaderPrg *CShaderMgr::Enable_CylinderShader(const char *shader_name, RenderPas
   shaderPrg->Set1f("inv_height", 1.0f / extent.height);
   shaderPrg->Set1i("no_flat_caps", 1);
   {
-    float smooth_half_bonds = (SettingGetGlobal_i(G, cSetting_smooth_half_bonds)) ? .2f : 0.f;
+    float smooth_half_bonds =
+        (SettingGetGlobal_i(G, cSetting_smooth_half_bonds)) ? .2f : 0.f;
     shaderPrg->Set1f("half_bond", smooth_half_bonds);
   }
   shaderPrg->Set_Specular_Values();
@@ -1048,14 +1097,16 @@ CShaderPrg *CShaderMgr::Enable_CylinderShader(const char *shader_name, RenderPas
   return shaderPrg;
 }
 
-CShaderPrg *CShaderMgr::Get_DefaultSphereShader(RenderPass pass){
+CShaderPrg* CShaderMgr::Get_DefaultSphereShader(RenderPass pass)
+{
   return GetShaderPrg("sphere", 1, pass);
 }
 
-
-CShaderPrg *CShaderMgr::Enable_DefaultSphereShader(RenderPass pass) {
-  CShaderPrg *shaderPrg = Get_DefaultSphereShader(pass);
-  if (!shaderPrg) return nullptr;
+CShaderPrg* CShaderMgr::Enable_DefaultSphereShader(RenderPass pass)
+{
+  CShaderPrg* shaderPrg = Get_DefaultSphereShader(pass);
+  if (!shaderPrg)
+    return nullptr;
   shaderPrg->Enable();
   shaderPrg->SetLightingEnabled(1);
   shaderPrg->Set1f("sphere_size_scale", 1.f);
@@ -1070,41 +1121,53 @@ CShaderPrg *CShaderMgr::Enable_DefaultSphereShader(RenderPass pass) {
   return (shaderPrg);
 }
 
-CShaderPrg *CShaderMgr::Get_ConnectorShader(RenderPass pass){
+CShaderPrg* CShaderMgr::Get_ConnectorShader(RenderPass pass)
+{
   return GetShaderPrg("connector", 1, pass);
 }
 
-CShaderPrg *CShaderMgr::Get_DefaultShader(RenderPass pass){
+CShaderPrg* CShaderMgr::Get_DefaultShader(RenderPass pass)
+{
   return GetShaderPrg("default", 1, pass);
 }
 
-CShaderPrg *CShaderMgr::Get_LineShader(RenderPass pass){
+CShaderPrg* CShaderMgr::Get_LineShader(RenderPass pass)
+{
   return GetShaderPrg("line", 1, pass);
 }
 
-CShaderPrg *CShaderMgr::Get_SurfaceShader(RenderPass pass){
+CShaderPrg* CShaderMgr::Get_SurfaceShader(RenderPass pass)
+{
   return GetShaderPrg("surface", 1, pass);
 }
 
-CShaderPrg *CShaderMgr::Get_CylinderShader(RenderPass pass, short set_current_shader) {
+CShaderPrg* CShaderMgr::Get_CylinderShader(
+    RenderPass pass, short set_current_shader)
+{
   return GetShaderPrg("cylinder", set_current_shader, pass);
 }
 
-CShaderPrg *CShaderMgr::Get_CylinderNewShader(RenderPass pass, short set_current_shader) {
+CShaderPrg* CShaderMgr::Get_CylinderNewShader(
+    RenderPass pass, short set_current_shader)
+{
   return GetShaderPrg("cylinder_new", set_current_shader, pass);
 }
 
-CShaderPrg *CShaderMgr::Get_Current_Shader(){
+CShaderPrg* CShaderMgr::Get_Current_Shader()
+{
   return current_shader;
 }
 
-CShaderPrg *CShaderMgr::Get_BackgroundShader(){
+CShaderPrg* CShaderMgr::Get_BackgroundShader()
+{
   return GetShaderPrg("bg");
 }
 
-CShaderPrg *CShaderMgr::Enable_BackgroundShader(){
-  CShaderPrg * shaderPrg = Get_BackgroundShader();
-  if (!shaderPrg) return shaderPrg;
+CShaderPrg* CShaderMgr::Enable_BackgroundShader()
+{
+  CShaderPrg* shaderPrg = Get_BackgroundShader();
+  if (!shaderPrg)
+    return shaderPrg;
   shaderPrg->Enable();
 
   glDisable(GL_DEPTH_TEST);
@@ -1113,37 +1176,41 @@ CShaderPrg *CShaderMgr::Enable_BackgroundShader(){
   return shaderPrg;
 }
 
-CShaderPrg *CShaderMgr::Enable_TriLinesShader() {
-  CShaderPrg * shaderPrg = GetShaderPrg("trilines");
-  if (!shaderPrg) return shaderPrg;
+CShaderPrg* CShaderMgr::Enable_TriLinesShader()
+{
+  CShaderPrg* shaderPrg = GetShaderPrg("trilines");
+  if (!shaderPrg)
+    return shaderPrg;
   shaderPrg->Enable();
   shaderPrg->SetBgUniforms();
   shaderPrg->Set_Stereo_And_AnaglyphMode();
   shaderPrg->Set_Matrices();
   auto extent = SceneGetExtentStereo(G);
-  shaderPrg->Set2f("inv_dimensions", 1.f/extent.width, 1.f/extent.height);
+  shaderPrg->Set2f("inv_dimensions", 1.f / extent.width, 1.f / extent.height);
   return shaderPrg;
 }
 
 #ifndef _PYMOL_NO_AA_SHADERS
 #endif
 
-CShaderPrg *CShaderMgr::Enable_OITShader() {
-  CShaderPrg * shaderPrg = GetShaderPrg("oit");
-  if (!shaderPrg) return shaderPrg;
+CShaderPrg* CShaderMgr::Enable_OITShader()
+{
+  CShaderPrg* shaderPrg = GetShaderPrg("oit");
+  if (!shaderPrg)
+    return shaderPrg;
   shaderPrg->Enable();
 
   constexpr GLuint accumTexUnit = 5;
   constexpr GLuint revealageTexUnit = 6;
   oit_pp->activateRTAsTexture(OIT_PostProcess::OITRT::ACCUM, accumTexUnit);
-  oit_pp->activateRTAsTexture(OIT_PostProcess::OITRT::REVEALAGE, revealageTexUnit);
+  oit_pp->activateRTAsTexture(
+      OIT_PostProcess::OITRT::REVEALAGE, revealageTexUnit);
   shaderPrg->Set1i("accumTex", accumTexUnit);
   shaderPrg->Set1i("revealageTex", revealageTexUnit);
   shaderPrg->Set1f("isRight", stereo_flag > 0 ? 1. : 0);
   glEnable(GL_BLEND);
   glBlendFuncSeparate(
-      GL_SRC_ALPHA,   GL_ONE_MINUS_SRC_ALPHA,
-      GL_ONE,         GL_ONE_MINUS_SRC_ALPHA);
+      GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
   glDisable(GL_DEPTH_TEST);
 #ifndef PURE_OPENGL_ES_2
@@ -1152,15 +1219,17 @@ CShaderPrg *CShaderMgr::Enable_OITShader() {
   return shaderPrg;
 }
 
-CShaderPrg *CShaderMgr::Enable_OITCopyShader() {
-  CShaderPrg * shaderPrg = GetShaderPrg("copy");
-  if (!shaderPrg) return shaderPrg;
+CShaderPrg* CShaderMgr::Enable_OITCopyShader()
+{
+  CShaderPrg* shaderPrg = GetShaderPrg("copy");
+  if (!shaderPrg)
+    return shaderPrg;
   shaderPrg->Enable();
 
   constexpr GLuint colorTexUnit = 7;
   activateOffscreenTexture(colorTexUnit);
   shaderPrg->Set1i("colorTex", colorTexUnit);
-  if (G->ShaderMgr->stereo_blend){
+  if (G->ShaderMgr->stereo_blend) {
     // for full-screen stereo
     glEnable(GL_BLEND);
     glBlendFunc(GL_ONE, GL_ONE);
@@ -1174,20 +1243,22 @@ CShaderPrg *CShaderMgr::Enable_OITCopyShader() {
   return shaderPrg;
 }
 
-CShaderPrg *CShaderMgr::Enable_LabelShader(RenderPass pass){
-  CShaderPrg *shaderPrg;
-  shaderPrg = Get_LabelShader(pass);  
+CShaderPrg* CShaderMgr::Enable_LabelShader(RenderPass pass)
+{
+  CShaderPrg* shaderPrg;
+  shaderPrg = Get_LabelShader(pass);
   if (!shaderPrg)
-      return nullptr;
+    return nullptr;
   shaderPrg->Enable();
   return Setup_LabelShader(shaderPrg);
 }
 
-CShaderPrg *CShaderMgr::Enable_ScreenShader(){
-  CShaderPrg *shaderPrg;
-  shaderPrg = Get_ScreenShader();  
+CShaderPrg* CShaderMgr::Enable_ScreenShader()
+{
+  CShaderPrg* shaderPrg;
+  shaderPrg = Get_ScreenShader();
   if (!shaderPrg)
-      return nullptr;
+    return nullptr;
   shaderPrg->Enable();
 
   int ortho_width, ortho_height;
@@ -1197,21 +1268,23 @@ CShaderPrg *CShaderMgr::Enable_ScreenShader(){
   return Setup_LabelShader(shaderPrg);
 }
 
-CShaderPrg *CShaderMgr::Enable_RampShader(){
-  CShaderPrg *shaderPrg;
-  shaderPrg = Get_RampShader();  
+CShaderPrg* CShaderMgr::Enable_RampShader()
+{
+  CShaderPrg* shaderPrg;
+  shaderPrg = Get_RampShader();
   if (!shaderPrg)
-      return nullptr;
+    return nullptr;
   shaderPrg->Enable();
   return Setup_LabelShader(shaderPrg);
 }
 
-CShaderPrg *CShaderMgr::Setup_LabelShader(CShaderPrg *shaderPrg) {
+CShaderPrg* CShaderMgr::Setup_LabelShader(CShaderPrg* shaderPrg)
+{
   shaderPrg->Set_Matrices();
 
   glActiveTexture(GL_TEXTURE3);
   TextureBindTexture(G);
-  if (!(shaderPrg->uniform_set & 8)){
+  if (!(shaderPrg->uniform_set & 8)) {
     shaderPrg->uniform_set |= 8;
     shaderPrg->Set1i("textureMap", 3);
   }
@@ -1224,7 +1297,7 @@ CShaderPrg *CShaderMgr::Setup_LabelShader(CShaderPrg *shaderPrg) {
 
   {
     float v_scale = SceneGetScreenVertexScale(G, nullptr);
-    shaderPrg->Set1f("screenOriginVertexScale", v_scale/2.f);
+    shaderPrg->Set1f("screenOriginVertexScale", v_scale / 2.f);
   }
   {
     float front, back;
@@ -1237,27 +1310,33 @@ CShaderPrg *CShaderMgr::Setup_LabelShader(CShaderPrg *shaderPrg) {
   return shaderPrg;
 }
 
-CShaderPrg *CShaderMgr::Get_LabelShader(RenderPass pass){
+CShaderPrg* CShaderMgr::Get_LabelShader(RenderPass pass)
+{
   return GetShaderPrg("label", 1, pass);
 }
 
-CShaderPrg *CShaderMgr::Get_ScreenShader() {
+CShaderPrg* CShaderMgr::Get_ScreenShader()
+{
   if (is_picking)
     return nullptr;
   return GetShaderPrg("screen");
 }
 
-CShaderPrg *CShaderMgr::Get_RampShader() {
+CShaderPrg* CShaderMgr::Get_RampShader()
+{
   return GetShaderPrg("ramp");
 }
 
-CShaderPrg *CShaderMgr::Get_IndicatorShader() {
+CShaderPrg* CShaderMgr::Get_IndicatorShader()
+{
   return GetShaderPrg("indicator");
 }
 
-CShaderPrg *CShaderMgr::Enable_IndicatorShader() {
-  CShaderPrg * shaderPrg = Get_IndicatorShader();
-  if (!shaderPrg) return shaderPrg;
+CShaderPrg* CShaderMgr::Enable_IndicatorShader()
+{
+  CShaderPrg* shaderPrg = Get_IndicatorShader();
+  if (!shaderPrg)
+    return shaderPrg;
   shaderPrg->Enable();
 
   shaderPrg->Set_Stereo_And_AnaglyphMode();
@@ -1265,7 +1344,7 @@ CShaderPrg *CShaderMgr::Enable_IndicatorShader() {
 
   glActiveTexture(GL_TEXTURE3);
   TextureBindTexture(G);
-  if (!(shaderPrg->uniform_set & 8)){
+  if (!(shaderPrg->uniform_set & 8)) {
     shaderPrg->Set1i("textureMap", 3);
     shaderPrg->uniform_set |= 8;
   }
@@ -1303,16 +1382,19 @@ CShaderPrg* CShaderMgr::Get_BezierShader()
   return GetShaderPrg("bezier");
 }
 
-void CShaderMgr::ResetUniformSet() {
-  for (auto & prog : programs) {
+void CShaderMgr::ResetUniformSet()
+{
+  for (auto& prog : programs) {
     prog.second->uniform_set = 0;
   }
 }
 
-void CShaderMgr::SetIsPicking(int is_picking) {
+void CShaderMgr::SetIsPicking(int is_picking)
+{
   this->is_picking = is_picking;
 }
-int CShaderMgr::GetIsPicking() {
+int CShaderMgr::GetIsPicking()
+{
   return is_picking;
 }
 
@@ -1321,24 +1403,24 @@ int CShaderMgr::GetIsPicking() {
 /*
  * Lighting setting indices are not contiguous, so we need a mapping array
  */
-int light_setting_indices[] = {
-  cSetting_light, cSetting_light2, cSetting_light3, cSetting_light4,
-  cSetting_light5, cSetting_light6, cSetting_light7, cSetting_light8,
-  cSetting_light9
-};
+int light_setting_indices[] = {cSetting_light, cSetting_light2, cSetting_light3,
+    cSetting_light4, cSetting_light5, cSetting_light6, cSetting_light7,
+    cSetting_light8, cSetting_light9};
 
 /**
  * Generate and upload a precomputed vec2(ambient, specular) lighting texture.
  *
  * Must be equivalent to "ComputeLighting" in "compute_color_for_light.fs"
  */
-void CShaderMgr::Generate_LightingTexture() {
+void CShaderMgr::Generate_LightingTexture()
+{
   const int light_max = 10;
   int light_count = SettingGetGlobal_i(G, cSetting_light_count);
   int spec_count = SettingGetGlobal_i(G, cSetting_spec_count);
   float ambient = SettingGetGlobal_f(G, cSetting_ambient);
   float direct = SettingGetGlobal_f(G, cSetting_direct);
-  float reflect = SettingGetGlobal_f(G, cSetting_reflect) * SceneGetReflectScaleValue(G, light_max);
+  float reflect = SettingGetGlobal_f(G, cSetting_reflect) *
+                  SceneGetReflectScaleValue(G, light_max);
   float shininess, spec_value;
   float shininess_0, spec_value_0;
   float diffuse, spec, shine;
@@ -1350,12 +1432,8 @@ void CShaderMgr::Generate_LightingTexture() {
   // (ambient, specular) 2D texture
   unsigned char texture_AS[LIGHTINGTEXTUREWIDTH][LIGHTINGTEXTUREWIDTH][2];
 
-  SceneGetAdjustedLightValues(G,
-      &spec_value,
-      &shininess,
-      &spec_value_0,
-      &shininess_0,
-      light_max);
+  SceneGetAdjustedLightValues(
+      G, &spec_value, &shininess, &spec_value_0, &shininess_0, light_max);
 
   if (light_count < 2) {
     light_count = 1;
@@ -1364,12 +1442,13 @@ void CShaderMgr::Generate_LightingTexture() {
     light_count = light_max;
   }
 
-  if(spec_count < 0) {
+  if (spec_count < 0) {
     spec_count = light_count - 1;
   }
 
   for (int i = 1; i < light_count; ++i) {
-    const float * setting = SettingGetGlobal_3fv(G, light_setting_indices[i - 1]);
+    const float* setting =
+        SettingGetGlobal_3fv(G, light_setting_indices[i - 1]);
     copy3f(setting, light_positions[i]);
     normalize3f(light_positions[i]);
     invert3f(light_positions[i]);
@@ -1396,16 +1475,28 @@ void CShaderMgr::Generate_LightingTexture() {
     for (int y = 0; y < LIGHTINGTEXTUREWIDTH; ++y) {
       for (int x = 0; x < LIGHTINGTEXTUREWIDTH; ++x) {
 
-        float vx =   x + .5f - vz;
+        float vx = x + .5f - vz;
         float vy = -(y + .5f - vz);
 
         switch (face) {
-          case 0: set3f(normal,  vz,  vy, -vx); break;
-          case 1: set3f(normal, -vz,  vy,  vx); break;
-          case 2: set3f(normal,  vx,  vz, -vy); break;
-          case 3: set3f(normal,  vx, -vz,  vy); break;
-          case 4: set3f(normal,  vx,  vy,  vz); break;
-          case 5: set3f(normal, -vx,  vy, -vz); break;
+        case 0:
+          set3f(normal, vz, vy, -vx);
+          break;
+        case 1:
+          set3f(normal, -vz, vy, vx);
+          break;
+        case 2:
+          set3f(normal, vx, vz, -vy);
+          break;
+        case 3:
+          set3f(normal, vx, -vz, vy);
+          break;
+        case 4:
+          set3f(normal, vx, vy, vz);
+          break;
+        case 5:
+          set3f(normal, -vx, vy, -vz);
+          break;
         }
 
         normalize3f(normal);
@@ -1427,7 +1518,7 @@ void CShaderMgr::Generate_LightingTexture() {
           }
 
           // light direction (normalized)
-          const float * L = light_positions[i];
+          const float* L = light_positions[i];
 
           // cosine of angle between normal and light
           float NdotL = dot_product3f(normal, L);
@@ -1459,8 +1550,7 @@ void CShaderMgr::Generate_LightingTexture() {
       }
     }
 
-    glTexImage2D(
-        GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
+    glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face,
         /* level */ 0,
         /* internalformat */ GL_LUMINANCE_ALPHA,
         /* width  */ LIGHTINGTEXTUREWIDTH,
@@ -1472,16 +1562,18 @@ void CShaderMgr::Generate_LightingTexture() {
   }
 }
 
-void CShaderMgr::Set_Reload_Bits(int bits){
+void CShaderMgr::Set_Reload_Bits(int bits)
+{
   reload_bits |= bits;
 }
 
-void CShaderMgr::Check_Reload() {
-  if(!SettingGetGlobal_b(G, cSetting_use_shaders)) {
+void CShaderMgr::Check_Reload()
+{
+  if (!SettingGetGlobal_b(G, cSetting_use_shaders)) {
     return;
   }
 
-  if (reload_bits){
+  if (reload_bits) {
     if (reload_bits == RELOAD_ALL_SHADERS) {
       for (auto& prog : programs)
         prog.second->is_valid = false;
@@ -1493,7 +1585,8 @@ void CShaderMgr::Check_Reload() {
   }
 }
 
-GLfloat *CShaderMgr::GetLineWidthRange() {
+GLfloat* CShaderMgr::GetLineWidthRange()
+{
   return line_width_range;
 }
 
@@ -1503,7 +1596,8 @@ GLfloat *CShaderMgr::GetLineWidthRange() {
 /**
  * Register filename -> shader dependencies for `shader`
  */
-void CShaderMgr::RegisterDependantFileNames(CShaderPrg * shader) {
+void CShaderMgr::RegisterDependantFileNames(CShaderPrg* shader)
+{
   shader_deps[shader->vertfile].push_back(shader->name);
   shader_deps[shader->fragfile].push_back(shader->name);
   if (shader->geomParams) {
@@ -1519,12 +1613,12 @@ void CShaderMgr::RegisterDependantFileNames(CShaderPrg * shader) {
  * Recursive function to insert `filename` and all the files where
  * `filename` is included into the given output vector.
  */
-void CShaderMgr::CollectDependantFileNames(const std::string &filename,
-    std::vector<std::string> &filenames) {
+void CShaderMgr::CollectDependantFileNames(
+    const std::string& filename, std::vector<std::string>& filenames)
+{
   auto it = include_deps.find(filename);
   if (it != include_deps.end()) {
-    for (const char ** filenameptr = it->second;
-        *filenameptr; ++filenameptr) {
+    for (const char** filenameptr = it->second; *filenameptr; ++filenameptr) {
       CollectDependantFileNames(*filenameptr, filenames);
     }
   }
@@ -1534,19 +1628,21 @@ void CShaderMgr::CollectDependantFileNames(const std::string &filename,
 /**
  * Make derived shaders for all shaders that depend on `variable`
  */
-void CShaderMgr::MakeDerivatives(const std::string &suffix, const std::string &variable) {
+void CShaderMgr::MakeDerivatives(
+    const std::string& suffix, const std::string& variable)
+{
   std::set<std::string> shadernames;
   std::vector<std::string> filenames;
 
   // variable -> files
-  for (const char ** filenameptr = ifdef_deps[variable];
-      *filenameptr; ++filenameptr) {
+  for (const char** filenameptr = ifdef_deps[variable]; *filenameptr;
+       ++filenameptr) {
     CollectDependantFileNames(*filenameptr, filenames);
   }
 
   // files -> shaders
   for (auto& filename : filenames) {
-    auto &vec = shader_deps[filename];
+    auto& vec = shader_deps[filename];
     for (auto& n_it : vec) {
       shadernames.insert(n_it);
     }
@@ -1554,7 +1650,8 @@ void CShaderMgr::MakeDerivatives(const std::string &suffix, const std::string &v
 
   // create shader derivatives
   for (const auto& shadername : shadernames) {
-    auto shader = programs[shadername]->DerivativeCopy(shadername + suffix, variable);
+    auto shader =
+        programs[shadername]->DerivativeCopy(shadername + suffix, variable);
     programs[shader->name] = shader;
 
     // register dependency
@@ -1565,7 +1662,8 @@ void CShaderMgr::MakeDerivatives(const std::string &suffix, const std::string &v
 /**
  * Reload the derivative shaders for `variable`
  */
-void CShaderMgr::Reload_Derivatives(const std::string &variable, bool value) {
+void CShaderMgr::Reload_Derivatives(const std::string& variable, bool value)
+{
   SetPreprocVar(variable, value, false);
 
   for (auto& prog : programs) {
@@ -1581,19 +1679,19 @@ void CShaderMgr::Reload_Derivatives(const std::string &variable, bool value) {
  * and if `invshaders` is true, also clear the `is_valid` flag for all
  * shader infos that depend on `filename`.
  */
-void CShaderMgr::ShaderSourceInvalidate(const char * filename, bool invshaders) {
+void CShaderMgr::ShaderSourceInvalidate(const char* filename, bool invshaders)
+{
   // recursion for includes
   auto it = include_deps.find(filename);
   if (it != include_deps.end()) {
-    for (const char ** filenameptr = it->second;
-        *filenameptr; ++filenameptr) {
+    for (const char** filenameptr = it->second; *filenameptr; ++filenameptr) {
       ShaderSourceInvalidate(*filenameptr, invshaders);
     }
   }
 
   // invalidate shaders
   if (invshaders) {
-    auto &vec = shader_deps[filename];
+    auto& vec = shader_deps[filename];
     for (const auto& shadername : vec) {
       programs[shadername]->is_valid = false;
     }
@@ -1606,11 +1704,13 @@ void CShaderMgr::ShaderSourceInvalidate(const char * filename, bool invshaders) 
  * Set the value for the `#ifdef` variable `key` and if the value has changed,
  * then invalidate all its dependant shader source files.
  */
-void CShaderMgr::SetPreprocVar(const std::string &key, bool value, bool invshaders) {
+void CShaderMgr::SetPreprocVar(
+    const std::string& key, bool value, bool invshaders)
+{
   auto& ref = m_shaderPreprocessor.getVar(key);
   if (ref != value) {
-    for (const char ** filenameptr = ifdef_deps[key];
-        *filenameptr; ++filenameptr) {
+    for (const char** filenameptr = ifdef_deps[key]; *filenameptr;
+         ++filenameptr) {
       ShaderSourceInvalidate(*filenameptr, invshaders);
     }
     ref = value;
@@ -1621,18 +1721,22 @@ void CShaderMgr::SetPreprocVar(const std::string &key, bool value, bool invshade
  * Insert `filename` -> `contents` (processed source) into the shader source
  * cache and invalidate its parents
  */
-void CShaderMgr::SetShaderSource(const char * filename, const std::string &contents) {
+void CShaderMgr::SetShaderSource(
+    const char* filename, const std::string& contents)
+{
   ShaderSourceInvalidate(filename);
   m_shaderPreprocessor.setSource(filename, contents);
 }
 
-void CShaderMgr::bindGPUBuffer(size_t hashid) {
+void CShaderMgr::bindGPUBuffer(size_t hashid)
+{
   auto search = _gpu_object_map.find(hashid);
   if (search != _gpu_object_map.end())
     search->second->bind();
 }
 
-void CShaderMgr::freeGPUBuffer(size_t hashid) {
+void CShaderMgr::freeGPUBuffer(size_t hashid)
+{
   if (!hashid)
     return;
   LOCK_GUARD_MUTEX(lock, gpu_objects_to_free_mutex);
@@ -1643,21 +1747,24 @@ void CShaderMgr::freeGPUBuffer(size_t hashid) {
 #endif
 }
 
-void CShaderMgr::freeGPUBuffers(std::vector<size_t> &&hashids) {
+void CShaderMgr::freeGPUBuffers(std::vector<size_t>&& hashids)
+{
   LOCK_GUARD_MUTEX(lock, gpu_objects_to_free_mutex);
-  _gpu_objects_to_free_vector.insert(_gpu_objects_to_free_vector.end(),
-                                     hashids.begin(), hashids.end());
+  _gpu_objects_to_free_vector.insert(
+      _gpu_objects_to_free_vector.end(), hashids.begin(), hashids.end());
 #ifdef _WEBGL
   freeAllGPUBuffers(); // immediate free on web
 #endif
 }
 
-void CShaderMgr::freeGPUBuffers(size_t * arr, size_t len) {
+void CShaderMgr::freeGPUBuffers(size_t* arr, size_t len)
+{
   for (unsigned int i = 0; i < len; ++i)
     freeGPUBuffer(arr[i]);
 }
 
-void CShaderMgr::freeAllGPUBuffers() {
+void CShaderMgr::freeAllGPUBuffers()
+{
   LOCK_GUARD_MUTEX(lock, gpu_objects_to_free_mutex);
   for (auto hashid : _gpu_objects_to_free_vector) {
     auto search = _gpu_object_map.find(hashid);
@@ -1670,7 +1777,7 @@ void CShaderMgr::freeAllGPUBuffers() {
   _gpu_objects_to_free_vector.clear();
 }
 
-int CShaderMgr::GetAttributeUID(const char * name)
+int CShaderMgr::GetAttributeUID(const char* name)
 {
   auto uloc = attribute_uids_by_name.find(name);
   if (uloc != attribute_uids_by_name.end())
@@ -1681,7 +1788,7 @@ int CShaderMgr::GetAttributeUID(const char * name)
   attribute_uids[uid] = name;
   return uid;
 }
-const char *CShaderMgr::GetAttributeName(int uid)
+const char* CShaderMgr::GetAttributeName(int uid)
 {
   auto uloc = attribute_uids.find(uid);
   if (uloc == attribute_uids.end())
@@ -1690,7 +1797,8 @@ const char *CShaderMgr::GetAttributeName(int uid)
 }
 
 // SceneRenderBindToOffscreen
-void CShaderMgr::bindOffscreen(int width, int height, GridInfo *grid) {
+void CShaderMgr::bindOffscreen(int width, int height, GridInfo* grid)
+{
   using namespace tex;
   renderTarget_t::shape_type req_size(width, height);
   renderTarget_t* rt = nullptr;
@@ -1702,7 +1810,7 @@ void CShaderMgr::bindOffscreen(int width, int height, GridInfo *grid) {
   if (!offscreen_rt) {
     CGOFree(G->Scene->offscreenCGO);
     rt = newGPUBuffer<renderTarget_t>(req_size);
-    rt->layout({ { 4, rt_layout_t::UBYTE } });
+    rt->layout({{4, rt_layout_t::UBYTE}});
     offscreen_rt = rt->get_hash_id();
   } else {
     rt = getGPUBuffer<renderTarget_t>(offscreen_rt);
@@ -1728,12 +1836,13 @@ void CShaderMgr::bindOffscreen(int width, int height, GridInfo *grid) {
 }
 
 // SceneRenderBindToOffscreenOIT
-void CShaderMgr::bindOffscreenOIT(int width, int height, int drawbuf) {
+void CShaderMgr::bindOffscreenOIT(int width, int height, int drawbuf)
+{
   using namespace tex;
 
   renderTarget_t::shape_type req_size(width, height);
 
-  if(!oit_pp || oit_pp->size() != req_size) {
+  if (!oit_pp || oit_pp->size() != req_size) {
     oit_pp = std::make_unique<OIT_PostProcess>(
         width, height, getGPUBuffer<renderTarget_t>(offscreen_rt)->_rbo);
   } else {
@@ -1744,12 +1853,14 @@ void CShaderMgr::bindOffscreenOIT(int width, int height, int drawbuf) {
   }
 }
 
-GLFramebufferConfig CShaderMgr::bindOffscreenOrtho(const Extent2D& extent, bool clear) {
+GLFramebufferConfig CShaderMgr::bindOffscreenOrtho(
+    const Extent2D& extent, bool clear)
+{
   using namespace tex;
   renderTarget_t::shape_type req_size(extent.width, extent.height);
   if (!offscreen_ortho_rt) {
     auto rt = newGPUBuffer<renderTarget_t>(req_size);
-    rt->layout({ { 4, rt_layout_t::UBYTE } });
+    rt->layout({{4, rt_layout_t::UBYTE}});
     offscreen_ortho_rt = rt->get_hash_id();
   }
 
@@ -1757,13 +1868,13 @@ GLFramebufferConfig CShaderMgr::bindOffscreenOrtho(const Extent2D& extent, bool 
   if (rt->size() != req_size) {
     freeGPUBuffer(offscreen_ortho_rt);
     rt = newGPUBuffer<renderTarget_t>(req_size);
-    rt->layout({ { 4, rt_layout_t::UBYTE } });
+    rt->layout({{4, rt_layout_t::UBYTE}});
     offscreen_ortho_rt = rt->get_hash_id();
   }
   rt->bind(clear);
   return GLFramebufferConfig{
       static_cast<std::uint32_t>(offscreen_ortho_rt), //
-      GL_COLOR_ATTACHMENT0 //
+      GL_COLOR_ATTACHMENT0                            //
   };
 }
 
@@ -1787,11 +1898,12 @@ GLFramebufferConfig CShaderMgr::bindOffscreenSizedImage(
   rt->bind(clear);
   return GLFramebufferConfig{
       static_cast<std::uint32_t>(offscreen_sized_image_rt), //
-      GL_COLOR_ATTACHMENT0       //
+      GL_COLOR_ATTACHMENT0                                  //
   };
 }
 
-void CShaderMgr::activateOffscreenTexture(GLuint textureIdx) {
+void CShaderMgr::activateOffscreenTexture(GLuint textureIdx)
+{
   glActiveTexture(GL_TEXTURE0 + textureIdx);
   auto t = getGPUBuffer<renderTarget_t>(offscreen_rt);
   if (t->_textures[0])
@@ -1800,7 +1912,7 @@ void CShaderMgr::activateOffscreenTexture(GLuint textureIdx) {
 
 void CShaderMgr::Disable_Current_Shader()
 {
-  if(current_shader){
+  if (current_shader) {
     current_shader->Disable();
   }
 }

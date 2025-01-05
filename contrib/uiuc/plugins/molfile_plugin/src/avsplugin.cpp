@@ -26,7 +26,7 @@
  * XXX - This plugin currently only supports the specific subset of AVS field
  * files that are produced by autodock. 'field' type must be 'uniform',
  * 'data' must be of type 'float', 'ndim' and 'nspace' must be 3, and
- * 'filetype' of all files referenced must be 'ascii'. 
+ * 'filetype' of all files referenced must be 'ascii'.
  *
  * XXX - The plugin also expects the values to appear in a certain order,
  * this should definitely be fixed.
@@ -36,9 +36,9 @@
  *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if defined(_AIX)
@@ -46,7 +46,7 @@
 #endif
 
 #if defined(WIN32) || defined(WIN64)
-#define strcasecmp  stricmp
+#define strcasecmp stricmp
 #define strncasecmp strnicmp
 #endif
 
@@ -61,19 +61,20 @@ typedef struct {
 
 typedef struct {
   int nsets;
-  molfile_volumetric_t *vol;
-  datasource_t *data;
+  molfile_volumetric_t* vol;
+  datasource_t* data;
 } avsfield_t;
 
-enum {NONE, ASCII, BINARY, UNFORMATTED};  /* File types */
-enum {UNIFORM, IRREGULAR, RECTILINEAR};   /* Field types */
-enum {AVSFLOAT};                          /* Data types */
+enum { NONE, ASCII, BINARY, UNFORMATTED }; /* File types */
+enum { UNIFORM, IRREGULAR, RECTILINEAR };  /* Field types */
+enum { AVSFLOAT };                         /* Data types */
 
 /* Reads lines from the stream into the array pointed to by s.
  * Returns a pointer to s when the first non-comment line is read or NULL on
  * error.
  */
-static char *get_string(char *s, int n, FILE *stream) {
+static char* get_string(char* s, int n, FILE* stream)
+{
   do {
     if (fgets(s, n, stream) == NULL) {
       fprintf(stderr, "avsplugin) Error reading string.\n");
@@ -86,7 +87,8 @@ static char *get_string(char *s, int n, FILE *stream) {
 /* Read information from a string and store it into a datasource structure.
  * Returns 0 on success, 1 on error.
  */
-static int read_datasource(char *s, datasource_t *data) {
+static int read_datasource(char* s, datasource_t* data)
+{
   char *src, *tok, *value;
   src = strdup(s);
   tok = strtok(src, " \t\n");
@@ -101,8 +103,9 @@ static int read_datasource(char *s, datasource_t *data) {
   data->filetype = NONE;
 
   /* The first word should be "coord" or "variable" */
-  if ( (strcasecmp(tok, "coord") != 0) && (strcasecmp(tok, "variable") != 0) ) {
-    fprintf(stderr, "avsplugin) Improperly formatted header: expected coord or variable.\n");
+  if ((strcasecmp(tok, "coord") != 0) && (strcasecmp(tok, "variable") != 0)) {
+    fprintf(stderr, "avsplugin) Improperly formatted header: expected coord or "
+                    "variable.\n");
     free(src);
     return 1;
   }
@@ -117,7 +120,7 @@ static int read_datasource(char *s, datasource_t *data) {
 
   /* Now read the additional arguments */
   tok = strtok(NULL, " \t\n");
-  while(tok) {
+  while (tok) {
     value = strchr(tok, '=');
     if (!value) {
       fprintf(stderr, "avsplugin) Error reading value.\n");
@@ -129,35 +132,29 @@ static int read_datasource(char *s, datasource_t *data) {
     if (strncasecmp(tok, "file=", value - tok) == 0) {
       /* XXX - This should be changed to something safer */
       strcpy(data->filename, value);
-    }
-    else if (strncasecmp(tok, "filetype=", value - tok) == 0) {
+    } else if (strncasecmp(tok, "filetype=", value - tok) == 0) {
       /* XXX - For now, only ascii files are recognized. Other possible
        * values are "unformatted" for unformatted Fortran data, and "binary"
        * for raw binary data.
        */
       if (strcasecmp(value, "ascii") == 0) {
         data->filetype = ASCII;
-      }
-      else {
+      } else {
         fprintf(stderr, "avsplugin) Non-ASCII files are not supported.\n");
         free(src);
         return 1;
       }
-    }
-    else if (strncasecmp(tok, "skip=", value - tok) == 0) {
+    } else if (strncasecmp(tok, "skip=", value - tok) == 0) {
       /* XXX - This should probably be more rigorous */
       data->skip = atoi(value);
-    }
-    else if (strncasecmp(tok, "offset=", value - tok) == 0) {
+    } else if (strncasecmp(tok, "offset=", value - tok) == 0) {
       /* XXX - This should probably be more rigorous */
       data->offset = atoi(value);
-    }
-    else if (strncasecmp(tok, "stride=", value - tok) == 0) {
+    } else if (strncasecmp(tok, "stride=", value - tok) == 0) {
       /* XXX - This should definitely be more rigorous -- we don't want
        * stride set to 0 of the value isn't an integer. */
       data->stride = atoi(value);
-    }
-    else {
+    } else {
       /* XXX - For now, return with an error if there's an unrecognized
        * argument. This should probably be changed.
        */
@@ -176,16 +173,18 @@ static int read_datasource(char *s, datasource_t *data) {
     fprintf(stderr, "avsplugin) Filename not set in options.\n");
     return 1;
   }
-  
+
   return 0;
 }
 
-static void *open_avsfield_read(const char *filepath, const char *filetype, int *natoms) {
-  avsfield_t *avsfield;
-  FILE *fd;
+static void* open_avsfield_read(
+    const char* filepath, const char* filetype, int* natoms)
+{
+  avsfield_t* avsfield;
+  FILE* fd;
   char inbuf[LINESIZE], current_file[256];
-  int ndim, nspace, veclen, xsize, ysize, zsize, 
-      index, i, coord_count, var_count;
+  int ndim, nspace, veclen, xsize, ysize, zsize, index, i, coord_count,
+      var_count;
   float value, origin[3], gridlength[3];
   datasource_t *coord = NULL, *variable = NULL;
 
@@ -302,7 +301,7 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
     return NULL;
   }
 
-  /* Allocate space for the coordinate and variable information 
+  /* Allocate space for the coordinate and variable information
    * coord is deleted in this fuction, variable is deleted when the plugin
    * is closed.
    */
@@ -316,8 +315,9 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
       fclose(fd);
       return NULL;
     }
-    if ( (sscanf(inbuf, "coord %d", &coord_count) != 1) || (coord_count != i+1) ) {
-    fprintf(stderr, "avsplugin) Error reading coord count.\n");
+    if ((sscanf(inbuf, "coord %d", &coord_count) != 1) ||
+        (coord_count != i + 1)) {
+      fprintf(stderr, "avsplugin) Error reading coord count.\n");
       delete[] coord;
       fclose(fd);
       return NULL;
@@ -337,7 +337,7 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
       return NULL;
     }
   }
-  
+
   /* Find the variable information */
   for (i = 0; i < veclen; i++) {
     if (get_string(inbuf, LINESIZE, fd) == NULL) {
@@ -345,7 +345,8 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
       fclose(fd);
       return NULL;
     }
-    if ( (sscanf(inbuf, "variable %d", &var_count) != 1) || (var_count != i+1) ) {
+    if ((sscanf(inbuf, "variable %d", &var_count) != 1) ||
+        (var_count != i + 1)) {
       fprintf(stderr, "avsplugin) Error reading variable count.\n");
       delete[] coord;
       fclose(fd);
@@ -362,7 +363,7 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
   fclose(fd);
   fd = NULL;
 
-  /* Read the coordinate file(s) to find the origin and grid size 
+  /* Read the coordinate file(s) to find the origin and grid size
    * XXX - this only works for "uniform" fields
    */
   for (i = 0; i < ndim; i++) {
@@ -379,8 +380,7 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
         delete[] coord;
         return NULL;
       }
-    }
-    else {
+    } else {
       /* Return to the beginning of the file */
       rewind(fd);
     }
@@ -469,27 +469,29 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
   return avsfield;
 }
 
-static int read_avsfield_metadata(void *v, int *nsets,
-  molfile_volumetric_t **metadata) {
-  avsfield_t *avsfield = (avsfield_t *)v;
+static int read_avsfield_metadata(
+    void* v, int* nsets, molfile_volumetric_t** metadata)
+{
+  avsfield_t* avsfield = (avsfield_t*) v;
   *nsets = avsfield->nsets;
   *metadata = avsfield->vol;
 
   return MOLFILE_SUCCESS;
 }
 
-static int read_avsfield_data(void *v, int set, float *datablock,
-                         float *colorblock) {
-  avsfield_t *avsfield = (avsfield_t *)v;
+static int read_avsfield_data(
+    void* v, int set, float* datablock, float* colorblock)
+{
+  avsfield_t* avsfield = (avsfield_t*) v;
   int skip, offset, stride, count, ndata, index;
   float value, *cellIndex = datablock;
   char inbuf[LINESIZE];
-  FILE *fd;
-  
+  FILE* fd;
+
   fd = fopen(avsfield->data[set].filename, "rb");
   if (!fd) {
     fprintf(stderr, "avsplugin) Error opening file.\n");
-    return MOLFILE_ERROR; 
+    return MOLFILE_ERROR;
   }
 
   skip = avsfield->data[set].skip;
@@ -497,7 +499,8 @@ static int read_avsfield_data(void *v, int set, float *datablock,
   stride = avsfield->data[set].stride;
 
   count = 0;
-  ndata = avsfield->vol[0].xsize * avsfield->vol[0].ysize * avsfield->vol[0].zsize;
+  ndata =
+      avsfield->vol[0].xsize * avsfield->vol[0].ysize * avsfield->vol[0].zsize;
 
   /* Skip the "skip" lines */
   for (index = 0; index < skip; index++) {
@@ -528,7 +531,7 @@ static int read_avsfield_data(void *v, int set, float *datablock,
     cellIndex++;
     count++;
 
-    for (index = 0; index < stride-1; index++) {
+    for (index = 0; index < stride - 1; index++) {
       if (fscanf(fd, " %f", &value) != 1) {
         fprintf(stderr, "avsplugin) Error skipping stride.\n");
         fclose(fd);
@@ -541,13 +544,14 @@ static int read_avsfield_data(void *v, int set, float *datablock,
   return MOLFILE_SUCCESS;
 }
 
-static void close_avsfield_read(void *v) {
-  avsfield_t *avsfield = (avsfield_t *)v;
+static void close_avsfield_read(void* v)
+{
+  avsfield_t* avsfield = (avsfield_t*) v;
 
   if (avsfield->vol != NULL)
-    delete [] avsfield->vol;
+    delete[] avsfield->vol;
   if (avsfield->data != NULL)
-    delete [] avsfield->data;
+    delete[] avsfield->data;
   delete avsfield;
 }
 
@@ -556,7 +560,8 @@ static void close_avsfield_read(void *v) {
  */
 static molfile_plugin_t plugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) { 
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(plugin));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -572,13 +577,16 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   plugin.read_volumetric_data = read_avsfield_data;
   plugin.close_file_read = close_avsfield_read;
 
-  return VMDPLUGIN_SUCCESS; 
-}
-
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
-
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
   return VMDPLUGIN_SUCCESS;
 }
 
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}
+
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
+  return VMDPLUGIN_SUCCESS;
+}

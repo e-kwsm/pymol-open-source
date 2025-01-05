@@ -1,89 +1,91 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
-#include"os_predef.h"
-#include"os_std.h"
+#include "os_predef.h"
+#include "os_python.h"
+#include "os_std.h"
 
-#include"Base.h"
-#include"MemoryDebug.h"
-#include"Ortho.h"
-#include"Word.h"
+#include "Base.h"
+#include "MemoryDebug.h"
+#include "Ortho.h"
+#include "Word.h"
 
-#include"Color.h"
-#include"PConv.h"
-#include"ObjectGadgetRamp.h"
-#include"Util.h"
-#include"Executive.h"
-#include"MyPNG.h"
-#include"Scene.h"
+#include "Color.h"
+#include "Executive.h"
 #include "Feedback.h"
+#include "MyPNG.h"
+#include "ObjectGadgetRamp.h"
+#include "PConv.h"
+#include "Scene.h"
+#include "Util.h"
 
 static int AutoColor[] = {
-  26,                           /* carbon */
-  5,                            /* cyan */
-  154,                          /* lightmagenta */
-  6,                            /* yellow */
-  9,                            /* salmon */
-  29,                           /* hydrogen */
-  11,                           /* slate */
-  13,                           /* orange */
-  10,                           /* lime */
-  5262,                         /* deepteal */
-  12,                           /* hotpink */
-  36,                           /* yelloworange */
-  5271,                         /* violetpurple */
-  124,                          /* grey70 */
-  17,                           /* marine */
-  18,                           /* olive */
-  5270,                         /* smudge */
-  20,                           /* teal */
-  5272,                         /* dirtyviolet */
-  52,                           /* wheat */
-  5258,                         /* deepsalmon */
-  5274,                         /* lightpink */
-  5257,                         /* aquamarine */
-  5256,                         /* paleyellow */
-  15,                           /* limegreen */
-  5277,                         /* skyblue */
-  5279,                         /* warmpink */
-  5276,                         /* limon */
-  53,                           /* violet */
-  5278,                         /* bluewhite */
-  5275,                         /* greencyan */
-  5269,                         /* sand */
-  22,                           /* forest */
-  5266,                         /* lightteal */
-  5280,                         /* darksalmon */
-  5267,                         /* splitpea */
-  5268,                         /* raspberry */
-  104,                          /* grey50 */
-  23,                           /* deepblue */
-  51,                           /* brown */
+    26,   /* carbon */
+    5,    /* cyan */
+    154,  /* lightmagenta */
+    6,    /* yellow */
+    9,    /* salmon */
+    29,   /* hydrogen */
+    11,   /* slate */
+    13,   /* orange */
+    10,   /* lime */
+    5262, /* deepteal */
+    12,   /* hotpink */
+    36,   /* yelloworange */
+    5271, /* violetpurple */
+    124,  /* grey70 */
+    17,   /* marine */
+    18,   /* olive */
+    5270, /* smudge */
+    20,   /* teal */
+    5272, /* dirtyviolet */
+    52,   /* wheat */
+    5258, /* deepsalmon */
+    5274, /* lightpink */
+    5257, /* aquamarine */
+    5256, /* paleyellow */
+    15,   /* limegreen */
+    5277, /* skyblue */
+    5279, /* warmpink */
+    5276, /* limon */
+    53,   /* violet */
+    5278, /* bluewhite */
+    5275, /* greencyan */
+    5269, /* sand */
+    22,   /* forest */
+    5266, /* lightteal */
+    5280, /* darksalmon */
+    5267, /* splitpea */
+    5268, /* raspberry */
+    104,  /* grey50 */
+    23,   /* deepblue */
+    51,   /* brown */
 };
 
 static int nAutoColor = 40;
-static void lookup_color(CColor * I, const float *in, float *out, int big_endian);
+static void lookup_color(
+    CColor* I, const float* in, float* out, int big_endian);
 
-void ColorGetBkrdContColor(PyMOLGlobals * G, float *rgb, int invert_flag)
+void ColorGetBkrdContColor(PyMOLGlobals* G, float* rgb, int invert_flag)
 {
-  const float *bkrd = ColorGet(G, SettingGet_color(G, nullptr, nullptr, cSetting_bg_rgb));
+  const float* bkrd =
+      ColorGet(G, SettingGet_color(G, nullptr, nullptr, cSetting_bg_rgb));
 
-  if(!invert_flag) {
-    if((bkrd[0] + bkrd[1] + bkrd[2]) > 0.5F) {
+  if (!invert_flag) {
+    if ((bkrd[0] + bkrd[1] + bkrd[2]) > 0.5F) {
       rgb[0] = 1.0F;
       rgb[1] = 1.0F;
       rgb[2] = 1.0F;
@@ -96,11 +98,11 @@ void ColorGetBkrdContColor(PyMOLGlobals * G, float *rgb, int invert_flag)
 
   {
     int a;
-    for(a = 0; a < 3; a++)
-      if(fabs(bkrd[a] - rgb[a]) < 0.5F) {
+    for (a = 0; a < 3; a++)
+      if (fabs(bkrd[a] - rgb[a]) < 0.5F) {
         rgb[a] = 1.0F - rgb[a];
-        if(fabs(bkrd[a] - rgb[a]) < 0.5F) {
-          if(bkrd[a] > 0.5F)
+        if (fabs(bkrd[a] - rgb[a]) < 0.5F) {
+          if (bkrd[a] > 0.5F)
             rgb[a] = 0.0F;
           else
             rgb[a] = 1.0F;
@@ -109,9 +111,9 @@ void ColorGetBkrdContColor(PyMOLGlobals * G, float *rgb, int invert_flag)
   }
 }
 
-unsigned int ColorGet32BitWord(PyMOLGlobals * G, const float *rgba)
+unsigned int ColorGet32BitWord(PyMOLGlobals* G, const float* rgba)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   unsigned int rc, gc, bc, ac;
   unsigned int result;
 
@@ -120,16 +122,16 @@ unsigned int ColorGet32BitWord(PyMOLGlobals * G, const float *rgba)
   bc = (int) (255 * rgba[2] + 0.49999F);
   ac = (int) (255 * rgba[3] + 0.49999F);
 
-  if(rc > 255)
+  if (rc > 255)
     rc = 255;
-  if(bc > 255)
+  if (bc > 255)
     bc = 255;
-  if(gc > 255)
+  if (gc > 255)
     gc = 255;
-  if(ac > 255)
+  if (ac > 255)
     ac = 255;
 
-  if(I->BigEndian) {
+  if (I->BigEndian) {
     result = (rc << 24) | (gc << 16) | (bc << 8) | ac;
   } else {
     result = (ac << 24) | (bc << 16) | (gc << 8) | rc;
@@ -137,43 +139,43 @@ unsigned int ColorGet32BitWord(PyMOLGlobals * G, const float *rgba)
   return result;
 }
 
-int ColorGetNext(PyMOLGlobals * G)
+int ColorGetNext(PyMOLGlobals* G)
 {
   int result;
   int next;
   next = SettingGetGlobal_i(G, cSetting_auto_color_next);
 
-  if(next >= nAutoColor)
+  if (next >= nAutoColor)
     next = 0;
   result = AutoColor[next];
   next++;
-  if(next >= nAutoColor)
+  if (next >= nAutoColor)
     next = 0;
   SettingSetGlobal_i(G, cSetting_auto_color_next, next);
   return (result);
 }
 
-int ColorGetCurrent(PyMOLGlobals * G)
+int ColorGetCurrent(PyMOLGlobals* G)
 {
   int result;
   int next;
   next = SettingGetGlobal_i(G, cSetting_auto_color_next);
   next--;
-  if(next < 0)
+  if (next < 0)
     next = (nAutoColor - 1);
   result = AutoColor[next];
   return (result);
 }
 
-int ColorCheckRamped(PyMOLGlobals * G, int index)
+int ColorCheckRamped(PyMOLGlobals* G, int index)
 {
   return (index <= (cColorExtCutoff));
 }
 
-ObjectGadgetRamp *ColorGetRamp(PyMOLGlobals * G, int index)
+ObjectGadgetRamp* ColorGetRamp(PyMOLGlobals* G, int index)
 {
-  CColor *I = G->Color;
-  if(index <= cColorExtCutoff) {
+  CColor* I = G->Color;
+  if (index <= cColorExtCutoff) {
     index = cColorExtCutoff - index;
     if (index < I->Ext.size()) {
       auto& ext = I->Ext[index];
@@ -186,18 +188,19 @@ ObjectGadgetRamp *ColorGetRamp(PyMOLGlobals * G, int index)
   return nullptr;
 }
 
-int ColorGetRamped(PyMOLGlobals * G, int index, const float *vertex, float *color, int state)
+int ColorGetRamped(
+    PyMOLGlobals* G, int index, const float* vertex, float* color, int state)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   int ok = false;
   if (auto* ptr = ColorGetRamp(G, index)) {
     ok = ObjectGadgetRampInterVertex(ptr, vertex, color, state);
   }
-  if(!ok) {
+  if (!ok) {
     color[0] = 1.0;
     color[1] = 1.0;
     color[2] = 1.0;
-  } else if(I->LUTActive) {
+  } else if (I->LUTActive) {
     lookup_color(I, color, color, I->BigEndian);
   }
   return (ok);
@@ -205,10 +208,10 @@ int ColorGetRamped(PyMOLGlobals * G, int index, const float *vertex, float *colo
 
 /**
  * Gets a color as 3 floats from an index and writes it into
- * the color argument.  If the index is a ramp, then it uses the vertex and state arguments to lookup the
- * color value in the ramp.
- * NOTES: does not support index values cColorObject(-5) or cColorAtomic(-4) color since the object
- *        or atom color is not passed in.
+ * the color argument.  If the index is a ramp, then it uses the vertex and
+ * state arguments to lookup the color value in the ramp. NOTES: does not
+ * support index values cColorObject(-5) or cColorAtomic(-4) color since the
+ * object or atom color is not passed in.
  *
  * @param index - color index value
  * @param vertex - x/y/z used for ramp lookup (if color index is a ramp)
@@ -217,10 +220,11 @@ int ColorGetRamped(PyMOLGlobals * G, int index, const float *vertex, float *colo
  *
  * @return whether the color index is dependent on a ramp.
  */
-bool ColorGetCheckRamped(PyMOLGlobals * G, int index, const float *vertex, float *color, int state)
+bool ColorGetCheckRamped(
+    PyMOLGlobals* G, int index, const float* vertex, float* color, int state)
 {
   bool isRamped = false;
-  if(ColorCheckRamped(G, index)) {
+  if (ColorCheckRamped(G, index)) {
     ColorGetRamped(G, index, vertex, color, state);
     isRamped = true;
   } else {
@@ -346,11 +350,11 @@ static const char* reg_name(CColor* const I, CColor::ColorIdx const index,
 
 void ColorRegisterExt(PyMOLGlobals* G, const char* name, ObjectGadgetRamp* ptr)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   int a;
 
   a = ColorFindExtByName(G, name);
-  if(a < 0) {
+  if (a < 0) {
     a = I->Ext.size();
 
     I->Ext.emplace_back();
@@ -359,14 +363,14 @@ void ColorRegisterExt(PyMOLGlobals* G, const char* name, ObjectGadgetRamp* ptr)
     ext.Name = reg_name(I, cColorExtCutoff - a, name);
     assert(I->Idx[ext.Name] == cColorExtCutoff - a);
   }
-  if(a >= 0) {
+  if (a >= 0) {
     I->Ext[a].Ptr = ptr;
   }
 }
 
-void ColorForgetExt(PyMOLGlobals * G, const char *name)
+void ColorForgetExt(PyMOLGlobals* G, const char* name)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   auto a = ColorFindExtByName(G, name);
 
   if (a < 0)
@@ -386,9 +390,9 @@ void ColorForgetExt(PyMOLGlobals * G, const char *name)
   }
 }
 
-PyObject *ColorExtAsPyList(PyMOLGlobals * G)
+PyObject* ColorExtAsPyList(PyMOLGlobals* G)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
 
   auto* result = PyList_New(I->Ext.size());
 
@@ -410,11 +414,10 @@ PyObject *ColorExtAsPyList(PyMOLGlobals * G)
   return result;
 }
 
-
 /*========================================================================*/
-PyObject *ColorAsPyList(PyMOLGlobals * G)
+PyObject* ColorAsPyList(PyMOLGlobals* G)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
 
   size_t n_custom = 0;
   for (const auto& color : I->Color) {
@@ -431,7 +434,8 @@ PyObject *ColorAsPyList(PyMOLGlobals * G)
   for (const auto& color : I->Color) {
     if (color.Custom || color.LutColorFlag) {
       auto* list = PyList_New(7);
-      PyList_SetItem(list, 0, PyString_FromString(color.Name ? color.Name : ""));
+      PyList_SetItem(
+          list, 0, PyString_FromString(color.Name ? color.Name : ""));
       PyList_SetItem(list, 1, PyInt_FromLong(a));
       PyList_SetItem(list, 2, PConvFloatArrayToPyList(color.Color, 3));
       PyList_SetItem(list, 3, PyInt_FromLong(color.Custom));
@@ -449,32 +453,32 @@ PyObject *ColorAsPyList(PyMOLGlobals * G)
 }
 
 /*========================================================================*/
-int ColorConvertOldSessionIndex(PyMOLGlobals * G, int index)
+int ColorConvertOldSessionIndex(PyMOLGlobals* G, int index)
 {
-  CColor *I = G->Color;
-  if(index > cColorExtCutoff) {
-    if(I->HaveOldSessionColors) {
+  CColor* I = G->Color;
+  if (index > cColorExtCutoff) {
+    if (I->HaveOldSessionColors) {
       for (int a = int(I->Color.size()) - 1; a >= 0; --a) {
         if (index == I->Color[a].old_session_index) {
           return a;
         }
       }
     }
-  } else if(I->HaveOldSessionExtColors) {
+  } else if (I->HaveOldSessionExtColors) {
     for (int a = int(I->Ext.size()) - 1; a >= 0; --a) {
       if (index == I->Ext[a].old_session_index) {
         return cColorExtCutoff - a;
       }
     }
   }
-  return index;                 /* failsafe */
+  return index; /* failsafe */
 }
 
 #define return_error_if_fail(e) p_return_val_if_fail((e), false);
 
-int ColorExtFromPyList(PyMOLGlobals * G, PyObject * list, int partial_restore)
+int ColorExtFromPyList(PyMOLGlobals* G, PyObject* list, int partial_restore)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   size_t n_ext = 0;
 
   assert(!I->HaveOldSessionExtColors);
@@ -529,9 +533,8 @@ int ColorExtFromPyList(PyMOLGlobals * G, PyObject * list, int partial_restore)
   return true;
 }
 
-
 /*========================================================================*/
-int ColorFromPyList(PyMOLGlobals * G, PyObject * list, int partial_restore)
+int ColorFromPyList(PyMOLGlobals* G, PyObject* list, int partial_restore)
 {
   CColor* I = G->Color;
 
@@ -543,7 +546,7 @@ int ColorFromPyList(PyMOLGlobals * G, PyObject * list, int partial_restore)
     }
   }
 
-  return_error_if_fail(list != nullptr );
+  return_error_if_fail(list != nullptr);
   return_error_if_fail(PyList_Check(list));
 
   int const n_custom = PyList_Size(list);
@@ -606,9 +609,10 @@ int ColorFromPyList(PyMOLGlobals * G, PyObject * list, int partial_restore)
 }
 
 /*========================================================================*/
-void ColorDef(PyMOLGlobals * G, const char *name, const float *v, int mode, int quiet)
+void ColorDef(
+    PyMOLGlobals* G, const char* name, const float* v, int mode, int quiet)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   int color = -1;
 
   // Search for a perfect case-sensitive match
@@ -645,30 +649,28 @@ void ColorDef(PyMOLGlobals * G, const char *name, const float *v, int mode, int 
   I->Color[color].Custom = true;
   ColorUpdateFromLut(G, color);
 
-  if(!quiet) {
+  if (!quiet) {
     PRINTFB(G, FB_Executive, FB_Actions)
-      " Color: \"%s\" defined as [ %3.3f, %3.3f, %3.3f ].\n", name, v[0], v[1], v[2]
-      ENDFB(G);
-
+    " Color: \"%s\" defined as [ %3.3f, %3.3f, %3.3f ].\n", name, v[0], v[1],
+        v[2] ENDFB(G);
   }
 
   PRINTFD(G, FB_Color)
-    " Color: and assigned number %d.\n", color ENDFD;
+  " Color: and assigned number %d.\n", color ENDFD;
 }
 
-
 /*========================================================================*/
-int ColorGetIndex(PyMOLGlobals * G, const char *name)
+int ColorGetIndex(PyMOLGlobals* G, const char* name)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   int i;
   int is_numeric = true;
 
   {
-    const char *c;
+    const char* c;
     c = name;
-    while(*c) {
-      if((((*c) < '0') || ((*c) > '9')) && ((*c) != '-')) {
+    while (*c) {
+      if ((((*c) < '0') || ((*c) > '9')) && ((*c) != '-')) {
         is_numeric = false;
         break;
       }
@@ -676,51 +678,51 @@ int ColorGetIndex(PyMOLGlobals * G, const char *name)
     }
   }
 
-  if(is_numeric) {
-    if(sscanf(name, "%d", &i)) {
-      if((i < I->Color.size()) && (i >= 0))
+  if (is_numeric) {
+    if (sscanf(name, "%d", &i)) {
+      if ((i < I->Color.size()) && (i >= 0))
         return (i);
-      else if(i == cColorNewAuto)
+      else if (i == cColorNewAuto)
         return (ColorGetNext(G));
-      else if(i == cColorCurAuto)
+      else if (i == cColorCurAuto)
         return (ColorGetCurrent(G));
-      else if(i == cColorAtomic)
+      else if (i == cColorAtomic)
         return cColorAtomic;
-      else if(i == cColorObject)
+      else if (i == cColorObject)
         return cColorObject;
-      else if(i == cColorFront)
+      else if (i == cColorFront)
         return cColorFront;
-      else if(i == cColorBack)
+      else if (i == cColorBack)
         return cColorBack;
-      else if(i == cColorDefault)
+      else if (i == cColorDefault)
         return cColorDefault;
       if (i & cColor_TRGB_Bits)
         return i;
     }
   }
-  if((name[0] == '0') && (name[1] == 'x')) {    /* explicit hex RGB 0x000000 */
+  if ((name[0] == '0') && (name[1] == 'x')) { /* explicit hex RGB 0x000000 */
     int tmp_color;
-    if(sscanf(name + 2, "%x", (unsigned int *) &tmp_color) == 1) {
-      tmp_color = (cColor_TRGB_Bits |
-                   (tmp_color & 0x00FFFFFF) | ((tmp_color >> 2) & 0x3F000000));
+    if (sscanf(name + 2, "%x", (unsigned int*) &tmp_color) == 1) {
+      tmp_color = (cColor_TRGB_Bits | (tmp_color & 0x00FFFFFF) |
+                   ((tmp_color >> 2) & 0x3F000000));
       return tmp_color;
     }
   }
 
   // the following block used to allow prefix matches (before PyMOL 2.5)
-  if(WordMatch(G, name, "default", true) < 0)
+  if (WordMatch(G, name, "default", true) < 0)
     return cColorDefault;
-  if(WordMatch(G, name, "auto", true) < 0)
+  if (WordMatch(G, name, "auto", true) < 0)
     return (ColorGetNext(G));
-  if(WordMatch(G, name, "current", true) < 0)
+  if (WordMatch(G, name, "current", true) < 0)
     return (ColorGetCurrent(G));
-  if(WordMatch(G, name, "atomic", true) < 0)
+  if (WordMatch(G, name, "atomic", true) < 0)
     return (cColorAtomic);
-  if(WordMatch(G, name, "object", true) < 0)
+  if (WordMatch(G, name, "object", true) < 0)
     return (cColorObject);
-  if(WordMatch(G, name, "front", true) < 0)
+  if (WordMatch(G, name, "front", true) < 0)
     return (cColorFront);
-  if(WordMatch(G, name, "back", true) < 0)
+  if (WordMatch(G, name, "back", true) < 0)
     return (cColorBack);
 
   // search for a perfect case-sensitive match (fast!)
@@ -747,29 +749,28 @@ int ColorGetIndex(PyMOLGlobals * G, const char *name)
   return color;
 }
 
-
 /*========================================================================*/
-const float *ColorGetNamed(PyMOLGlobals * G, const char *name)
+const float* ColorGetNamed(PyMOLGlobals* G, const char* name)
 {
   return (ColorGet(G, ColorGetIndex(G, name)));
 }
 
-
 /*========================================================================*/
-const char *ColorGetName(PyMOLGlobals * G, int index)
+const char* ColorGetName(PyMOLGlobals* G, int index)
 {
-  CColor *I = G->Color;
-  if((index >= 0) && (index < I->Color.size())) {
+  CColor* I = G->Color;
+  if ((index >= 0) && (index < I->Color.size())) {
     return I->Color[index].Name;
-  } else if((index & cColor_TRGB_Mask) == cColor_TRGB_Bits) {
-    index = (((index & 0xFFFFFF) | ((index << 2) & 0xFC000000) |        /* convert 6 bits of trans into 8 */
+  } else if ((index & cColor_TRGB_Mask) == cColor_TRGB_Bits) {
+    index = (((index & 0xFFFFFF) |
+              ((index << 2) & 0xFC000000) | /* convert 6 bits of trans into 8 */
               ((index >> 4) & 0x03000000)));
-    if(index & 0xFF000000)      /* if transparent */
+    if (index & 0xFF000000) /* if transparent */
       sprintf(I->RGBName, "0x%08x", index);
-    else                        /* else */
+    else /* else */
       sprintf(I->RGBName, "0x%06x", index);
     return I->RGBName;
-  } else if(index <= cColorExtCutoff) {
+  } else if (index <= cColorExtCutoff) {
     int a = cColorExtCutoff - index;
     if (a < I->Ext.size()) {
       return I->Ext[a].Name;
@@ -779,21 +780,20 @@ const char *ColorGetName(PyMOLGlobals * G, int index)
   return (nullptr);
 }
 
-
 /*========================================================================*/
-int ColorGetStatus(PyMOLGlobals * G, int index)
+int ColorGetStatus(PyMOLGlobals* G, int index)
 {
-  CColor *I = G->Color;
-  /* return 0 if color is invalid, -1 if hidden; 
+  CColor* I = G->Color;
+  /* return 0 if color is invalid, -1 if hidden;
      1 otherwise */
   int result = 0;
-  if((index >= 0) && (index < I->Color.size())) {
+  if ((index >= 0) && (index < I->Color.size())) {
     auto* color_name = I->Color[index].Name;
-    if(color_name) {
+    if (color_name) {
       const char* c = color_name;
       result = 1;
-      while(*c) {
-        if(((*c) >= '0') && ((*c) <= '9')) {
+      while (*c) {
+        if (((*c) >= '0') && ((*c) <= '9')) {
           result = -1;
           break;
         }
@@ -804,67 +804,64 @@ int ColorGetStatus(PyMOLGlobals * G, int index)
   return (result);
 }
 
-
 /*========================================================================*/
-int ColorGetNColor(PyMOLGlobals * G)
+int ColorGetNColor(PyMOLGlobals* G)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   return (I->Color.size());
 }
 
-
 /*========================================================================*/
-void ColorFree(PyMOLGlobals * G)
+void ColorFree(PyMOLGlobals* G)
 {
   DeleteP(G->Color);
 }
 
-
 /*========================================================================*/
 
-void ColorReset(PyMOLGlobals * G)
+void ColorReset(PyMOLGlobals* G)
 {
 
-/* PyMOL core color names
+  /* PyMOL core color names
 
-  1   1   1   white
- .5  .5  .5   grey/gray
-  0   0   0   black 
+    1   1   1   white
+   .5  .5  .5   grey/gray
+    0   0   0   black
 
-  1   0   0   red
-  0   1   0   green
-  0   0   1   blue
+    1   0   0   red
+    0   1   0   green
+    0   0   1   blue
 
-  1   1   0   yellow
-  1   0   1   magenta
-  0   1   1   cyan
+    1   1   0   yellow
+    1   0   1   magenta
+    0   1   1   cyan
 
-  1   1  .5   paleyellow  .
-  1  .5   1   violet      .
- .5   1   1   aquamarine  .
+    1   1  .5   paleyellow  .
+    1  .5   1   violet      .
+   .5   1   1   aquamarine  .
 
-  1  .5  .5   deepsalmon  .
- .5   1  .5   palegreen   .
- .5  .5   1   slate       .
+    1  .5  .5   deepsalmon  .
+   .5   1  .5   palegreen   .
+   .5  .5   1   slate       .
 
- .75 .75  0   olive       .
- .75  0  .75  purple      .
-  0  .75 .75  teal        .
+   .75 .75  0   olive       .
+   .75  0  .75  purple      .
+    0  .75 .75  teal        .
 
- .6  .6  .1   deepolive   .
- .6  .1  .6   deeppurple  .
- .1  .6  .6   deepteal    .
+   .6  .6  .1   deepolive   .
+   .6  .1  .6   deeppurple  .
+   .1  .6  .6   deepteal    .
 
-  1  .5   0   orange      .
-  1   0  .5   hotpink     .
- .5   1   0   chartreuse  .
-  0   1  .5   limegreen   .
-  0  .5   1   marine      .
- .5   0   1   purpleblue  .
+    1  .5   0   orange      .
+    1   0  .5   hotpink     .
+   .5   1   0   chartreuse  .
+    0   1  .5   limegreen   .
+    0  .5   1   marine      .
+   .5   0   1   purpleblue  .
 
-*/
+  */
 
-  CColor *I = G->Color;
+  CColor* I = G->Color;
 
   I->Idx.clear();
   I->Ext.clear();
@@ -878,136 +875,127 @@ void ColorReset(PyMOLGlobals * G)
   int set1;
   float f;
   float spectrumS[13][3] = {
-    {1.0, 0.0, 1.0},            /* magenta - 0 */
-    {0.5, 0.0, 1.0},
-    {0.0, 0.0, 1.0},            /* blue - 166.66  */
-    {0.0, 0.5, 1.0},
-    {0.0, 1.0, 1.0},            /* cyan - 333.33 */
+      {1.0, 0.0, 1.0},                  /* magenta - 0 */
+      {0.5, 0.0, 1.0}, {0.0, 0.0, 1.0}, /* blue - 166.66  */
+      {0.0, 0.5, 1.0}, {0.0, 1.0, 1.0}, /* cyan - 333.33 */
 
-    {0.0, 1.0, 0.5},
-    {0.0, 1.0, 0.0},            /* green - 500 */
-    {0.5, 1.0, 0.0},
-    {1.0, 1.0, 0.0},            /* yellow - 666.66 */
-    {1.0, 0.5, 0.0},
+      {0.0, 1.0, 0.5}, {0.0, 1.0, 0.0}, /* green - 500 */
+      {0.5, 1.0, 0.0}, {1.0, 1.0, 0.0}, /* yellow - 666.66 */
+      {1.0, 0.5, 0.0},
 
-    {1.0, 0.0, 0.0},            /* red - 833.33 */
-    {1.0, 0.0, 0.5},
-    {1.0, 0.0, 1.0},            /* magenta - 999 */
+      {1.0, 0.0, 0.0},                  /* red - 833.33 */
+      {1.0, 0.0, 0.5}, {1.0, 0.0, 1.0}, /* magenta - 999 */
   };
 
   float spectrumR[13][3] = {
-    {1.0, 1.0, 0.0},            /* yellow - 0 */
-    {0.5, 1.0, 0.0},            /* chartreuse */
-    {0.0, 1.0, 0.0},            /* green - 166.66 */
-    {0.0, 1.0, 0.5},            /* limegreen */
-    {0.0, 1.0, 1.0},            /* cyan - 333.33 */
+      {1.0, 1.0, 0.0}, /* yellow - 0 */
+      {0.5, 1.0, 0.0}, /* chartreuse */
+      {0.0, 1.0, 0.0}, /* green - 166.66 */
+      {0.0, 1.0, 0.5}, /* limegreen */
+      {0.0, 1.0, 1.0}, /* cyan - 333.33 */
 
-    {0.0, 0.5, 1.0},            /* marine */
-    {0.0, 0.0, 1.0},            /* blue - 500 */
-    {0.5, 0.0, 1.0},            /* purpleblue */
-    {1.0, 0.0, 1.0},            /* magenta - 666.66 */
-    {1.0, 0.0, 0.5},            /* hotpink */
+      {0.0, 0.5, 1.0}, /* marine */
+      {0.0, 0.0, 1.0}, /* blue - 500 */
+      {0.5, 0.0, 1.0}, /* purpleblue */
+      {1.0, 0.0, 1.0}, /* magenta - 666.66 */
+      {1.0, 0.0, 0.5}, /* hotpink */
 
-    {1.0, 0.0, 0.0},            /* red - 833.33 */
-    {1.0, 0.5, 0.0},            /* orange */
-    {1.0, 1.0, 0.0},            /* yellow - 999 */
+      {1.0, 0.0, 0.0}, /* red - 833.33 */
+      {1.0, 0.5, 0.0}, /* orange */
+      {1.0, 1.0, 0.0}, /* yellow - 999 */
   };
 
   float spectrumC[][3] = {
-    {1.0, 1.0, 0.0},            /* yellow - 0 */
-    {0.0, 0.0, 1.0},            /* blue - 83.333 */
-    {1.0, 0.0, 0.0},            /* red - 167.67 */
-    {0.0, 1.0, 0.0},            /* green - 250.00 */
-    {1.0, 0.0, 1.0},            /* magenta - 333.33 */
+      {1.0, 1.0, 0.0}, /* yellow - 0 */
+      {0.0, 0.0, 1.0}, /* blue - 83.333 */
+      {1.0, 0.0, 0.0}, /* red - 167.67 */
+      {0.0, 1.0, 0.0}, /* green - 250.00 */
+      {1.0, 0.0, 1.0}, /* magenta - 333.33 */
 
-    {0.0, 1.0, 1.0},            /* cyan - 416.67 */
-    {1.0, 1.0, 0.0},            /* yellow - 500.00 */
-    {0.0, 1.0, 0.0},            /* green - 583.33 */
-    {0.0, 0.0, 1.0},            /* blue - 666.67 */
-    {1.0, 0.0, 1.0},            /* magenta - 750.00 */
+      {0.0, 1.0, 1.0}, /* cyan - 416.67 */
+      {1.0, 1.0, 0.0}, /* yellow - 500.00 */
+      {0.0, 1.0, 0.0}, /* green - 583.33 */
+      {0.0, 0.0, 1.0}, /* blue - 666.67 */
+      {1.0, 0.0, 1.0}, /* magenta - 750.00 */
 
-    {1.0, 1.0, 0.0},            /* yellow - 833.33 */
-    {1.0, 0.0, 0.0},            /* red - 916.67 */
-    {0.0, 1.0, 1.0},            /* cyan - 999 */
+      {1.0, 1.0, 0.0}, /* yellow - 833.33 */
+      {1.0, 0.0, 0.0}, /* red - 916.67 */
+      {0.0, 1.0, 1.0}, /* cyan - 999 */
   };
 
   float spectrumW[][3] = {
-    {1.0, 1.0, 0.0},            /* yellow - 0 */
-    {1.0, 1.0, 1.0},            /* white */
-    {0.0, 0.0, 1.0},            /* blue  - 83.333 */
-    {1.0, 1.0, 1.0},            /* white */
-    {1.0, 0.0, 0.0},            /* red - 166.67 */
+      {1.0, 1.0, 0.0}, /* yellow - 0 */
+      {1.0, 1.0, 1.0}, /* white */
+      {0.0, 0.0, 1.0}, /* blue  - 83.333 */
+      {1.0, 1.0, 1.0}, /* white */
+      {1.0, 0.0, 0.0}, /* red - 166.67 */
 
-    {1.0, 1.0, 1.0},            /* white */
-    {0.0, 1.0, 0.0},            /* green - 250.00 */
-    {1.0, 1.0, 1.0},            /* white */
-    {1.0, 0.0, 1.0},            /* magenta - 333.33 */
-    {1.0, 1.0, 1.0},            /* white */
+      {1.0, 1.0, 1.0}, /* white */
+      {0.0, 1.0, 0.0}, /* green - 250.00 */
+      {1.0, 1.0, 1.0}, /* white */
+      {1.0, 0.0, 1.0}, /* magenta - 333.33 */
+      {1.0, 1.0, 1.0}, /* white */
 
-    {0.0, 1.0, 1.0},            /* cyan - 416.67 */
-    {1.0, 1.0, 1.0},            /* white */
-    {1.0, 1.0, 0.0},            /* yellow - 500.00 */
-    {1.0, 1.0, 1.0},            /* white */
-    {0.0, 1.0, 0.0},            /* green - 583.33 */
+      {0.0, 1.0, 1.0}, /* cyan - 416.67 */
+      {1.0, 1.0, 1.0}, /* white */
+      {1.0, 1.0, 0.0}, /* yellow - 500.00 */
+      {1.0, 1.0, 1.0}, /* white */
+      {0.0, 1.0, 0.0}, /* green - 583.33 */
 
-    {1.0, 1.0, 1.0},            /* white */
-    {0.0, 0.0, 1.0},            /* blue - 666.67 */
-    {1.0, 1.0, 1.0},            /* white */
-    {1.0, 0.0, 1.0},            /* magenta - 750.00 */
-    {1.0, 1.0, 1.0},            /* white */
+      {1.0, 1.0, 1.0}, /* white */
+      {0.0, 0.0, 1.0}, /* blue - 666.67 */
+      {1.0, 1.0, 1.0}, /* white */
+      {1.0, 0.0, 1.0}, /* magenta - 750.00 */
+      {1.0, 1.0, 1.0}, /* white */
 
-    {1.0, 1.0, 0.0},            /* yellow - 833.33 */
-    {1.0, 1.0, 1.0},            /* white */
-    {1.0, 0.0, 0.0},            /* red - 916.67 */
-    {1.0, 1.0, 1.0},            /* white */
-    {0.0, 1.0, 1.0},            /* cyan - 999 */
+      {1.0, 1.0, 0.0}, /* yellow - 833.33 */
+      {1.0, 1.0, 1.0}, /* white */
+      {1.0, 0.0, 0.0}, /* red - 916.67 */
+      {1.0, 1.0, 1.0}, /* white */
+      {0.0, 1.0, 1.0}, /* cyan - 999 */
   };
 
   float spectrumO[29][3] = {
-    /* a rainbow with perceptive color balancing and extra blue/red at the ends */
-    {1.0, 0.0, 1.0},            /* violet */
-    {0.8F, 0.0, 1.0},
+      /* a rainbow with perceptive color balancing and extra blue/red at the
+         ends */
+      {1.0, 0.0, 1.0}, /* violet */
+      {0.8F, 0.0, 1.0},
 
-    {0.5F, 0.0, 1.0},           /* blend */
+      {0.5F, 0.0, 1.0}, /* blend */
 
-    {0.0, 0.0, 1.0},            /* blue */
-    {0.0, 0.0, 1.0},            /* blue */
-    {0.0, 0.2F, 1.0},
+      {0.0, 0.0, 1.0}, /* blue */
+      {0.0, 0.0, 1.0}, /* blue */
+      {0.0, 0.2F, 1.0},
 
-    {0.0, 0.5F, 1.0},           /* blend */
+      {0.0, 0.5F, 1.0}, /* blend */
 
-    {0.0, 0.8F, 1.0},
-    {0.0, 1.0, 1.0},            /* cyan */
-    {0.0, 1.0, 0.8F},
+      {0.0, 0.8F, 1.0}, {0.0, 1.0, 1.0}, /* cyan */
+      {0.0, 1.0, 0.8F},
 
-    {0.0, 1.0, 0.5F},           /* blend */
+      {0.0, 1.0, 0.5F}, /* blend */
 
-    {0.0, 1.0, 0.2F},
-    {0.0, 1.0, 0.0},            /* green */
-    {0.2F, 1.0, 0.0},
+      {0.0, 1.0, 0.2F}, {0.0, 1.0, 0.0}, /* green */
+      {0.2F, 1.0, 0.0},
 
-    {0.5F, 1.0, 0.0},           /* blend */
+      {0.5F, 1.0, 0.0}, /* blend */
 
-    {0.8F, 1.0, 0.0},
-    {1.0, 1.0, 0.0},            /* yellow */
-    {1.0, 0.9F, 0.0},
+      {0.8F, 1.0, 0.0}, {1.0, 1.0, 0.0}, /* yellow */
+      {1.0, 0.9F, 0.0},
 
-    {1.0, 0.75F, 0.0},          /* blend */
+      {1.0, 0.75F, 0.0}, /* blend */
 
-    {1.0, 0.6F, 0.0},
-    {1.0, 0.5F, 0.0},           /* orange */
-    {1.0, 0.4F, 0.0},
+      {1.0, 0.6F, 0.0}, {1.0, 0.5F, 0.0}, /* orange */
+      {1.0, 0.4F, 0.0},
 
-    {1.0, 0.3F, 0.0},           /* blend */
+      {1.0, 0.3F, 0.0}, /* blend */
 
-    {1.0, 0.2F, 0.0},
-    {1.0, 0.0, 0.0},            /* red */
-    {1.0, 0.0, 0.0},            /* red */
+      {1.0, 0.2F, 0.0}, {1.0, 0.0, 0.0}, /* red */
+      {1.0, 0.0, 0.0},                   /* red */
 
-    {1.0, 0.0, 0.5F},           /* blend */
+      {1.0, 0.0, 0.5F}, /* blend */
 
-    {1.0, 0.0, 0.8F},           /* violet */
-    {1.0, 0.0, 1.0},            /* violet */
+      {1.0, 0.0, 0.8F}, /* violet */
+      {1.0, 0.0, 1.0},  /* violet */
   };
 
   /* BLUE->VIOLET->RED r546 to r909 */
@@ -1045,8 +1033,8 @@ void ColorReset(PyMOLGlobals * G)
   reg_named_color("ruby", 0.6F, 0.2F, 0.2F);
   reg_named_color("forest", 0.2F, 0.6F, 0.2F);
   reg_named_color("deepblue", 0.25F, 0.25F, 0.65F); /* was "deep" */
-  reg_named_color("grey", 0.5F, 0.5F, 0.5F); /* english spelling */
-  reg_named_color("gray", 0.5F, 0.5F, 0.5F); /* american spelling */
+  reg_named_color("grey", 0.5F, 0.5F, 0.5F);        /* english spelling */
+  reg_named_color("gray", 0.5F, 0.5F, 0.5F);        /* american spelling */
   reg_named_color("carbon", 0.2F, 1.F, 0.2F);
   reg_named_color("nitrogen", 0.2F, 0.2F, 1.F);
   reg_named_color("oxygen", 1.F, 0.3F, 0.3F);
@@ -1078,8 +1066,8 @@ void ColorReset(PyMOLGlobals * G)
 
   /* greybow */
 
-  strcpy(name, "grey00");       /* english spelling */
-  for(a = 0; a < 100; a = a + 1) {
+  strcpy(name, "grey00"); /* english spelling */
+  for (a = 0; a < 100; a = a + 1) {
     name[5] = (a % 10) + '0';
     name[4] = ((a % 100) / 10) + '0';
     /* sprintf(color->Name,"grey%02d",a); */
@@ -1093,7 +1081,7 @@ void ColorReset(PyMOLGlobals * G)
   /* full spectrum (s000-s999) */
 
   strcpy(name, "s000");
-  for(a = 0; a < 1000; a = a + 1) {
+  for (a = 0; a < 1000; a = a + 1) {
     set1 = (int) (a / A_DIV);
     name[3] = (a % 10) + '0';
     name[2] = ((a % 100) / 10) + '0';
@@ -1109,7 +1097,7 @@ void ColorReset(PyMOLGlobals * G)
   /* offset & reversed full spectrum (r000-r999) */
 
   strcpy(name, "r000");
-  for(a = 0; a < 1000; a = a + 1) {
+  for (a = 0; a < 1000; a = a + 1) {
     set1 = (int) (a / A_DIV);
     /* sprintf(color->Name,"r%03d",a); */
     name[3] = (a % 10) + '0';
@@ -1125,7 +1113,7 @@ void ColorReset(PyMOLGlobals * G)
   /* complementary spectra (c000-c999) */
 
   strcpy(name, "c000");
-  for(a = 0; a < 1000; a = a + 1) {
+  for (a = 0; a < 1000; a = a + 1) {
     set1 = (int) (a / A_DIV);
     /*     sprintf(color->Name,"c%03d",a); */
     name[3] = (a % 10) + '0';
@@ -1143,7 +1131,7 @@ void ColorReset(PyMOLGlobals * G)
   /* complementary spectra separated by white (w000-w999) */
 
   strcpy(name, "w000");
-  for(a = 0; a < 1000; a = a + 1) {
+  for (a = 0; a < 1000; a = a + 1) {
     set1 = (int) (a / W_DIV);
     /* sprintf(color->Name,"w%03d",a); */
     name[3] = (a % 10) + '0';
@@ -1158,8 +1146,8 @@ void ColorReset(PyMOLGlobals * G)
 
   reg_named_color("density", 0.1F, 0.1F, 0.6F);
 
-  strcpy(name, "gray00");       /* american */
-  for(a = 0; a < 100; a = a + 1) {
+  strcpy(name, "gray00"); /* american */
+  for (a = 0; a < 100; a = a + 1) {
     name[5] = (a % 10) + '0';
     name[4] = ((a % 100) / 10) + '0';
     /* sprintf(color->Name,"gray%02d",a); */
@@ -1171,7 +1159,7 @@ void ColorReset(PyMOLGlobals * G)
 #define B_DIV 35.7143F
 
   strcpy(name, "o000");
-  for(a = 0; a < 1000; a = a + 1) {
+  for (a = 0; a < 1000; a = a + 1) {
     set1 = (int) (a / B_DIV);
     name[3] = (a % 10) + '0';
     name[2] = ((a % 100) / 10) + '0';
@@ -1321,31 +1309,31 @@ void ColorReset(PyMOLGlobals * G)
   reg_named_color("pseudoatom", 0.9F, 0.9F, 0.9F);
 }
 
-int ColorTableLoad(PyMOLGlobals * G, const char *fname, float gamma, int quiet)
+int ColorTableLoad(PyMOLGlobals* G, const char* fname, float gamma, int quiet)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   int ok = true;
 
   I->Gamma = gamma;
-  if(!fname[0]) {
+  if (!fname[0]) {
     ColorUpdateFromLut(G, -1);
   } else {
     int width = 512, height = 512;
-    if(!strcmp(fname, "rgb")) {
-      if(!I->ColorTable.empty()) {
+    if (!strcmp(fname, "rgb")) {
+      if (!I->ColorTable.empty()) {
         I->ColorTable.clear();
         PRINTFB(G, FB_Color, FB_Actions)
-          " Color: purged table; restoring RGB colors.\n" ENDFB(G);
+        " Color: purged table; restoring RGB colors.\n" ENDFB(G);
       }
       ColorUpdateFromLut(G, -1);
-    } else if(!strcmp(fname, "greyscale")) {
+    } else if (!strcmp(fname, "greyscale")) {
 
       int x, y;
       unsigned int r = 0, g = 0, b = 0;
       unsigned int *pixel, mask, *p;
       unsigned int rc;
 
-      if(I->BigEndian)
+      if (I->BigEndian)
         mask = 0x000000FF;
       else
         mask = 0xFF000000;
@@ -1353,42 +1341,41 @@ int ColorTableLoad(PyMOLGlobals * G, const char *fname, float gamma, int quiet)
       I->ColorTable.resize(512 * 512);
 
       p = I->ColorTable.data();
-      for(x = 0; x < width; x++)
-        for(y = 0; y < height; y++)
+      for (x = 0; x < width; x++)
+        for (y = 0; y < height; y++)
           *(p++) = mask;
 
-      for(y = 0; y < height; y++)
-        for(x = 0; x < width; x++) {
-          rc = (r + g + b)/3;
+      for (y = 0; y < height; y++)
+        for (x = 0; x < width; x++) {
+          rc = (r + g + b) / 3;
 
-          pixel = I->ColorTable.data() + ((width) * y) + x;
-          if(I->BigEndian) {
+          pixel = I->ColorTable.data() + ((width) *y) + x;
+          if (I->BigEndian) {
             *(pixel) = mask | (rc << 24) | (rc << 16) | (rc << 8);
           } else {
             *(pixel) = mask | (rc << 16) | (rc << 8) | rc;
           }
           b = b + 4;
-          if(!(0xFF & b)) {
+          if (!(0xFF & b)) {
             b = 0;
             g = g + 4;
-            if(!(0xFF & g)) {
+            if (!(0xFF & g)) {
               g = 0;
               r = r + 4;
             }
           }
         }
 
-      if(!quiet) {
+      if (!quiet) {
         PRINTFB(G, FB_Color, FB_Actions)
-          " Color: defined table '%s'.\n", fname ENDFB(G);
+        " Color: defined table '%s'.\n", fname ENDFB(G);
       }
 
       ColorUpdateFromLut(G, -1);
       ExecutiveInvalidateRep(G, cKeywordAll, cRepAll, cRepInvColor);
       SceneChanged(G);
 
-
-    } else if(!strcmp(fname, "pymol")) {
+    } else if (!strcmp(fname, "pymol")) {
 
       int x, y;
       unsigned int r = 0, g = 0, b = 0;
@@ -1407,7 +1394,7 @@ int ColorTableLoad(PyMOLGlobals * G, const char *fname, float gamma, int quiet)
       blue_max = SettingGetGlobal_f(G, cSetting_pymol_space_max_blue);
       min_factor = SettingGetGlobal_f(G, cSetting_pymol_space_min_factor);
 
-      if(I->BigEndian)
+      if (I->BigEndian)
         mask = 0x000000FF;
       else
         mask = 0xFF000000;
@@ -1415,30 +1402,30 @@ int ColorTableLoad(PyMOLGlobals * G, const char *fname, float gamma, int quiet)
       I->ColorTable.resize(512 * 512);
 
       p = I->ColorTable.data();
-      for(x = 0; x < width; x++)
-        for(y = 0; y < height; y++)
+      for (x = 0; x < width; x++)
+        for (y = 0; y < height; y++)
           *(p++) = mask;
 
-      for(y = 0; y < height; y++)
-        for(x = 0; x < width; x++) {
+      for (y = 0; y < height; y++)
+        for (x = 0; x < width; x++) {
           rc = r;
           gc = g;
           bc = b;
 
-          if((r >= g) && (r >= b)) {
-            if(rc > 255 * red_max) {
+          if ((r >= g) && (r >= b)) {
+            if (rc > 255 * red_max) {
               rc = (unsigned int) (red_max * 255);
               bc = bc * rc / r;
               gc = gc * rc / r;
             }
-          } else if((g >= b) && (g >= r)) {
-            if(gc > 255 * green_max) {
+          } else if ((g >= b) && (g >= r)) {
+            if (gc > 255 * green_max) {
               gc = (unsigned int) (green_max * 255);
               bc = bc * gc / g;
               rc = rc * gc / g;
             }
-          } else if((b >= g) && (b >= r)) {
-            if(bc > 255 * blue_max) {
+          } else if ((b >= g) && (b >= r)) {
+            if (bc > 255 * blue_max) {
               bc = (unsigned int) (blue_max * 255);
               gc = gc * bc / b;
               rc = rc * bc / b;
@@ -1449,48 +1436,48 @@ int ColorTableLoad(PyMOLGlobals * G, const char *fname, float gamma, int quiet)
           gf = (int) (min_factor * gc + 0.49999F);
           bf = (int) (min_factor * bc + 0.49999F);
 
-          if(rc < gf)
+          if (rc < gf)
             rc = (int) gf;
-          if(bc < gf)
+          if (bc < gf)
             bc = (int) gf;
 
-          if(rc < bf)
+          if (rc < bf)
             rc = (int) bf;
-          if(gc < bf)
+          if (gc < bf)
             gc = (int) bf;
 
-          if(gc < rf)
+          if (gc < rf)
             gc = (int) rf;
-          if(bc < rf)
+          if (bc < rf)
             bc = (int) rf;
 
-          if(rc > 255)
+          if (rc > 255)
             rc = 255;
-          if(bc > 255)
+          if (bc > 255)
             bc = 255;
-          if(gc > 255)
+          if (gc > 255)
             gc = 255;
 
-          pixel = I->ColorTable.data() + ((width) * y) + x;
-          if(I->BigEndian) {
+          pixel = I->ColorTable.data() + ((width) *y) + x;
+          if (I->BigEndian) {
             *(pixel) = mask | (rc << 24) | (gc << 16) | (bc << 8);
           } else {
             *(pixel) = mask | (bc << 16) | (gc << 8) | rc;
           }
           b = b + 4;
-          if(!(0xFF & b)) {
+          if (!(0xFF & b)) {
             b = 0;
             g = g + 4;
-            if(!(0xFF & g)) {
+            if (!(0xFF & g)) {
               g = 0;
               r = r + 4;
             }
           }
         }
 
-      if(!quiet) {
+      if (!quiet) {
         PRINTFB(G, FB_Color, FB_Actions)
-          " Color: defined table '%s'.\n", fname ENDFB(G);
+        " Color: defined table '%s'.\n", fname ENDFB(G);
       }
 
       ColorUpdateFromLut(G, -1);
@@ -1498,58 +1485,60 @@ int ColorTableLoad(PyMOLGlobals * G, const char *fname, float gamma, int quiet)
       SceneChanged(G);
 
     } else {
-      if(strlen(fname)) {
+      if (strlen(fname)) {
 
         auto image = MyPNGRead(fname);
-        if(image) {
+        if (image) {
           std::tie(width, height) = image->getSize();
-          if((width == 512) && (height == 512)) {
+          if ((width == 512) && (height == 512)) {
             auto imageSize = width * height;
             I->ColorTable.resize(imageSize);
-            std::copy(image->pixels(), image->pixels() + imageSize, I->ColorTable.data());
+            std::copy(image->pixels(), image->pixels() + imageSize,
+                I->ColorTable.data());
 
-            if(!quiet) {
+            if (!quiet) {
               PRINTFB(G, FB_Color, FB_Actions)
-                " Color: loaded table '%s'.\n", fname ENDFB(G);
+              " Color: loaded table '%s'.\n", fname ENDFB(G);
             }
 
             ColorUpdateFromLut(G, -1);
 
           } else {
             PRINTFB(G, FB_Color, FB_Errors)
-              " ColorTableLoad-Error: invalid dimensions w x h  = %d x %d; should be 512 x 512.\n",
-              width, height ENDFB(G);
+            " ColorTableLoad-Error: invalid dimensions w x h  = %d x %d; "
+            "should be 512 x 512.\n",
+                width, height ENDFB(G);
 
             ok = false;
           }
         } else {
           PRINTFB(G, FB_Color, FB_Errors)
-            " ColorTableLoad-Error: unable to load '%s'.\n", fname ENDFB(G);
+          " ColorTableLoad-Error: unable to load '%s'.\n", fname ENDFB(G);
           ok = false;
         }
       } else {
         PRINTFB(G, FB_Color, FB_Actions)
-          " Color: purged table; colors unchanged.\n" ENDFB(G);
+        " Color: purged table; colors unchanged.\n" ENDFB(G);
         I->ColorTable.clear();
       }
     }
   }
-  if(ok) {
+  if (ok) {
     ExecutiveInvalidateRep(G, cKeywordAll, cRepAll, cRepInvColor);
     SceneChanged(G);
   }
   return (ok);
 }
 
-static void lookup_color(CColor * I, const float *in, float *out, int big_endian)
+static void lookup_color(CColor* I, const float* in, float* out, int big_endian)
 {
   const float _1 = 1.0F;
-  unsigned int *table = I->ColorTable.data();
-  if(table) {
+  unsigned int* table = I->ColorTable.data();
+  if (table) {
     unsigned int r, g, b, rr, gr, br;
     unsigned int ra, ga, ba;
     unsigned int rc[2][2][2], gc[2][2][2], bc[2][2][2];
-    unsigned int *entry;
+    unsigned int* entry;
     int x, y, z;
     float fr, fg, fb, frm1x, fgm1, fbm1, rct, gct, bct;
     const float _2 = 2.0F, _0 = 0.0F, _05 = 0.5F, _04999 = 0.4999F;
@@ -1569,22 +1558,22 @@ static void lookup_color(CColor * I, const float *in, float *out, int big_endian
 
     /* now for a crude little trilinear */
 
-    for(x = 0; x < 2; x++) {
+    for (x = 0; x < 2; x++) {
       ra = r + x;
-      if(ra > 63)
+      if (ra > 63)
         ra = 63;
-      for(y = 0; y < 2; y++) {
+      for (y = 0; y < 2; y++) {
         ga = g + y;
-        if(ga > 63)
+        if (ga > 63)
           ga = 63;
-        for(z = 0; z < 2; z++) {
+        for (z = 0; z < 2; z++) {
           ba = b + z;
-          if(ba > 63)
+          if (ba > 63)
             ba = 63;
 
           entry = table + (ra << 12) + (ga << 6) + ba;
 
-          if(big_endian) {
+          if (big_endian) {
             rc[x][y][z] = 0xFF & ((*entry) >> 24);
             gc[x][y][z] = 0xFF & ((*entry) >> 16);
             bc[x][y][z] = 0xFF & ((*entry) >> 8);
@@ -1605,45 +1594,36 @@ static void lookup_color(CColor * I, const float *in, float *out, int big_endian
     fg = 1.0F - fgm1;
     fb = 1.0F - fbm1;
 
-    rct = _04999 +
-      (fr * fg * fb * rc[0][0][0]) +
-      (frm1x * fg * fb * rc[1][0][0]) +
-      (fr * fgm1 * fb * rc[0][1][0]) +
-      (fr * fg * fbm1 * rc[0][0][1]) +
-      (frm1x * fgm1 * fb * rc[1][1][0]) +
-      (fr * fgm1 * fbm1 * rc[0][1][1]) +
-      (frm1x * fg * fbm1 * rc[1][0][1]) + (frm1x * fgm1 * fbm1 * rc[1][1][1]);
+    rct = _04999 + (fr * fg * fb * rc[0][0][0]) +
+          (frm1x * fg * fb * rc[1][0][0]) + (fr * fgm1 * fb * rc[0][1][0]) +
+          (fr * fg * fbm1 * rc[0][0][1]) + (frm1x * fgm1 * fb * rc[1][1][0]) +
+          (fr * fgm1 * fbm1 * rc[0][1][1]) + (frm1x * fg * fbm1 * rc[1][0][1]) +
+          (frm1x * fgm1 * fbm1 * rc[1][1][1]);
 
-    gct = _04999 +
-      (fr * fg * fb * gc[0][0][0]) +
-      (frm1x * fg * fb * gc[1][0][0]) +
-      (fr * fgm1 * fb * gc[0][1][0]) +
-      (fr * fg * fbm1 * gc[0][0][1]) +
-      (frm1x * fgm1 * fb * gc[1][1][0]) +
-      (fr * fgm1 * fbm1 * gc[0][1][1]) +
-      (frm1x * fg * fbm1 * gc[1][0][1]) + (frm1x * fgm1 * fbm1 * gc[1][1][1]);
+    gct = _04999 + (fr * fg * fb * gc[0][0][0]) +
+          (frm1x * fg * fb * gc[1][0][0]) + (fr * fgm1 * fb * gc[0][1][0]) +
+          (fr * fg * fbm1 * gc[0][0][1]) + (frm1x * fgm1 * fb * gc[1][1][0]) +
+          (fr * fgm1 * fbm1 * gc[0][1][1]) + (frm1x * fg * fbm1 * gc[1][0][1]) +
+          (frm1x * fgm1 * fbm1 * gc[1][1][1]);
 
-    bct = _04999 +
-      (fr * fg * fb * bc[0][0][0]) +
-      (frm1x * fg * fb * bc[1][0][0]) +
-      (fr * fgm1 * fb * bc[0][1][0]) +
-      (fr * fg * fbm1 * bc[0][0][1]) +
-      (frm1x * fgm1 * fb * bc[1][1][0]) +
-      (fr * fgm1 * fbm1 * bc[0][1][1]) +
-      (frm1x * fg * fbm1 * bc[1][0][1]) + (frm1x * fgm1 * fbm1 * bc[1][1][1]);
+    bct = _04999 + (fr * fg * fb * bc[0][0][0]) +
+          (frm1x * fg * fb * bc[1][0][0]) + (fr * fgm1 * fb * bc[0][1][0]) +
+          (fr * fg * fbm1 * bc[0][0][1]) + (frm1x * fgm1 * fb * bc[1][1][0]) +
+          (fr * fgm1 * fbm1 * bc[0][1][1]) + (frm1x * fg * fbm1 * bc[1][0][1]) +
+          (frm1x * fgm1 * fbm1 * bc[1][1][1]);
 
-    if(r >= 63)
+    if (r >= 63)
       rct += rr;
-    if(g >= 63)
+    if (g >= 63)
       gct += gr;
-    if(b >= 63)
+    if (b >= 63)
       bct += br;
 
-    if(rct <= _2)
-      rct = _0;                 /* make sure black is black */
-    if(gct <= _2)
+    if (rct <= _2)
+      rct = _0; /* make sure black is black */
+    if (gct <= _2)
       gct = _0;
-    if(bct <= _2)
+    if (bct <= _2)
       bct = _0;
 
     out[0] = rct * inv255;
@@ -1655,10 +1635,10 @@ static void lookup_color(CColor * I, const float *in, float *out, int big_endian
     out[2] = in[2];
   }
 
-  if((I->Gamma != 1.0F) && (I->Gamma > R_SMALL4)) {
+  if ((I->Gamma != 1.0F) && (I->Gamma > R_SMALL4)) {
     float inv_gamma = 1.0F / I->Gamma;
     float inp = (out[0] + out[1] + out[2]) * (1 / 3.0F);
-    if(inp >= R_SMALL4) {
+    if (inp >= R_SMALL4) {
       float sig = (float) (pow(inp, inv_gamma)) / inp;
       out[0] *= sig;
       out[1] *= sig;
@@ -1666,62 +1646,58 @@ static void lookup_color(CColor * I, const float *in, float *out, int big_endian
     }
   }
 
-  if(out[0] > _1)
+  if (out[0] > _1)
     out[0] = _1;
-  if(out[1] > _1)
+  if (out[1] > _1)
     out[1] = _1;
-  if(out[2] > _1)
+  if (out[2] > _1)
     out[2] = _1;
-
 }
 
-
 /*========================================================================*/
-void ColorUpdateFromLut(PyMOLGlobals * G, int index)
+void ColorUpdateFromLut(PyMOLGlobals* G, int index)
 {
   int i;
   int once = false;
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   float *color, *new_color;
 
   I->LUTActive = (!I->ColorTable.empty() || (I->Gamma != 1.0F));
 
   i = index;
-  if(index >= 0) {
+  if (index >= 0) {
     once = true;
   }
-  for(i = 0; i < I->Color.size(); i++) {
-    if(!once)
+  for (i = 0; i < I->Color.size(); i++) {
+    if (!once)
       index = i;
 
-    if(index < I->Color.size()) {
-      if(!I->LUTActive) {
+    if (index < I->Color.size()) {
+      if (!I->LUTActive) {
         I->Color[index].LutColorFlag = false;
-      } else if(!I->Color[index].Fixed) {
+      } else if (!I->Color[index].Fixed) {
         color = I->Color[index].Color;
         new_color = I->Color[index].LutColor;
         lookup_color(I, color, new_color, I->BigEndian);
 
         PRINTFD(G, FB_Color)
-          "%5.3f %5.3f %5.3f -> %5.3f %5.3f %5.3f\n",
-          color[0], color[1], color[2], new_color[0], new_color[1], new_color[2]
-          ENDFD;
+        "%5.3f %5.3f %5.3f -> %5.3f %5.3f %5.3f\n", color[0], color[1],
+            color[2], new_color[0], new_color[1], new_color[2] ENDFD;
 
         I->Color[index].LutColorFlag = true;
       }
     }
 
-    if(once)
+    if (once)
       break;
   }
 }
 
-
 /*========================================================================*/
-int ColorLookupColor(PyMOLGlobals * G, float *color)
+int ColorLookupColor(PyMOLGlobals* G, float* color)
 {
-  CColor *I = G->Color;
-  if(I->LUTActive) {
+  CColor* I = G->Color;
+  if (I->LUTActive) {
     lookup_color(I, color, color, I->BigEndian);
     return true;
   } else {
@@ -1729,69 +1705,72 @@ int ColorLookupColor(PyMOLGlobals * G, float *color)
   }
 }
 
-
 /*========================================================================*/
-int ColorInit(PyMOLGlobals * G)
+int ColorInit(PyMOLGlobals* G)
 {
-  CColor *I = nullptr;
+  CColor* I = nullptr;
 
   if ((G->Color = new CColor())) {
     I = G->Color;
     unsigned int test;
-    unsigned char *testPtr;
+    unsigned char* testPtr;
 
     test = 0xFF000000;
-    testPtr = (unsigned char *) &test;
+    testPtr = (unsigned char*) &test;
     I->BigEndian = (*testPtr) & 0x01;
 
-    ColorReset(G);              /* will alloc I->Idx and I->Lex */
+    ColorReset(G); /* will alloc I->Idx and I->Lex */
     return 1;
   } else {
     return 0;
   }
 }
 
-void ColorUpdateFront(PyMOLGlobals * G, const float *back)
+void ColorUpdateFront(PyMOLGlobals* G, const float* back)
 {
-  CColor *I = G->Color;
+  CColor* I = G->Color;
   copy3f(back, I->Back);
   I->Front[0] = 1.0F - back[0];
   I->Front[1] = 1.0F - back[1];
   I->Front[2] = 1.0F - back[2];
-  if(diff3f(I->Front, back) < 0.5F)
+  if (diff3f(I->Front, back) < 0.5F)
     zero3f(I->Front);
 }
 
-void ColorUpdateFrontFromSettings(PyMOLGlobals * G){
+void ColorUpdateFrontFromSettings(PyMOLGlobals* G)
+{
   int bg_gradient = SettingGet_b(G, nullptr, nullptr, cSetting_bg_gradient);
-  const char * bg_image_filename = SettingGet_s(G, nullptr, nullptr, cSetting_bg_image_filename);
+  const char* bg_image_filename =
+      SettingGet_s(G, nullptr, nullptr, cSetting_bg_image_filename);
   short bg_image = bg_image_filename && bg_image_filename[0];
-  
-  if (!bg_gradient){
-    if (!bg_image && !OrthoBackgroundDataIsSet(*G->Ortho)){
-      const float *v = ColorGet(G, SettingGet_color(G, nullptr, nullptr, cSetting_bg_rgb));
+
+  if (!bg_gradient) {
+    if (!bg_image && !OrthoBackgroundDataIsSet(*G->Ortho)) {
+      const float* v =
+          ColorGet(G, SettingGet_color(G, nullptr, nullptr, cSetting_bg_rgb));
       ColorUpdateFront(G, v);
     } else {
-      float v[] = { 0.f, 0.f, 0.f };
+      float v[] = {0.f, 0.f, 0.f};
       ColorUpdateFront(G, v);
     }
   } else {
     float vv[3];
-    const float *v = ColorGet(G, SettingGet_color(G, nullptr, nullptr, cSetting_bg_rgb_bottom));
-    const float *vb = ColorGet(G, SettingGet_color(G, nullptr, nullptr, cSetting_bg_rgb_top));
+    const float* v = ColorGet(
+        G, SettingGet_color(G, nullptr, nullptr, cSetting_bg_rgb_bottom));
+    const float* vb =
+        ColorGet(G, SettingGet_color(G, nullptr, nullptr, cSetting_bg_rgb_top));
     average3f(v, vb, vv);
-    ColorUpdateFront(G, vv);    
+    ColorUpdateFront(G, vv);
   }
 }
 
-
 /*========================================================================*/
-const float *ColorGetSpecial(PyMOLGlobals * G, int index)
+const float* ColorGetSpecial(PyMOLGlobals* G, int index)
 {
-  if(index >= 0)
+  if (index >= 0)
     return ColorGet(G, index);
   else {
-    CColor *I = G->Color;
+    CColor* I = G->Color;
     I->RGBColor[0] = (float) index;
     I->RGBColor[1] = -1.0F;
     I->RGBColor[2] = -1.0F;
@@ -1799,26 +1778,28 @@ const float *ColorGetSpecial(PyMOLGlobals * G, int index)
   }
 }
 
-const float *ColorGet(PyMOLGlobals * G, int index)
+const float* ColorGet(PyMOLGlobals* G, int index)
 {
-  CColor *I = G->Color;
-  const float *ptr;
-  if((index >= 0) && (index < I->Color.size())) {
-    if(I->Color[index].LutColorFlag && SettingGetGlobal_b(G, cSetting_clamp_colors))
+  CColor* I = G->Color;
+  const float* ptr;
+  if ((index >= 0) && (index < I->Color.size())) {
+    if (I->Color[index].LutColorFlag &&
+        SettingGetGlobal_b(G, cSetting_clamp_colors))
       ptr = I->Color[index].LutColor;
     else
       ptr = I->Color[index].Color;
     return (ptr);
-  } else if((index & cColor_TRGB_Mask) == cColor_TRGB_Bits) {   /* a 24-bit RGB color */
+  } else if ((index & cColor_TRGB_Mask) ==
+             cColor_TRGB_Bits) { /* a 24-bit RGB color */
     I->RGBColor[0] = ((index & 0x00FF0000) >> 16) / 255.0F;
     I->RGBColor[1] = ((index & 0x0000FF00) >> 8) / 255.0F;
     I->RGBColor[2] = ((index & 0x000000FF)) / 255.0F;
-    if(I->LUTActive)
+    if (I->LUTActive)
       lookup_color(I, I->RGBColor, I->RGBColor, I->BigEndian);
     return I->RGBColor;
-  } else if(index == cColorFront) {
+  } else if (index == cColorFront) {
     return I->Front;
-  } else if(index == cColorBack) {
+  } else if (index == cColorBack) {
     return I->Back;
   } else {
     /* invalid color id, then simply return white */
@@ -1826,14 +1807,15 @@ const float *ColorGet(PyMOLGlobals * G, int index)
   }
 }
 
-const float *ColorGetRaw(PyMOLGlobals * G, int index)
+const float* ColorGetRaw(PyMOLGlobals* G, int index)
 {
-  CColor *I = G->Color;
-  const float *ptr;
-  if((index >= 0) && (index < I->Color.size())) {
+  CColor* I = G->Color;
+  const float* ptr;
+  if ((index >= 0) && (index < I->Color.size())) {
     ptr = I->Color[index].Color;
     return (ptr);
-  } else if((index & cColor_TRGB_Mask) == cColor_TRGB_Bits) {   /* a 24-bit RGB color */
+  } else if ((index & cColor_TRGB_Mask) ==
+             cColor_TRGB_Bits) { /* a 24-bit RGB color */
     I->RGBColor[0] = ((index & 0x00FF0000) >> 16) / 255.0F;
     I->RGBColor[1] = ((index & 0x0000FF00) >> 8) / 255.0F;
     I->RGBColor[2] = ((index & 0x000000FF)) / 255.0F;
@@ -1844,31 +1826,33 @@ const float *ColorGetRaw(PyMOLGlobals * G, int index)
   }
 }
 
-int ColorGetEncoded(PyMOLGlobals * G, int index, float *color)
+int ColorGetEncoded(PyMOLGlobals* G, int index, float* color)
 {
-  CColor *I = G->Color;
-  float *ptr;
-  if((index >= 0) && (index < I->Color.size())) {
-    if(I->Color[index].LutColorFlag && SettingGetGlobal_b(G, cSetting_clamp_colors))
+  CColor* I = G->Color;
+  float* ptr;
+  if ((index >= 0) && (index < I->Color.size())) {
+    if (I->Color[index].LutColorFlag &&
+        SettingGetGlobal_b(G, cSetting_clamp_colors))
       ptr = I->Color[index].LutColor;
     else
       ptr = I->Color[index].Color;
     copy3f(ptr, color);
-  } else if((index & cColor_TRGB_Mask) == cColor_TRGB_Bits) {   /* a 24-bit RGB color */
+  } else if ((index & cColor_TRGB_Mask) ==
+             cColor_TRGB_Bits) { /* a 24-bit RGB color */
     float rgb_color[3];
     rgb_color[0] = ((index & 0x00FF0000) >> 16) / 255.0F;
     rgb_color[1] = ((index & 0x0000FF00) >> 8) / 255.0F;
     rgb_color[2] = ((index & 0x000000FF)) / 255.0F;
-    if(I->LUTActive)
+    if (I->LUTActive)
       lookup_color(I, rgb_color, rgb_color, I->BigEndian);
     copy3f(rgb_color, color);
-  } else if(index <= cColorExtCutoff) {
+  } else if (index <= cColorExtCutoff) {
     color[0] = (float) index;
     color[1] = 0.0F;
     color[2] = 0.0F;
-  } else if(index == cColorFront) {
+  } else if (index == cColorFront) {
     copy3f(I->Front, color);
-  } else if(index == cColorBack) {
+  } else if (index == cColorBack) {
     copy3f(I->Back, color);
   } else {
     color[0] = 1.0F;
@@ -1880,15 +1864,14 @@ int ColorGetEncoded(PyMOLGlobals * G, int index, float *color)
   return 1;
 }
 
-int Color3fToInt(PyMOLGlobals * G, const float *rgb){
+int Color3fToInt(PyMOLGlobals* G, const float* rgb)
+{
   unsigned int rc, gc, bc;
   rc = pymol_roundf(rgb[0] * 255.);
   gc = pymol_roundf(rgb[1] * 255.);
   bc = pymol_roundf(rgb[2] * 255.);
-  return ( ( cColor_TRGB_Bits & 0xFF000000) | 
-	   ( ( rc << 16 ) & 0x00FF0000) |
-	   ( ( gc << 8 ) & 0x0000FF00) |
-	   ( ( bc & 0x000000FF ) ) );
+  return ((cColor_TRGB_Bits & 0xFF000000) | ((rc << 16) & 0x00FF0000) |
+          ((gc << 8) & 0x0000FF00) | ((bc & 0x000000FF)));
 }
 
 void ColorRenameExt(
@@ -1908,15 +1891,14 @@ void ColorRenameExt(
   }
 
   // Find corresponding color ext and provide it the new name
-  auto extIt = std::find_if(I->Ext.begin(), I->Ext.end(), [oldName](const ExtRec& rec) {
-    return oldName == rec.Name;
-  });
+  auto extIt = std::find_if(I->Ext.begin(), I->Ext.end(),
+      [oldName](const ExtRec& rec) { return oldName == rec.Name; });
   if (extIt == I->Ext.end()) {
     return;
   }
   auto newNameit = I->Idx.find(newName.c_str());
   if (newNameit == I->Idx.end()) {
-   return;
+    return;
   }
   auto& ext = *extIt;
   ext.Name = newNameit->first.c_str();

@@ -1,43 +1,43 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
-#include"os_predef.h"
-#include"os_std.h"
-#include"os_gl.h"
+#include "os_gl.h"
+#include "os_predef.h"
+#include "os_python.h"
+#include "os_std.h"
 
-#include "main.h"
 #include "Base.h"
+#include "CGO.h"
 #include "Control.h"
-#include "Scene.h"
 #include "Executive.h"
-#include "Setting.h"
+#include "Movie.h"
+#include "Ortho.h"
 #include "P.h"
+#include "Scene.h"
 #include "Seq.h"
-#include"Movie.h"
+#include "Setting.h"
 #include "Text.h"
 #include "Util.h"
-#include "Ortho.h"
-#include "CGO.h"
+#include "main.h"
 
 #define cControlBoxSize DIP2PIXEL(17)
 #define cControlLeftMargin DIP2PIXEL(8)
 #define cControlTopMargin DIP2PIXEL(2)
 #define cControlSpacing DIP2PIXEL(2)
-#define cControlInnerMargin  DIP2PIXEL(4)
+#define cControlInnerMargin DIP2PIXEL(4)
 #define cControlSpread DIP2PIXEL(6)
 #define cControlSize DIP2PIXEL(160)
 
@@ -47,31 +47,31 @@ Z* -------------------------------------------------------------------
 
 #define SDOF_QUEUE_MASK 0x1F
 
-
 struct CControl : public Block {
-  bool DragFlag {};
-  int LastPos {};
-  int ExtraSpace {};
-  float ButtonColor[3] { 0.5f, 0.5f, 0.5f };
-  float ActiveColor[3] { 0.65f, 0.65f, 0.65f };
-  int Pressed { -1 };
-  int Active { -1 };
-  int SaveWidth { 0 };
-  double LastClickTime {};
-  int SkipRelease {};
-  int NButton { 9 };
+  bool DragFlag{};
+  int LastPos{};
+  int ExtraSpace{};
+  float ButtonColor[3]{0.5f, 0.5f, 0.5f};
+  float ActiveColor[3]{0.65f, 0.65f, 0.65f};
+  int Pressed{-1};
+  int Active{-1};
+  int SaveWidth{0};
+  double LastClickTime{};
+  int SkipRelease{};
+  int NButton{9};
 
   /* not saved */
 
-  int sdofActive {};
-  double sdofLastIterTime {};
-  int sdofMode {};
-  float sdofTrans[3] {};
-  float sdofRot[3] {};
-  unsigned int sdofWroteTo {}, sdofReadFrom {};       /* queue synchronization fields */
-  float sdofBuffer[(SDOF_QUEUE_MASK + 1) * 6] {};
+  int sdofActive{};
+  double sdofLastIterTime{};
+  int sdofMode{};
+  float sdofTrans[3]{};
+  float sdofRot[3]{};
+  unsigned int sdofWroteTo{}, sdofReadFrom{}; /* queue synchronization fields */
+  float sdofBuffer[(SDOF_QUEUE_MASK + 1) * 6]{};
 
-  CControl(PyMOLGlobals * G) : Block(G) {};
+  CControl(PyMOLGlobals* G)
+      : Block(G) {};
 
   int click(int button, int x, int y, int mod) override;
   void draw(CGO* ortho) override;
@@ -80,20 +80,20 @@ struct CControl : public Block {
   void reshape(int width, int height) override;
 };
 
-int ControlSdofButton(PyMOLGlobals * G, int button)
+int ControlSdofButton(PyMOLGlobals* G, int button)
 {
-  CControl *I = G->Control;
-  if(I) {
-    if(button == 1) {           /* LEFT */
-      if(I->sdofMode != SDOF_DRAG_MODE) {
+  CControl* I = G->Control;
+  if (I) {
+    if (button == 1) { /* LEFT */
+      if (I->sdofMode != SDOF_DRAG_MODE) {
         I->sdofMode = SDOF_DRAG_MODE;
         OrthoAddOutput(G, " SDOF: Drag mode.\n");
       } else {
         I->sdofMode = SDOF_NORMAL_MODE;
         OrthoAddOutput(G, " SDOF: Normal mode.\n");
       }
-    } else if(button == 2) {    /* RIGHT */
-      if(I->sdofMode != SDOF_CLIP_MODE) {
+    } else if (button == 2) { /* RIGHT */
+      if (I->sdofMode != SDOF_CLIP_MODE) {
         I->sdofMode = SDOF_CLIP_MODE;
         OrthoAddOutput(G, " SDOF: Clip mode.\n");
       } else {
@@ -106,21 +106,20 @@ int ControlSdofButton(PyMOLGlobals * G, int button)
   return 1;
 }
 
-int ControlSdofUpdate(PyMOLGlobals * G, float tx, float ty, float tz, float rx, float ry,
-                      float rz)
+int ControlSdofUpdate(
+    PyMOLGlobals* G, float tx, float ty, float tz, float rx, float ry, float rz)
 {
   /* may be called asynchronously anytime after CControl has been initialized */
 
-  CControl *I = G->Control;
-  if(I) {
+  CControl* I = G->Control;
+  if (I) {
     float tol = 0.0001;
-    bool active =
-      fabs(tx) >= tol || fabs(ty) >= tol || fabs(tz) >= tol ||
-      fabs(rx) >= tol || fabs(ry) >= tol || fabs(rz) >= tol;
+    bool active = fabs(tx) >= tol || fabs(ty) >= tol || fabs(tz) >= tol ||
+                  fabs(rx) >= tol || fabs(ry) >= tol || fabs(rz) >= tol;
 
-    if(active) {
+    if (active) {
       int slot = (I->sdofWroteTo + 1) & SDOF_QUEUE_MASK;
-      float *buffer = I->sdofBuffer + (6 * slot);
+      float* buffer = I->sdofBuffer + (6 * slot);
 
       buffer[0] = tx;
       buffer[1] = ty;
@@ -132,27 +131,28 @@ int ControlSdofUpdate(PyMOLGlobals * G, float tx, float ty, float tz, float rx, 
       I->sdofWroteTo = slot;
 
       {
-        if(!I->sdofActive) {
+        if (!I->sdofActive) {
           I->sdofLastIterTime = UtilGetSeconds(G);
         }
       }
-      /*printf("wrote %8.3f %8.3f %8.3f %8.3f %8.3f %8.3f %d %d %d\n",tx,ty,tz,rx,ry,rz,I->sdofReadFrom,I->sdofWroteTo,slot); */
+      /*printf("wrote %8.3f %8.3f %8.3f %8.3f %8.3f %8.3f %d %d
+       * %d\n",tx,ty,tz,rx,ry,rz,I->sdofReadFrom,I->sdofWroteTo,slot); */
     }
     I->sdofActive = active;
   }
   return 1;
 }
 
-int ControlSdofIterate(PyMOLGlobals * G)
+int ControlSdofIterate(PyMOLGlobals* G)
 {
-  CControl *I = G->Control;
-  if(I->sdofWroteTo != I->sdofReadFrom && I->sdofActive) {
+  CControl* I = G->Control;
+  if (I->sdofWroteTo != I->sdofReadFrom && I->sdofActive) {
 
     int slot = I->sdofWroteTo;
 
     /* new data available */
 
-    float *buffer = I->sdofBuffer + (6 * slot);
+    float* buffer = I->sdofBuffer + (6 * slot);
 
     I->sdofTrans[0] = buffer[0];
     I->sdofTrans[1] = buffer[1];
@@ -168,12 +168,13 @@ int ControlSdofIterate(PyMOLGlobals * G)
     I->sdofLastIterTime = now;
 
     {
-      /* suppress small amounts of combined motion using a truncated switching function */
+      /* suppress small amounts of combined motion using a truncated switching
+       * function */
 
       float len_rot = length3f(I->sdofRot);
       float len_trans = length3f(I->sdofTrans);
       float *dom, *sub;
-      if(len_rot > len_trans) {
+      if (len_rot > len_trans) {
         dom = &len_rot;
         sub = &len_trans;
       } else {
@@ -185,9 +186,9 @@ int ControlSdofIterate(PyMOLGlobals * G)
         float expo = 2.0F;
         float trnc = 0.05F;
         float sub_fxn = (*sub) / (*dom);
-        if(sub_fxn < trnc) {
+        if (sub_fxn < trnc) {
           sub_fxn = 0.0F;
-        } else if(sub_fxn < 0.5F) {
+        } else if (sub_fxn < 0.5F) {
           sub_fxn = (sub_fxn - trnc) / (0.5F - trnc);
           sub_fxn = (float) pow(sub_fxn, expo);
         } else {
@@ -200,24 +201,22 @@ int ControlSdofIterate(PyMOLGlobals * G)
       }
     }
     /* translate */
-    SceneTranslateScaled(G,
-                         delta * I->sdofTrans[0],
-                         -delta * I->sdofTrans[1], -delta * I->sdofTrans[2], I->sdofMode);
+    SceneTranslateScaled(G, delta * I->sdofTrans[0], -delta * I->sdofTrans[1],
+        -delta * I->sdofTrans[2], I->sdofMode);
 
     /* rotate */
-    SceneRotateScaled(G,
-                      2.0F * delta * I->sdofRot[0],
-                      -2.0F * delta * I->sdofRot[1],
-                      -2.0F * delta * I->sdofRot[2], I->sdofMode);
+    SceneRotateScaled(G, 2.0F * delta * I->sdofRot[0],
+        -2.0F * delta * I->sdofRot[1], -2.0F * delta * I->sdofRot[2],
+        I->sdofMode);
 
     SceneDirty(G);
   }
   return 1;
 }
 
-int ControlRocking(PyMOLGlobals * G)
+int ControlRocking(PyMOLGlobals* G)
 {
-  if(G->Interrupt) {
+  if (G->Interrupt) {
     SettingSetGlobal_b(G, cSetting_rock, false);
   }
   return SettingGetGlobal_b(G, cSetting_rock);
@@ -225,30 +224,29 @@ int ControlRocking(PyMOLGlobals * G)
 
 void CControl::reshape(int width, int height)
 {
-  PyMOLGlobals *G = m_G;
-  CControl *I = G->Control;
+  PyMOLGlobals* G = m_G;
+  CControl* I = G->Control;
   Block::reshape(width, height);
   /* this is a pragmatic workaround for mac X11 where the nub gets
      hidden by the window expansion tab */
 
-  if((rect.right - rect.left) < 20) {
+  if ((rect.right - rect.left) < 20) {
     rect.top = rect.top + 10;
   }
 
   I->ExtraSpace = ((rect.right - rect.left) - cControlSize);
-  if(I->ExtraSpace < 0)
+  if (I->ExtraSpace < 0)
     I->ExtraSpace = 0;
 }
 
-static int which_button(CControl * I, int x, int y)
+static int which_button(CControl* I, int x, int y)
 {
   int result = -1;
   x -= I->rect.left + cControlLeftMargin;
   y -= I->rect.top - cControlTopMargin;
-  if(x >= 0)
-    if((y <= 0) && (y > (-cControlBoxSize))) {
-      int control_width =
-        I->rect.right - (I->rect.left + cControlLeftMargin);
+  if (x >= 0)
+    if ((y <= 0) && (y > (-cControlBoxSize))) {
+      int control_width = I->rect.right - (I->rect.left + cControlLeftMargin);
       result = (I->NButton * x) / control_width;
     }
   return result;
@@ -258,15 +256,15 @@ int CControl::drag(int x, int y, int mod)
 {
   int delta;
   int gui_width;
-  PyMOLGlobals *G = m_G;
-  CControl *I = G->Control;
-  if(!I->SkipRelease) {
+  PyMOLGlobals* G = m_G;
+  CControl* I = G->Control;
+  if (!I->SkipRelease) {
     delta = x - I->LastPos;
     delta /= DIP2PIXEL(1);
-    if(I->DragFlag) {
-      if(delta) {
+    if (I->DragFlag) {
+      if (delta) {
         gui_width = SettingGetGlobal_i(G, cSetting_internal_gui_width) - delta;
-        if(gui_width < cControlMinWidth)
+        if (gui_width < cControlMinWidth)
           gui_width = cControlMinWidth;
         delta = SettingGetGlobal_i(G, cSetting_internal_gui_width) - gui_width;
         I->LastPos = x;
@@ -276,7 +274,7 @@ int CControl::drag(int x, int y, int mod)
       }
     } else {
       I->Active = which_button(I, x, y);
-      if(I->Active != I->Pressed)
+      if (I->Active != I->Pressed)
         I->Active = -1;
       OrthoInvalidateDoDraw(G);
       OrthoDirty(G);
@@ -287,14 +285,14 @@ int CControl::drag(int x, int y, int mod)
 
 int CControl::release(int button, int x, int y, int mod)
 {
-  PyMOLGlobals *G = m_G;
-  CControl *I = G->Control;
+  PyMOLGlobals* G = m_G;
+  CControl* I = G->Control;
 
   int sel = 0;
 
   I->LastPos = x;
   sel = which_button(I, x, y);
-  if(!I->SkipRelease) {
+  if (!I->SkipRelease) {
     switch (sel) {
     case 0:
       SceneSetFrame(G, 4, 0);
@@ -306,16 +304,16 @@ int CControl::release(int button, int x, int y, int mod)
       break;
     case 2:
       MoviePlay(G, cMovieStop);
-      if(SettingGetGlobal_b(G, cSetting_sculpting))
+      if (SettingGetGlobal_b(G, cSetting_sculpting))
         SettingSetGlobal_b(G, cSetting_sculpting, 0);
-      if(SettingGetGlobal_b(G, cSetting_rock))
+      if (SettingGetGlobal_b(G, cSetting_rock))
         SettingSetGlobal_b(G, cSetting_rock, false);
       OrthoDirty(G);
       PLog(G, "cmd.mstop()", cPLog_pym);
       break;
     case 3:
-      if(!MoviePlaying(G)) {
-        if(mod & cOrthoCTRL) {
+      if (!MoviePlaying(G)) {
+        if (mod & cOrthoCTRL) {
           PLog(G, "cmd.rewind()", cPLog_pym);
           PLog(G, "cmd.mplay()", cPLog_pym);
           SceneSetFrame(G, 4, 0);
@@ -335,7 +333,7 @@ int CControl::release(int button, int x, int y, int mod)
       PLog(G, "cmd.forward()", cPLog_pym);
       break;
     case 5:
-      if(mod & cOrthoCTRL) {
+      if (mod & cOrthoCTRL) {
         SceneSetFrame(G, 3, 0);
         PLog(G, "cmd.middle()", cPLog_pym);
       } else {
@@ -344,7 +342,7 @@ int CControl::release(int button, int x, int y, int mod)
       }
       break;
     case 6:
-      if(SettingGetGlobal_b(G, cSetting_seq_view)) {
+      if (SettingGetGlobal_b(G, cSetting_seq_view)) {
         SettingSetGlobal_b(G, cSetting_seq_view, 0);
         SeqChanged(G);
         PLog(G, "cmd.set('seq_view',0)", cPLog_pym);
@@ -356,8 +354,9 @@ int CControl::release(int button, int x, int y, int mod)
       OrthoDirty(G);
       break;
     case 7:
-      SettingSetGlobal_b(G, cSetting_rock, !SettingGetGlobal_b(G, cSetting_rock));
-      if(SettingGetGlobal_b(G, cSetting_rock)) {
+      SettingSetGlobal_b(
+          G, cSetting_rock, !SettingGetGlobal_b(G, cSetting_rock));
+      if (SettingGetGlobal_b(G, cSetting_rock)) {
         SceneRestartSweepTimer(G);
         PLog(G, "cmd.rock(1)", cPLog_pym);
       } else
@@ -384,42 +383,39 @@ int CControl::release(int button, int x, int y, int mod)
   return (1);
 }
 
-Block *ControlGetBlock(PyMOLGlobals * G)
+Block* ControlGetBlock(PyMOLGlobals* G)
 {
-  CControl *I = G->Control;
+  CControl* I = G->Control;
   {
     return (I);
   }
 }
 
-
 /*========================================================================*/
-int ControlIdling(PyMOLGlobals * G)
+int ControlIdling(PyMOLGlobals* G)
 {
-  CControl *I = G->Control;
-  return (I->sdofActive ||
-          MoviePlaying(G) ||
-          SettingGetGlobal_b(G, cSetting_rock) || SettingGetGlobal_b(G, cSetting_sculpting));
+  CControl* I = G->Control;
+  return (I->sdofActive || MoviePlaying(G) ||
+          SettingGetGlobal_b(G, cSetting_rock) ||
+          SettingGetGlobal_b(G, cSetting_sculpting));
 }
 
-
 /*========================================================================*/
-void ControlFree(PyMOLGlobals * G)
+void ControlFree(PyMOLGlobals* G)
 {
 
   DeleteP(G->Control);
 }
 
-
 /*========================================================================*/
-pymol::Result<bool> ControlRock(PyMOLGlobals * G, int mode)
+pymol::Result<bool> ControlRock(PyMOLGlobals* G, int mode)
 {
   switch (mode) {
   case -2:
     break;
   case -1:
     SettingSetGlobal_b(G, cSetting_rock, !SettingGetGlobal_b(G, cSetting_rock));
-    if(SettingGetGlobal_b(G, cSetting_rock)) {
+    if (SettingGetGlobal_b(G, cSetting_rock)) {
       SceneRestartSweepTimer(G);
     }
     break;
@@ -431,26 +427,25 @@ pymol::Result<bool> ControlRock(PyMOLGlobals * G, int mode)
     SceneRestartSweepTimer(G);
     break;
   }
-  if(mode != -2) {
+  if (mode != -2) {
     SceneRestartFrameTimer(G);
     OrthoDirty(G);
   }
   return SettingGetGlobal_b(G, cSetting_rock);
 }
 
-
 /*========================================================================*/
 int CControl::click(int button, int x, int y, int mod)
 {
-  PyMOLGlobals *G = m_G;
-  CControl *I = G->Control;
+  PyMOLGlobals* G = m_G;
+  CControl* I = G->Control;
   I->SkipRelease = false;
-  if(x < (I->rect.left + cControlLeftMargin)) {
+  if (x < (I->rect.left + cControlLeftMargin)) {
     y -= I->rect.top - cControlTopMargin;
-    if((y <= 0) && (y > (-cControlBoxSize))) {
+    if ((y <= 0) && (y > (-cControlBoxSize))) {
       double now = UtilGetSeconds(m_G);
-      if((now - I->LastClickTime) < 0.35) {
-        if(I->SaveWidth) {
+      if ((now - I->LastClickTime) < 0.35) {
+        if (I->SaveWidth) {
           SettingSetGlobal_i(G, cSetting_internal_gui_width, I->SaveWidth);
           OrthoReshape(G, -1, -1, false);
           I->SaveWidth = 0;
@@ -470,17 +465,17 @@ int CControl::click(int button, int x, int y, int mod)
   } else {
     I->Pressed = which_button(I, x, y);
     I->Active = I->Pressed;
-    if(I->Pressed)
+    if (I->Pressed)
       OrthoGrab(G, this);
     OrthoDirty(G);
   }
   return (1);
 }
 
-static void draw_button(int x2, int y2, int w, int h, float *light, float *dark,
-                        float *inside , CGO *orthoCGO)
+static void draw_button(int x2, int y2, int w, int h, float* light, float* dark,
+    float* inside, CGO* orthoCGO)
 {
-  if (orthoCGO){
+  if (orthoCGO) {
     CGOColorv(orthoCGO, light);
     CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
     CGOVertex(orthoCGO, x2, y2, 0.f);
@@ -488,7 +483,7 @@ static void draw_button(int x2, int y2, int w, int h, float *light, float *dark,
     CGOVertex(orthoCGO, x2 + w, y2, 0.f);
     CGOVertex(orthoCGO, x2 + w, y2 + h, 0.f);
     CGOEnd(orthoCGO);
-    
+
     CGOColorv(orthoCGO, dark);
     CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
     CGOVertex(orthoCGO, x2 + 1, y2, 0.f);
@@ -496,7 +491,7 @@ static void draw_button(int x2, int y2, int w, int h, float *light, float *dark,
     CGOVertex(orthoCGO, x2 + w, y2, 0.f);
     CGOVertex(orthoCGO, x2 + w, y2 + h - 1, 0.f);
     CGOEnd(orthoCGO);
-    
+
     CGOColorv(orthoCGO, inside);
     CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
     CGOVertex(orthoCGO, x2 + 1, y2 + 1, 0.f);
@@ -512,7 +507,7 @@ static void draw_button(int x2, int y2, int w, int h, float *light, float *dark,
     glVertex2i(x2 + w, y2 + h);
     glVertex2i(x2 + w, y2);
     glEnd();
-    
+
     glColor3fv(dark);
     glBegin(GL_POLYGON);
     glVertex2i(x2 + 1, y2);
@@ -520,7 +515,7 @@ static void draw_button(int x2, int y2, int w, int h, float *light, float *dark,
     glVertex2i(x2 + w, y2 + h - 1);
     glVertex2i(x2 + w, y2);
     glEnd();
-    
+
     glColor3fv(inside);
     glBegin(GL_POLYGON);
     glVertex2i(x2 + 1, y2 + 1);
@@ -531,20 +526,19 @@ static void draw_button(int x2, int y2, int w, int h, float *light, float *dark,
   }
 }
 
-
 /*========================================================================*/
 void CControl::draw(CGO* orthoCGO)
 {
-  PyMOLGlobals *G = m_G;
-  CControl *I = this; // TODO: Remove I during Control refactor
+  PyMOLGlobals* G = m_G;
+  CControl* I = this; // TODO: Remove I during Control refactor
   int x, y;
   int nButton = I->NButton;
   int but_num;
-  float lightEdge[3] = { 0.65F, 0.65F, 0.65F };
-  float darkEdge[3] = { 0.3F, 0.3F, 0.3F };
-  float pushed[3] = { 0.8F, 0.8F, 0.8F };
+  float lightEdge[3] = {0.65F, 0.65F, 0.65F};
+  float darkEdge[3] = {0.3F, 0.3F, 0.3F};
+  float pushed[3] = {0.8F, 0.8F, 0.8F};
 
-  if(G->HaveGUI && G->ValidContext) {
+  if (G->HaveGUI && G->ValidContext) {
 
     int control_width = rect.right - (rect.left + cControlLeftMargin);
 
@@ -569,292 +563,330 @@ void CControl::draw(CGO* orthoCGO)
       top = rect.top - (cControlTopMargin - 1);
       right = left + DIP2PIXEL(5);
 
-      /* This draws the separator on the left side of the movie control buttons */
-      if (orthoCGO){
-	CGOColor(orthoCGO, 0.8F, 0.8F, 0.8F);
-	CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	CGOVertex(orthoCGO, right, top, 0.f);
-	CGOVertex(orthoCGO, right, bottom, 0.f);
-	CGOVertex(orthoCGO, left, top, 0.f);
-	CGOVertex(orthoCGO, left, bottom, 0.f);
-	CGOEnd(orthoCGO);
-	
-	CGOColor(orthoCGO, 0.3F, 0.3F, 0.3F);
-	CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	CGOVertex(orthoCGO, right, top - 1, 0.f);
-	CGOVertex(orthoCGO, right, bottom, 0.f);
-	CGOVertex(orthoCGO, left + 1, top - 1, 0.f);
-	CGOVertex(orthoCGO, left + 1, bottom, 0.f);
-	CGOEnd(orthoCGO);
-	
-	CGOColorv(orthoCGO, I->ButtonColor);
-	
-	CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	CGOVertex(orthoCGO, right - 1, top - 1, 0.f);
-	CGOVertex(orthoCGO, right - 1, bottom + 1, 0.f);
-	CGOVertex(orthoCGO, left + 1, top - 1, 0.f);
-	CGOVertex(orthoCGO, left + 1, bottom + 1, 0.f);
-	CGOEnd(orthoCGO);
+      /* This draws the separator on the left side of the movie control buttons
+       */
+      if (orthoCGO) {
+        CGOColor(orthoCGO, 0.8F, 0.8F, 0.8F);
+        CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+        CGOVertex(orthoCGO, right, top, 0.f);
+        CGOVertex(orthoCGO, right, bottom, 0.f);
+        CGOVertex(orthoCGO, left, top, 0.f);
+        CGOVertex(orthoCGO, left, bottom, 0.f);
+        CGOEnd(orthoCGO);
+
+        CGOColor(orthoCGO, 0.3F, 0.3F, 0.3F);
+        CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+        CGOVertex(orthoCGO, right, top - 1, 0.f);
+        CGOVertex(orthoCGO, right, bottom, 0.f);
+        CGOVertex(orthoCGO, left + 1, top - 1, 0.f);
+        CGOVertex(orthoCGO, left + 1, bottom, 0.f);
+        CGOEnd(orthoCGO);
+
+        CGOColorv(orthoCGO, I->ButtonColor);
+
+        CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+        CGOVertex(orthoCGO, right - 1, top - 1, 0.f);
+        CGOVertex(orthoCGO, right - 1, bottom + 1, 0.f);
+        CGOVertex(orthoCGO, left + 1, top - 1, 0.f);
+        CGOVertex(orthoCGO, left + 1, bottom + 1, 0.f);
+        CGOEnd(orthoCGO);
       } else {
-	glColor3f(0.8F, 0.8F, 0.8F);
-	glBegin(GL_POLYGON);
-	glVertex2i(right, top);
-	glVertex2i(right, bottom);
-	glVertex2i(left, bottom);
-	glVertex2i(left, top);
-	glEnd();
-	
-	glColor3f(0.3F, 0.3F, 0.3F);
-	glBegin(GL_POLYGON);
-	glVertex2i(right, top - 1);
-	glVertex2i(right, bottom);
-	glVertex2i(left + 1, bottom);
-	glVertex2i(left + 1, top - 1);
-	glEnd();
-	
-	glColor3fv(I->ButtonColor);
-	
-	glBegin(GL_POLYGON);
-	glVertex2i(right - 1, top - 1);
-	glVertex2i(right - 1, bottom + 1);
-	glVertex2i(left + 1, bottom + 1);
-	glVertex2i(left + 1, top - 1);
-	glEnd();
+        glColor3f(0.8F, 0.8F, 0.8F);
+        glBegin(GL_POLYGON);
+        glVertex2i(right, top);
+        glVertex2i(right, bottom);
+        glVertex2i(left, bottom);
+        glVertex2i(left, top);
+        glEnd();
+
+        glColor3f(0.3F, 0.3F, 0.3F);
+        glBegin(GL_POLYGON);
+        glVertex2i(right, top - 1);
+        glVertex2i(right, bottom);
+        glVertex2i(left + 1, bottom);
+        glVertex2i(left + 1, top - 1);
+        glEnd();
+
+        glColor3fv(I->ButtonColor);
+
+        glBegin(GL_POLYGON);
+        glVertex2i(right - 1, top - 1);
+        glVertex2i(right - 1, bottom + 1);
+        glVertex2i(left + 1, bottom + 1);
+        glVertex2i(left + 1, top - 1);
+        glEnd();
       }
 
-    y = rect.top - cControlTopMargin;
+      y = rect.top - cControlTopMargin;
 
-    for(but_num = 0; but_num < nButton; but_num++) {
-      int but_width;
-      int but_left;
-      int but_bottom;
-      int but_height;
+      for (but_num = 0; but_num < nButton; but_num++) {
+        int but_width;
+        int but_left;
+        int but_bottom;
+        int but_height;
 
-      but_left =
-        rect.left + cControlLeftMargin + (but_num * control_width) / nButton;
-      but_width =
-        (((but_num + 1) * control_width / nButton) -
-         ((but_num) * control_width / nButton)) - 1;
+        but_left = rect.left + cControlLeftMargin +
+                   (but_num * control_width) / nButton;
+        but_width = (((but_num + 1) * control_width / nButton) -
+                        ((but_num) *control_width / nButton)) -
+                    1;
 
-      but_bottom = y - (cControlBoxSize - 1);
-      but_height = cControlBoxSize;
+        but_bottom = y - (cControlBoxSize - 1);
+        but_height = cControlBoxSize;
 
-      if(but_num == I->Active) {
-        draw_button(but_left, but_bottom,
-                    but_width, but_height, lightEdge, darkEdge, pushed, orthoCGO);
-      } else if(((but_num == 6) && (SettingGetGlobal_b(G, cSetting_seq_view))) ||
-                ((but_num == 3) && (MoviePlaying(G))) ||
-                ((but_num == 7) && (SettingGetGlobal_b(G, cSetting_rock)))){
-        draw_button(but_left, but_bottom,
-                    but_width, but_height, lightEdge, darkEdge, I->ActiveColor, orthoCGO);
-      } else {
-        draw_button(but_left, but_bottom,
-                    but_width, but_height, lightEdge, darkEdge, I->ButtonColor, orthoCGO);
-      }
+        if (but_num == I->Active) {
+          draw_button(but_left, but_bottom, but_width, but_height, lightEdge,
+              darkEdge, pushed, orthoCGO);
+        } else if (((but_num == 6) &&
+                       (SettingGetGlobal_b(G, cSetting_seq_view))) ||
+                   ((but_num == 3) && (MoviePlaying(G))) ||
+                   ((but_num == 7) && (SettingGetGlobal_b(G, cSetting_rock)))) {
+          draw_button(but_left, but_bottom, but_width, but_height, lightEdge,
+              darkEdge, I->ActiveColor, orthoCGO);
+        } else {
+          draw_button(but_left, but_bottom, but_width, but_height, lightEdge,
+              darkEdge, I->ButtonColor, orthoCGO);
+        }
 
-      if(control_width > 100) {
-        x = but_left + (but_width - cControlBoxSize) / 2;
+        if (control_width > 100) {
+          x = but_left + (but_width - cControlBoxSize) / 2;
 
-	if (orthoCGO)
-	  CGOColorv(orthoCGO, TextColor);
+          if (orthoCGO)
+            CGOColorv(orthoCGO, TextColor);
 #ifndef PURE_OPENGL_ES_2
-	else
-	  glColor3fv(TextColor);
+          else
+            glColor3fv(TextColor);
 #endif
-        switch (but_num) {
-        case 0:
-	  if (orthoCGO){
-	    CGOBegin(orthoCGO, GL_TRIANGLES);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin,
-		      y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin, y - (cControlBoxSize / 2), 0.f);
-	    CGOEnd(orthoCGO);
+          switch (but_num) {
+          case 0:
+            if (orthoCGO) {
+              CGOBegin(orthoCGO, GL_TRIANGLES);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOEnd(orthoCGO);
 
+              CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin - 1.f,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin - 1.f,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
+              CGOEnd(orthoCGO);
+            } else {
+              glBegin(GL_TRIANGLES);
+              glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - cControlInnerMargin);
+              glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin);
+              glVertex2i(x + cControlInnerMargin, y - (cControlBoxSize / 2));
+              glEnd();
+              glBegin(GL_LINES);
+              glVertex2i(x + cControlInnerMargin, y - cControlInnerMargin);
+              glVertex2i(x + cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin);
+              glEnd();
+            }
+            break;
+          case 1:
+            if (orthoCGO) {
+              CGOBegin(orthoCGO, GL_TRIANGLES);
+              CGOVertex(orthoCGO, x + cControlBoxSize / 2 + 2,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + cControlBoxSize / 2 + 2,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOEnd(orthoCGO);
+            } else {
+              glBegin(GL_POLYGON);
+              glVertex2i(
+                  x + cControlBoxSize / 2 + 2, y - (cControlBoxSize / 2));
+              glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - cControlInnerMargin);
+              glVertex2i(x + cControlInnerMargin, y - (cControlBoxSize / 2));
+              glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin);
+              glEnd();
+            }
+            break;
+          case 2:
+            if (orthoCGO) {
+              CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
+              CGOEnd(orthoCGO);
+            } else {
+              glBegin(GL_POLYGON);
+              glVertex2i(x + cControlInnerMargin, y - cControlInnerMargin);
+              glVertex2i(x + cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin);
+              glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin);
+              glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - cControlInnerMargin);
+              glEnd();
+            }
+            break;
+          case 3:
+            if (orthoCGO) {
+              CGOBegin(orthoCGO, GL_TRIANGLES);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - cControlInnerMargin + 1, 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin - 1, 0.f);
+              CGOVertex(orthoCGO, x + (cControlBoxSize) -cControlInnerMargin,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOEnd(orthoCGO);
+            } else {
+              glBegin(GL_TRIANGLES);
+              glVertex2i(x + cControlInnerMargin, y - cControlInnerMargin + 1);
+              glVertex2i(x + cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin - 1);
+              glVertex2i(x + (cControlBoxSize) -cControlInnerMargin,
+                  y - (cControlBoxSize / 2));
+              glEnd();
+            }
+            break;
+          case 4:
+            if (orthoCGO) {
+              CGOBegin(orthoCGO, GL_TRIANGLES);
+              CGOVertex(orthoCGO, x + cControlBoxSize / 2 - 2,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + cControlBoxSize / 2 - 2,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOEnd(orthoCGO);
+            } else {
+              glBegin(GL_POLYGON);
+              glVertex2i(
+                  x + cControlBoxSize / 2 - 2, y - (cControlBoxSize / 2));
+              glVertex2i(x + cControlInnerMargin, y - cControlInnerMargin);
+              glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize / 2));
+              glVertex2i(x + cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin);
+              glEnd();
+            }
+            break;
+          case 5:
+            if (orthoCGO) {
+              CGOBegin(orthoCGO, GL_TRIANGLES);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize / 2), 0.f);
+              CGOEnd(orthoCGO);
 
-	    CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin, y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin-1.f, y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin, y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin-1.f, y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
-	    CGOEnd(orthoCGO);
-	  } else {
-	    glBegin(GL_TRIANGLES);
-	    glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - cControlInnerMargin);
-	    glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin);
-	    glVertex2i(x + cControlInnerMargin, y - (cControlBoxSize / 2));
-	    glEnd();
-	    glBegin(GL_LINES);
-	    glVertex2i(x + cControlInnerMargin, y - cControlInnerMargin);
-	    glVertex2i(x + cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin);
-	    glEnd();
-	  }
-          break;
-        case 1:
-	  if (orthoCGO){
-	    CGOBegin(orthoCGO, GL_TRIANGLES);
-	    CGOVertex(orthoCGO, x + cControlBoxSize / 2 + 2, y - (cControlBoxSize / 2), 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin,
-		      y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin, y - (cControlBoxSize / 2), 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin, y - (cControlBoxSize / 2), 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin,
-		      y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + cControlBoxSize / 2 + 2, y - (cControlBoxSize / 2), 0.f);
-	    CGOEnd(orthoCGO);
-	  } else {
-	    glBegin(GL_POLYGON);
-	    glVertex2i(x + cControlBoxSize / 2 + 2, y - (cControlBoxSize / 2));
-	    glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - cControlInnerMargin);
-	    glVertex2i(x + cControlInnerMargin, y - (cControlBoxSize / 2));
-	    glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin);
-	    glEnd();
-	  }
-          break;
-        case 2:
-	  if (orthoCGO){
-	    CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin, y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
-	    CGOEnd(orthoCGO);
-	  } else {
-	    glBegin(GL_POLYGON);
-	    glVertex2i(x + cControlInnerMargin, y - cControlInnerMargin);
-	    glVertex2i(x + cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin);
-	    glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin);
-	    glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - cControlInnerMargin);
-	    glEnd();
-	  }
-          break;
-        case 3:
-	  if (orthoCGO){
-	    CGOBegin(orthoCGO, GL_TRIANGLES);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin, y - cControlInnerMargin + 1, 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin,
-		      y - (cControlBoxSize - 1) + cControlInnerMargin - 1, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize) - cControlInnerMargin,
-		      y - (cControlBoxSize / 2), 0.f);
-	    CGOEnd(orthoCGO);
-	  } else {
-	    glBegin(GL_TRIANGLES);
-	    glVertex2i(x + cControlInnerMargin, y - cControlInnerMargin + 1);
-	    glVertex2i(x + cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin - 1);
-	    glVertex2i(x + (cControlBoxSize) - cControlInnerMargin,
-		       y - (cControlBoxSize / 2));
-	    glEnd();
-	  }
-          break;
-        case 4:
-	  if (orthoCGO){
-	    CGOBegin(orthoCGO, GL_TRIANGLES);
-	    CGOVertex(orthoCGO, x + cControlBoxSize / 2 - 2, y - (cControlBoxSize / 2), 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin, y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - (cControlBoxSize / 2), 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - (cControlBoxSize / 2), 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + cControlBoxSize / 2 - 2, y - (cControlBoxSize / 2), 0.f);
-	    CGOEnd(orthoCGO);
-	  } else {
-	    glBegin(GL_POLYGON);
-	    glVertex2i(x + cControlBoxSize / 2 - 2, y - (cControlBoxSize / 2));
-	    glVertex2i(x + cControlInnerMargin, y - cControlInnerMargin);
-	    glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - (cControlBoxSize / 2));
-	    glVertex2i(x + cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin);
-	    glEnd();
-	  }
-          break;
-        case 5:
-	  if (orthoCGO){
-	    CGOBegin(orthoCGO, GL_TRIANGLES);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin, y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + cControlInnerMargin,
-		      y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin,
-		      y - (cControlBoxSize / 2), 0.f);
-	    CGOEnd(orthoCGO);
-
-	    CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin, y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin - 1.f, y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin, y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize - 1) - cControlInnerMargin - 1.f, y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
-	    CGOEnd(orthoCGO);
-	  } else {
-	    glBegin(GL_TRIANGLES);
-	    glVertex2i(x + cControlInnerMargin, y - cControlInnerMargin);
-	    glVertex2i(x + cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin);
-	    glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - (cControlBoxSize / 2));
-	    glEnd();
-	    glBegin(GL_LINES);
-	    glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - cControlInnerMargin);
-	    glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
-		       y - (cControlBoxSize - 1) + cControlInnerMargin);
-	    glEnd();
-	  }
-          break;
-        case 6:
-	  TextSetColor(G, TextColor);
-          TextDrawStrAt(G, "S", x + cControlInnerMargin,
-                        y - cControlBoxSize + cControlInnerMargin + 1, orthoCGO);
-          break;
-        case 7:
-	  if (orthoCGO){
-	    CGOBegin(orthoCGO, GL_TRIANGLES);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize / 2) + cControlSpread, y - cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize / 2),
-		      y - (cControlBoxSize) + cControlInnerMargin, 0.f);
-	    CGOVertex(orthoCGO, x + (cControlBoxSize / 2) - cControlSpread, y - cControlInnerMargin, 0.f);
-	    CGOEnd(orthoCGO);
-	  } else {
-	    glBegin(GL_POLYGON);
-	    glVertex2i(x + (cControlBoxSize / 2) + cControlSpread, y - cControlInnerMargin);
-	    glVertex2i(x + (cControlBoxSize / 2),
-		       y - (cControlBoxSize) + cControlInnerMargin);
-	    glVertex2i(x + (cControlBoxSize / 2) - cControlSpread, y - cControlInnerMargin);
-	    glEnd();
-	  }
-          break;
-        case 8:
-	  TextSetColor(G, TextColor);
-          TextDrawStrAt(G, "F", x + cControlInnerMargin,
-                        y - cControlBoxSize + cControlInnerMargin + 1, orthoCGO);
-          break;
+              CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin - 1.f,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO,
+                  x + (cControlBoxSize - 1) - cControlInnerMargin - 1.f,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin, 0.f);
+              CGOEnd(orthoCGO);
+            } else {
+              glBegin(GL_TRIANGLES);
+              glVertex2i(x + cControlInnerMargin, y - cControlInnerMargin);
+              glVertex2i(x + cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin);
+              glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize / 2));
+              glEnd();
+              glBegin(GL_LINES);
+              glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - cControlInnerMargin);
+              glVertex2i(x + (cControlBoxSize - 1) - cControlInnerMargin,
+                  y - (cControlBoxSize - 1) + cControlInnerMargin);
+              glEnd();
+            }
+            break;
+          case 6:
+            TextSetColor(G, TextColor);
+            TextDrawStrAt(G, "S", x + cControlInnerMargin,
+                y - cControlBoxSize + cControlInnerMargin + 1, orthoCGO);
+            break;
+          case 7:
+            if (orthoCGO) {
+              CGOBegin(orthoCGO, GL_TRIANGLES);
+              CGOVertex(orthoCGO, x + (cControlBoxSize / 2) + cControlSpread,
+                  y - cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + (cControlBoxSize / 2),
+                  y - (cControlBoxSize) + cControlInnerMargin, 0.f);
+              CGOVertex(orthoCGO, x + (cControlBoxSize / 2) - cControlSpread,
+                  y - cControlInnerMargin, 0.f);
+              CGOEnd(orthoCGO);
+            } else {
+              glBegin(GL_POLYGON);
+              glVertex2i(x + (cControlBoxSize / 2) + cControlSpread,
+                  y - cControlInnerMargin);
+              glVertex2i(x + (cControlBoxSize / 2),
+                  y - (cControlBoxSize) + cControlInnerMargin);
+              glVertex2i(x + (cControlBoxSize / 2) - cControlSpread,
+                  y - cControlInnerMargin);
+              glEnd();
+            }
+            break;
+          case 8:
+            TextSetColor(G, TextColor);
+            TextDrawStrAt(G, "F", x + cControlInnerMargin,
+                y - cControlBoxSize + cControlInnerMargin + 1, orthoCGO);
+            break;
+          }
         }
       }
-    }
     }
   }
 }
 
-
 /*========================================================================*/
-int ControlInit(PyMOLGlobals * G)
+int ControlInit(PyMOLGlobals* G)
 {
-  CControl *I = nullptr;
-  if((I = (G->Control = new CControl(G)))) {
+  CControl* I = nullptr;
+  if ((I = (G->Control = new CControl(G)))) {
     I->active = true;
     I->TextColor[0] = 1.0;
     I->TextColor[1] = 0.75;

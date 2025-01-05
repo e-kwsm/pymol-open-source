@@ -17,8 +17,7 @@ ScrollBar getValuedScrollBar()
 }
 } // namespace
 
-static
-bool operator==(const BlockRect& lhs, const BlockRect& rhs)
+static bool operator==(const BlockRect& lhs, const BlockRect& rhs)
 {
   return lhs.top == rhs.top && lhs.left == rhs.left &&
          lhs.bottom == rhs.bottom && lhs.right == rhs.right;
@@ -102,4 +101,3 @@ TEST_CASE("ScrollBar setBox", "[ScrollBar]")
  * int grabbed();
  * void drawHandle(float, CGO*);
  */
-

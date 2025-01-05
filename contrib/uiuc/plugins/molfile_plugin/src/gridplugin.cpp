@@ -20,8 +20,8 @@
  *
  ***************************************************************************/
 
-/* 
- * Binary potential map format used by Molecular Discovery GRID, 
+/*
+ * Binary potential map format used by Molecular Discovery GRID,
  * UHBD, and other packages.
  *
  * Files begin with a 160-byte formatted fortran header.
@@ -43,36 +43,36 @@
  *
  * XXX - Not sure if slicing order is the same in every file. Also, other
  * values from plane metadata seem to have no use -- I'm probably missing
- * something. 
+ * something.
  *
  */
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if defined(_AIX)
 #include <strings.h>
 #endif
 
-#include "molfile_plugin.h"
 #include "endianswap.h"
 #include "fortread.h"
+#include "molfile_plugin.h"
 
 typedef struct {
-  FILE *fd;
+  FILE* fd;
   int swap;
-  molfile_volumetric_t *vol;
+  molfile_volumetric_t* vol;
 } grid_t;
 
-
-static void *open_grid_read(const char *filepath, const char *filetype,
-    int *natoms) {
-  FILE *fd;
-  grid_t *grid;
+static void* open_grid_read(
+    const char* filepath, const char* filetype, int* natoms)
+{
+  FILE* fd;
+  grid_t* grid;
   float header[64], ra, rx, ry, rz;
   int dataBegin, swap, blocksize, nnx, nny, nnz;
-  
+
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "gridplugin) Error opening file.\n");
@@ -82,17 +82,17 @@ static void *open_grid_read(const char *filepath, const char *filetype,
   // Use the first four-byte integer in the file to determine the file's
   // byte-order
   fread(&dataBegin, sizeof(int), 1, fd);
-  if ( (dataBegin > 255) || (dataBegin < 0) ) {
+  if ((dataBegin > 255) || (dataBegin < 0)) {
     // check if the bytes need to be swapped
     swap4_aligned(&dataBegin, 1);
     if (dataBegin <= 255) {
       swap = 1;
     } else {
-      fprintf(stderr, "gridplugin) Cannot read file: header block is too large.\n");
+      fprintf(
+          stderr, "gridplugin) Cannot read file: header block is too large.\n");
       return NULL;
     }
-  }
-  else {
+  } else {
     swap = 0;
   }
 
@@ -106,9 +106,9 @@ static void *open_grid_read(const char *filepath, const char *filetype,
   }
 
   // number of planes in each dimension
-  nnx = ((int *)header)[25];
-  nny = ((int *)header)[26];
-  nnz = ((int *)header)[27];
+  nnx = ((int*) header)[25];
+  nny = ((int*) header)[26];
+  nnz = ((int*) header)[27];
 
   // grid spacing in angstroms
   ra = header[28];
@@ -118,7 +118,7 @@ static void *open_grid_read(const char *filepath, const char *filetype,
   ry = header[30];
   rz = header[31];
 
-  // Allocate and initialize the structure 
+  // Allocate and initialize the structure
   grid = new grid_t;
   grid->fd = fd;
   grid->vol = NULL;
@@ -129,7 +129,7 @@ static void *open_grid_read(const char *filepath, const char *filetype,
   strcpy(grid->vol[0].dataname, "GRID Electron Density Map");
 
   // XXX - origin seems to be shifted by one grid point in each direction
-  // from the reference point. 
+  // from the reference point.
   grid->vol[0].origin[0] = rx + ra;
   grid->vol[0].origin[1] = ry + ra;
   grid->vol[0].origin[2] = rz + ra;
@@ -150,25 +150,26 @@ static void *open_grid_read(const char *filepath, const char *filetype,
   grid->vol[0].ysize = nny;
   grid->vol[0].zsize = nnz;
 
-  grid->vol[0].has_color = 0;   // This file has no color
+  grid->vol[0].has_color = 0; // This file has no color
 
   return grid;
 }
 
-static int read_grid_metadata(void *v, int *nsets, 
-  molfile_volumetric_t **metadata) {
-  grid_t *grid = (grid_t *)v;
-  *nsets = 1;                   // This file contains only one data set.
-  *metadata = grid->vol;  
+static int read_grid_metadata(
+    void* v, int* nsets, molfile_volumetric_t** metadata)
+{
+  grid_t* grid = (grid_t*) v;
+  *nsets = 1; // This file contains only one data set.
+  *metadata = grid->vol;
 
   return MOLFILE_SUCCESS;
 }
 
-static int read_grid_data(void *v, int set, float *datablock,
-                         float *colorblock) {
-  grid_t *grid = (grid_t *)v;
+static int read_grid_data(void* v, int set, float* datablock, float* colorblock)
+{
+  grid_t* grid = (grid_t*) v;
   int planeHeader[3], planeSize, i, z;
-  float *planeData;
+  float* planeData;
 
   planeSize = grid->vol[0].xsize * grid->vol[0].ysize;
 
@@ -178,7 +179,7 @@ static int read_grid_data(void *v, int set, float *datablock,
     // read the plane metadata
     if (fortread_4(planeHeader, 3, grid->swap, grid->fd) != 3) {
       fprintf(stderr, "gridplugin) Error reading plane metadata.\n");
-      delete [] planeData;
+      delete[] planeData;
       return MOLFILE_ERROR;
     }
     z = planeHeader[0] - 1;
@@ -186,24 +187,25 @@ static int read_grid_data(void *v, int set, float *datablock,
     // read the plane data
     if (fortread_4(planeData, planeSize, grid->swap, grid->fd) != planeSize) {
       fprintf(stderr, "gridplugin) Error reading plane data.\n");
-      delete [] planeData;
+      delete[] planeData;
       return MOLFILE_ERROR;
     }
 
     // copy the plane data to the datablock
-    memcpy(datablock + z*planeSize, planeData, planeSize * sizeof(float));
+    memcpy(datablock + z * planeSize, planeData, planeSize * sizeof(float));
   }
 
-  delete [] planeData;
+  delete[] planeData;
   return MOLFILE_SUCCESS;
 }
 
-static void close_grid_read(void *v) {
-  grid_t *grid = (grid_t *)v;
+static void close_grid_read(void* v)
+{
+  grid_t* grid = (grid_t*) v;
 
   fclose(grid->fd);
   if (grid->vol != NULL)
-    delete [] grid->vol; 
+    delete[] grid->vol;
   delete grid;
 }
 
@@ -212,7 +214,8 @@ static void close_grid_read(void *v) {
  */
 static molfile_plugin_t plugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) { 
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -230,10 +233,13 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
-
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}

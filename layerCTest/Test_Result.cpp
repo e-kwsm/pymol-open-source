@@ -2,8 +2,7 @@
 #include "Test.h"
 using namespace pymol::test;
 
-static
-pymol::Result<int> sum(int i, int j)
+static pymol::Result<int> sum(int i, int j)
 {
   return i + j;
 }
@@ -20,8 +19,7 @@ TEST_CASE("Result simple", "[Result]")
 }
 
 template <typename T, typename U>
-static
-pymol::Result<std::common_type_t<T, U>> sum(T i, U j)
+static pymol::Result<std::common_type_t<T, U>> sum(T i, U j)
 {
   return i + j;
 }
@@ -37,8 +35,7 @@ TEST_CASE("Result template", "[Result]")
   REQUIRE(pymol::almost_equal(ans.result(), 8.));
 }
 
-static
-pymol::Result<int> sumError(int i, int j)
+static pymol::Result<int> sumError(int i, int j)
 {
   return pymol::Error{"Values cannot be summed."};
 }

@@ -1779,7 +1779,7 @@ static void OrthoDrawMessages(PyMOLGlobals* G, CGO* orthoCGO)
 /**
  * Draws the Font Texture for debugging purposes
  * @param orthoCGO the CGO to render into
-*/
+ */
 static void OrthoDrawFontTextureDebug(PyMOLGlobals* G, CGO* orthoCGO)
 {
   /*  This shows the font texture in the middle of the screen, we might want
@@ -1895,7 +1895,8 @@ void OrthoDoDraw(PyMOLGlobals* G, const OrthoDrawInfo& drawInfo)
     // Workaround for now
     shouldRenderScene = true;
 #else
-    if (numOverlayLines || (!text) || drawInfo.renderMode == OrthoRenderMode::VR)
+    if (numOverlayLines || (!text) ||
+        drawInfo.renderMode == OrthoRenderMode::VR)
       if (!SceneRenderCached(G))
         shouldRenderScene = true;
 #endif
@@ -1932,7 +1933,8 @@ void OrthoDoDraw(PyMOLGlobals* G, const OrthoDrawInfo& drawInfo)
     I->DrawTime += I->LastDraw;
     ButModeSetRate(G, (float) I->DrawTime);
 
-    if (shouldRenderScene && (drawInfo.renderMode != OrthoRenderMode::GeoWallRight)) {
+    if (shouldRenderScene &&
+        (drawInfo.renderMode != OrthoRenderMode::GeoWallRight)) {
       SceneRenderInfo renderInfo{};
       renderInfo.forceCopy = SettingGet<bool>(G, cSetting_image_copy_always);
       renderInfo.offscreen = drawInfo.offscreenRender;
@@ -1955,7 +1957,7 @@ void OrthoDoDraw(PyMOLGlobals* G, const OrthoDrawInfo& drawInfo)
           OpenVRMenuBufferStart(G, I->Width, I->Height);
         } else
 #endif
-        break;
+          break;
       case 0:
 #ifdef _PYMOL_OPENVR
         if (offscreen_vr) {
@@ -2004,7 +2006,8 @@ void OrthoDoDraw(PyMOLGlobals* G, const OrthoDrawInfo& drawInfo)
 
       auto internal_feedback = SettingGet<int>(G, cSetting_internal_feedback);
       if (internal_feedback) { /* moved to avoid conflict with menus */
-        OrthoDrawInternalFeedbackBG(G, orthoCGO, rightSceneMargin, internal_gui_mode);
+        OrthoDrawInternalFeedbackBG(
+            G, orthoCGO, rightSceneMargin, internal_gui_mode);
       }
 
       PRINTFD(G, FB_Ortho)
@@ -2016,8 +2019,8 @@ void OrthoDoDraw(PyMOLGlobals* G, const OrthoDrawInfo& drawInfo)
 
       OrthoRestorePrompt(G);
 
-      OrthoDrawText(G, orthoCGO, draw_text, internal_feedback,
-          numOverlayLines, internal_gui_mode);
+      OrthoDrawText(G, orthoCGO, draw_text, internal_feedback, numOverlayLines,
+          internal_gui_mode);
 
       OrthoDrawWizardPrompt(G, orthoCGO);
 
@@ -2083,7 +2086,7 @@ void OrthoDoDraw(PyMOLGlobals* G, const OrthoDrawInfo& drawInfo)
           OpenVRMenuBufferStart(G, I->Width, I->Height);
         } else
 #endif
-        break;
+          break;
       case 0:
         break;
       }
@@ -2997,7 +3000,6 @@ Rect2D OrthoGetRect(PyMOLGlobals* G)
   return {{0, 0}, {width, height}};
 }
 
-
 /**
  * @brief Retrieves Ortho UI aspect ratio
  * @return aspect ratio
@@ -3030,19 +3032,19 @@ static void OrthoDrawSizedTile(PyMOLGlobals* G, const Offset2D& offset,
   drawInfo.viewport = Rect2D{offset.x, offset.y, extent.width, extent.height};
   drawInfo.offscreenRender = true;
   glViewport(drawInfo.viewport->offset.x, drawInfo.viewport->offset.y,
-    drawInfo.viewport->extent.width, drawInfo.viewport->extent.height);
+      drawInfo.viewport->extent.width, drawInfo.viewport->extent.height);
   OrthoDoDraw(G, drawInfo);
   auto tileImg = GLImageToPyMOLImage(G, offscreenFBO, SceneGetRect(G));
 
   if (!tileImg.empty()) { /* the image into place */
-    Rect2D srcRect {{}, extent};
+    Rect2D srcRect{{}, extent};
     Rect2D dstRect{offset, OrthoGetExtent(G)};
     PyMOLImageCopy(tileImg, dstImage, srcRect, dstRect);
   } // if tileImg not empty
 }
 
-static void OrthoDrawSizedTiles(PyMOLGlobals* G,
-    const Extent2D& extent, pymol::Image& dstImage)
+static void OrthoDrawSizedTiles(
+    PyMOLGlobals* G, const Extent2D& extent, pymol::Image& dstImage)
 {
   auto I = G->Ortho;
 
@@ -3139,9 +3141,9 @@ static pymol::Result<pymol::Image> OrthoMakeSizedImage(
   return final_image;
 }
 
-pymol::Result<bool> OrthoDeferImage(PyMOLGlobals* G, Extent2D extent, const char* filename,
-    int antialias, float dpi, int format, int quiet, pymol::Image* out_img,
-    bool with_overlay)
+pymol::Result<bool> OrthoDeferImage(PyMOLGlobals* G, Extent2D extent,
+    const char* filename, int antialias, float dpi, int format, int quiet,
+    pymol::Image* out_img, bool with_overlay)
 {
   std::string filename_str = filename ? filename : "";
   std::function<void()> deferred = [=]() {

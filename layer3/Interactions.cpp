@@ -14,10 +14,9 @@
 #include "RingFinder.h"
 #include "Selector.h"
 #include "SelectorDef.h"
-#include "AtomIterators.h"
 
-#include <glm/vec3.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/vec3.hpp>
 
 #include <map>
 #include <set>
@@ -329,10 +328,10 @@ DistSet* FindPiInteractions(PyMOLGlobals* G,
         if (angle < PIPI_FACE_TO_FACE_MAXIMUM_ANGLE &&
             distance < PIPI_FACE_TO_FACE_MAXIMUM_DISTANCE) {
           PRINTFB(G, FB_DistSet, FB_Blather)
-            "face-to-face %d %d\n", i, j ENDFB(G);
+          "face-to-face %d %d\n", i, j ENDFB(G);
         } else if (angle > PIPI_EDGE_TO_FACE_MINIMUM_ANGLE) {
           PRINTFB(G, FB_DistSet, FB_Blather)
-            "edge-to-face %d %d\n", i, j ENDFB(G);
+          "edge-to-face %d %d\n", i, j ENDFB(G);
         } else {
           continue;
         }
@@ -369,7 +368,7 @@ DistSet* FindPiInteractions(PyMOLGlobals* G,
             glm::value_ptr(cation2), state1, state2);
 
         PRINTFB(G, FB_DistSet, FB_Blather)
-          "pi-cat %d %d\n", i, j ENDFB(G);
+        "pi-cat %d %d\n", i, j ENDFB(G);
       }
     }
 

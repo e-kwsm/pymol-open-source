@@ -1,16 +1,16 @@
-#include "Executive.h"
 #include "ExecutivePython.h"
+#include "Executive.h"
 #ifndef _PYMOL_NOPY
+#include "Feedback.h"
 #include "ObjectAlignment.h"
 #include "ObjectCGO.h"
 #include "ObjectCallback.h"
 #include "ObjectMap.h"
 #include "P.h"
-#include "Feedback.h"
 
-pymol::Result<> ExecutiveLoadObject(PyMOLGlobals* G,
-    const char* oname, PyObject* model, int frame, int type, int finish,
-    int discrete, int quiet, int zoom)
+pymol::Result<> ExecutiveLoadObject(PyMOLGlobals* G, const char* oname,
+    PyObject* model, int frame, int type, int finish, int discrete, int quiet,
+    int zoom)
 {
   ObjectNameType valid_name = "";
   pymol::CObject *origObj = nullptr, *obj;
@@ -106,8 +106,7 @@ pymol::Result<> ExecutiveLoadObject(PyMOLGlobals* G,
         origObj = nullptr;
       }
     PBlock(G); /*PBlockAndUnlockAPI(); */
-    obj = ObjectCallbackDefine(
-        G, (ObjectCallback*) origObj, model, frame);
+    obj = ObjectCallbackDefine(G, (ObjectCallback*) origObj, model, frame);
     PUnblock(G); /*PLockAPIAndUnblock(); */
     if (!origObj) {
       if (obj) {
@@ -159,7 +158,7 @@ pymol::Result<> ExecutiveSetRawAlignment(PyMOLGlobals* G,
     guide = ExecutiveFindObject<ObjectMolecule>(G, guidename.c_str());
   }
 
-  if(!PyList_Check(raw)) {
+  if (!PyList_Check(raw)) {
     return pymol::make_error("alignment must be list");
   }
 
@@ -168,28 +167,28 @@ pymol::Result<> ExecutiveSetRawAlignment(PyMOLGlobals* G,
   pymol::vla<int> align_vla(n_cols * 3);
   size_t vla_offset = 0;
 
-  for(size_t c = 0; c < n_cols; ++c) {
-    PyObject * col = PyList_GetItem(raw, c);
+  for (size_t c = 0; c < n_cols; ++c) {
+    PyObject* col = PyList_GetItem(raw, c);
 
-    if(!PyList_Check(col)) {
+    if (!PyList_Check(col)) {
       return pymol::make_error("columns must be list");
     }
 
     auto n_idx = PyList_Size(col);
 
-    for(size_t i = 0; i < n_idx; ++i) {
-      const char * model;
+    for (size_t i = 0; i < n_idx; ++i) {
+      const char* model;
       int index;
 
-      PyObject * idx = PyList_GetItem(col, i);
+      PyObject* idx = PyList_GetItem(col, i);
 
-      if(!PyArg_ParseTuple(idx, "si", &model, &index)) {
+      if (!PyArg_ParseTuple(idx, "si", &model, &index)) {
         return pymol::make_error("indices must be (str, int)");
       }
 
       auto mol = ExecutiveFindObject<ObjectMolecule>(G, model);
 
-      if(!mol) {
+      if (!mol) {
         return pymol::make_error("object ", model, " not found");
       }
 
@@ -198,7 +197,8 @@ pymol::Result<> ExecutiveSetRawAlignment(PyMOLGlobals* G,
       }
 
       if (index < 1 || mol->NAtom < index) {
-        return pymol::make_error("index ('", model, ", ", index, ") out of range");
+        return pymol::make_error(
+            "index ('", model, ", ", index, ") out of range");
       }
 
       auto uid = AtomInfoCheckUniqueID(G, mol->AtomInfo + index - 1);
@@ -218,8 +218,8 @@ pymol::Result<> ExecutiveSetRawAlignment(PyMOLGlobals* G,
   }
 
   // create alignment object
-  cobj = ObjectAlignmentDefine(G, (ObjectAlignment*) cobj,
-      align_vla, state, true, guide, nullptr);
+  cobj = ObjectAlignmentDefine(
+      G, (ObjectAlignment*) cobj, align_vla, state, true, guide, nullptr);
 
   // manage alignment object
   ObjectSetName(cobj, alnname.c_str());

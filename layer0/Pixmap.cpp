@@ -1,17 +1,17 @@
 
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* Copyright (c) Schrodinger, LLC. 
+C* Copyright (c) Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
@@ -20,33 +20,33 @@ Z* -------------------------------------------------------------------
 #include "MemoryDebug.h"
 #include "Util.h"
 
-void PixmapInit(PyMOLGlobals * G, CPixmap * I, int width, int height)
+void PixmapInit(PyMOLGlobals* G, CPixmap* I, int width, int height)
 {
   UtilZeroMem(I, sizeof(CPixmap));
   I->G = G;
   I->height = height;
   I->width = width;
-  if((height >= 0) && (width >= 0)) {
+  if ((height >= 0) && (width >= 0)) {
     I->buffer = pymol::malloc<unsigned char>(4 * height * width);
   }
 }
 
-CPixmap *PixmapNew(PyMOLGlobals * G, int width, int height)
+CPixmap* PixmapNew(PyMOLGlobals* G, int width, int height)
 {
   auto I = new CPixmap();
   PixmapInit(G, I, width, height);
   return I;
 }
 
-void PixmapInitFromBitmap(PyMOLGlobals * G, CPixmap * I, int width, int height,
-                          unsigned char *bitmap, unsigned char *rgba, int sampling)
+void PixmapInitFromBitmap(PyMOLGlobals* G, CPixmap* I, int width, int height,
+    unsigned char* bitmap, unsigned char* rgba, int sampling)
 {
-  if(I) {
+  if (I) {
 
     int x, y, bit_cnt;
     unsigned char cur = 0;
-    unsigned char *src;
-    unsigned char *dst;
+    unsigned char* src;
+    unsigned char* dst;
     unsigned char red, blue, green, alpha;
     PixmapInit(G, I, width * sampling, height * sampling);
     red = rgba[0];
@@ -56,15 +56,15 @@ void PixmapInitFromBitmap(PyMOLGlobals * G, CPixmap * I, int width, int height,
     UtilZeroMem(I->buffer, 4 * width * height);
     src = bitmap;
     dst = I->buffer;
-    for(y = 0; y < height; y++) {
+    for (y = 0; y < height; y++) {
       bit_cnt = 7;
-      for(x = 0; x < width; x++) {
+      for (x = 0; x < width; x++) {
         bit_cnt++;
-        if(bit_cnt > 7) {
+        if (bit_cnt > 7) {
           cur = *(src++);
           bit_cnt = 0;
         }
-        if(cur & 0x80) {
+        if (cur & 0x80) {
           *(dst++) = red;
           *(dst++) = green;
           *(dst++) = blue;
@@ -78,26 +78,27 @@ void PixmapInitFromBitmap(PyMOLGlobals * G, CPixmap * I, int width, int height,
         cur <<= 1;
       }
     }
-    if(sampling > 1) {
+    if (sampling > 1) {
       unsigned int *p, *pp, *q, *row;
       int row_cnt, col_cnt, width_sampling = width * sampling;
 
-      p = (unsigned int *) (I->buffer + 4 * width * height);
-      q = (unsigned int *) (I->buffer + 4 * width * height * sampling * sampling);
-      while(p > (unsigned int *) I->buffer) {
+      p = (unsigned int*) (I->buffer + 4 * width * height);
+      q = (unsigned int*) (I->buffer +
+                           4 * width * height * sampling * sampling);
+      while (p > (unsigned int*) I->buffer) {
         row_cnt = sampling - 1;
         row = q;
-        for(x = 0; x < width; x++) {    /* first row */
+        for (x = 0; x < width; x++) { /* first row */
           col_cnt = sampling;
           p--;
-          while(col_cnt--) {
+          while (col_cnt--) {
             *(--q) = *p;
           }
         }
-        if(row_cnt) {
-          while(row_cnt--) {    /* remaining rows */
+        if (row_cnt) {
+          while (row_cnt--) { /* remaining rows */
             pp = row;
-            for(x = 0; x < width_sampling; x++) {
+            for (x = 0; x < width_sampling; x++) {
               *(--q) = *(--pp);
             }
           }
@@ -107,21 +108,18 @@ void PixmapInitFromBitmap(PyMOLGlobals * G, CPixmap * I, int width, int height,
   }
 }
 
-void PixmapInitFromBytemap(PyMOLGlobals * G, CPixmap * I,
-                           int width,
-                           int height,
-                           int pitch,
-                           unsigned char *bytemap,
-                           unsigned char *rgba, unsigned char *outline_rgb, int flat)
+void PixmapInitFromBytemap(PyMOLGlobals* G, CPixmap* I, int width, int height,
+    int pitch, unsigned char* bytemap, unsigned char* rgba,
+    unsigned char* outline_rgb, int flat)
 {
-  if(I) {
+  if (I) {
 
     int x, y;
     unsigned char *src, *sa, alp;
-    unsigned char *dst;
+    unsigned char* dst;
     unsigned char red, blue, green, alpha, no_alpha;
     unsigned char ored = 0, oblue = 0, ogreen = 0;
-    if(!outline_rgb[3])
+    if (!outline_rgb[3])
       outline_rgb = nullptr;
     else {
       ored = outline_rgb[0];
@@ -137,12 +135,12 @@ void PixmapInitFromBytemap(PyMOLGlobals * G, CPixmap * I,
     src = bytemap;
     dst = I->buffer;
     no_alpha = flat;
-    for(y = 0; y < height; y++) {
+    for (y = 0; y < height; y++) {
       sa = src;
-      if(no_alpha) {
-        for(x = 0; x < width; x++) {
+      if (no_alpha) {
+        for (x = 0; x < width; x++) {
           alp = *(sa++);
-          if(alp) {
+          if (alp) {
             *(dst++) = red;
             *(dst++) = green;
             *(dst++) = blue;
@@ -155,40 +153,40 @@ void PixmapInitFromBytemap(PyMOLGlobals * G, CPixmap * I,
           }
         }
       } else {
-        for(x = 0; x < width; x++) {
-          if(outline_rgb) {
+        for (x = 0; x < width; x++) {
+          if (outline_rgb) {
             unsigned char amax = 0, amin;
-            if(y > 0) {
+            if (y > 0) {
               alp = 255 - *(sa - pitch);
             } else {
               alp = 255;
             }
-            if(amax < alp)
+            if (amax < alp)
               amax = alp;
-            if(y < (height - 1)) {
+            if (y < (height - 1)) {
               alp = 255 - *(sa + pitch);
             } else {
               alp = 255;
             }
-            if(amax < alp)
+            if (amax < alp)
               amax = alp;
-            if(x > 0) {
+            if (x > 0) {
               alp = 255 - *(sa - 1);
             } else {
               alp = 255;
             }
-            if(amax < alp)
+            if (amax < alp)
               amax = alp;
-            if(x < (width - 1)) {
+            if (x < (width - 1)) {
               alp = 255 - *(sa + 1);
             } else {
               alp = 255;
             }
-            if(amax < alp)
+            if (amax < alp)
               amax = alp;
             amin = 255 - amax;
             alp = *(sa++);
-            if(alp) {
+            if (alp) {
               *(dst++) = (red * amin + ored * amax) / 255;
               *(dst++) = (green * amin + ogreen * amax) / 255;
               *(dst++) = (blue * amin + oblue * amax) / 255;
@@ -201,7 +199,7 @@ void PixmapInitFromBytemap(PyMOLGlobals * G, CPixmap * I,
             }
           } else {
             alp = *(sa++);
-            if(alp) {
+            if (alp) {
               *(dst++) = red;
               *(dst++) = green;
               *(dst++) = blue;
@@ -213,7 +211,6 @@ void PixmapInitFromBytemap(PyMOLGlobals * G, CPixmap * I,
               *(dst++) = 0;
             }
           }
-
         }
       }
       src += pitch;
@@ -221,14 +218,14 @@ void PixmapInitFromBytemap(PyMOLGlobals * G, CPixmap * I,
   }
 }
 
-void PixmapPurge(CPixmap * I)
+void PixmapPurge(CPixmap* I)
 {
-  if(I) {
+  if (I) {
     FreeP(I->buffer);
   }
 }
 
-void PixmapFreeP(CPixmap * I)
+void PixmapFreeP(CPixmap* I)
 {
   PixmapPurge(I);
   DeleteP(I);

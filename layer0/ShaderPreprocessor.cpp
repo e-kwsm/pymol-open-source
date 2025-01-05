@@ -267,7 +267,8 @@ std::string ShaderPreprocessor::getSource(std::string_view filename)
   return result;
 }
 
-void ShaderPreprocessor::setSource(std::string_view filename, std::string_view source)
+void ShaderPreprocessor::setSource(
+    std::string_view filename, std::string_view source)
 {
   m_cache_processed[filename.data()] = source;
 }

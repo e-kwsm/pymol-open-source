@@ -6,8 +6,8 @@
 
 #include "os_std.h"
 
-#include "ObjectMolecule.h"
 #include "Feedback.h"
+#include "ObjectMolecule.h"
 
 #ifndef _PYMOL_NO_MSGPACKC
 
@@ -16,13 +16,13 @@
 #include <algorithm>
 #include <vector>
 
-#include "pymol/zstring_view.h"
 #include "AssemblyHelpers.h"
 #include "AtomInfo.h"
 #include "Err.h"
 #include "Lex.h"
 #include "MemoryDebug.h"
 #include "Rep.h"
+#include "pymol/zstring_view.h"
 
 const char ss_map[] = {
     // indices shifted by +1 w.r.t. spec
@@ -35,31 +35,28 @@ const char ss_map[] = {
     'S', // bridge
     'L', // turn
     'L', // coil
-    0
-};
+    0};
 
 /**
  * Get the assembly coordinate sets
  *
  * See also: read_pdbx_struct_assembly (CifMoleculeReader.cpp)
  */
-static
-CoordSet ** get_assembly_csets(PyMOLGlobals * G,
-    const MMTF_container * container,
-    const AtomInfoType * atInfo,
-    const CoordSet * cset)
+static CoordSet** get_assembly_csets(PyMOLGlobals* G,
+    const MMTF_container* container, const AtomInfoType* atInfo,
+    const CoordSet* cset)
 {
-  const char * assembly_id = SettingGetGlobal_s(G, cSetting_assembly);
+  const char* assembly_id = SettingGetGlobal_s(G, cSetting_assembly);
 
   if (!assembly_id || !assembly_id[0])
     return nullptr;
 
-  const MMTF_BioAssembly * assembly = nullptr;
+  const MMTF_BioAssembly* assembly = nullptr;
 
   // look up assembly by name
   for (auto a = container->bioAssemblyList,
-      a_end = a + container->bioAssemblyListCount;
-      a != a_end; ++a) {
+            a_end = a + container->bioAssemblyListCount;
+       a != a_end; ++a) {
     if (strcmp(a->name, assembly_id) == 0) {
       assembly = a;
       break;
@@ -68,15 +65,15 @@ CoordSet ** get_assembly_csets(PyMOLGlobals * G,
 
   if (!assembly) {
     PRINTFB(G, FB_Executive, FB_Details)
-      " ExecutiveLoad-Detail: No such assembly: '%s'\n", assembly_id ENDFB(G);
+    " ExecutiveLoad-Detail: No such assembly: '%s'\n", assembly_id ENDFB(G);
     return nullptr;
   }
 
   PRINTFB(G, FB_Executive, FB_Details)
-    " ExecutiveLoad-Detail: Creating assembly '%s'\n", assembly_id ENDFB(G);
+  " ExecutiveLoad-Detail: Creating assembly '%s'\n", assembly_id ENDFB(G);
 
   int ncsets = assembly->transformListCount;
-  CoordSet ** csets = VLACalloc(CoordSet *, ncsets);
+  CoordSet** csets = VLACalloc(CoordSet*, ncsets);
 
   for (int state = 0; state < ncsets; ++state) {
     auto trans = assembly->transformList + state;
@@ -84,9 +81,9 @@ CoordSet ** get_assembly_csets(PyMOLGlobals * G,
     // get set of chains for this transformation
     std::set<lexborrow_t> chains_set;
     for (auto ci_it = trans->chainIndexList,
-        ci_it_end = ci_it + trans->chainIndexListCount;
-        ci_it != ci_it_end; ++ci_it) {
-      const char * chain = container->chainIdList[*ci_it];
+              ci_it_end = ci_it + trans->chainIndexListCount;
+         ci_it != ci_it_end; ++ci_it) {
+      const char* chain = container->chainIdList[*ci_it];
       auto borrowed = LexBorrow(G, chain);
       if (borrowed != LEX_BORROW_NOTFOUND) {
         chains_set.insert(borrowed);
@@ -102,48 +99,50 @@ CoordSet ** get_assembly_csets(PyMOLGlobals * G,
 }
 #endif
 
-ObjectMolecule * ObjectMoleculeReadMmtfStr(PyMOLGlobals * G, ObjectMolecule * I,
-    const char * st, int st_len, int frame, int discrete, int quiet, int multiplex, int zoom)
+ObjectMolecule* ObjectMoleculeReadMmtfStr(PyMOLGlobals* G, ObjectMolecule* I,
+    const char* st, int st_len, int frame, int discrete, int quiet,
+    int multiplex, int zoom)
 {
 #ifdef _PYMOL_NO_MSGPACKC
   PRINTFB(G, FB_ObjectMolecule, FB_Errors)
-    " Error: This build has no fast MMTF support.\n" ENDFB(G);
+  " Error: This build has no fast MMTF support.\n" ENDFB(G);
   return nullptr;
 #else
 
   if (I) {
     PRINTFB(G, FB_ObjectMolecule, FB_Errors)
-      " Error: loading MMTF into existing object not supported, please use 'create'\n"
-      "        to append to an existing object.\n" ENDFB(G);
+    " Error: loading MMTF into existing object not supported, please use "
+    "'create'\n"
+    "        to append to an existing object.\n" ENDFB(G);
     return nullptr;
   }
 
   if (multiplex > 0) {
     PRINTFB(G, FB_ObjectMolecule, FB_Errors)
-      " Error: multiplex not supported for MMTF\n" ENDFB(G);
+    " Error: multiplex not supported for MMTF\n" ENDFB(G);
     return nullptr;
   }
 
-  MMTF_container * container = MMTF_container_new();
+  MMTF_container* container = MMTF_container_new();
 
   if (!MMTF_unpack_from_string(st, st_len, container)) {
     PRINTFB(G, FB_ObjectMolecule, FB_Errors)
-      " Error: Failed to load MMTF file\n" ENDFB(G);
+    " Error: Failed to load MMTF file\n" ENDFB(G);
     MMTF_container_free(container);
     return nullptr;
   }
 
   if (!quiet) {
     PRINTFB(G, FB_ObjectMolecule, FB_Details)
-      " MMTF structureId: '%s', mmtfVersion: '%s'\n",
-      (container->structureId ? container->structureId : ""),
-      (container->mmtfVersion ? container->mmtfVersion : "") ENDFB(G);
+    " MMTF structureId: '%s', mmtfVersion: '%s'\n",
+        (container->structureId ? container->structureId : ""),
+        (container->mmtfVersion ? container->mmtfVersion : "") ENDFB(G);
 
     // title "echo tag"
     if (container->title && container->title[0] &&
         strstr(SettingGetGlobal_s(G, cSetting_pdb_echo_tags), "TITLE")) {
       PRINTFB(G, FB_ObjectMolecule, FB_Details)
-        "TITLE     %s\n", container->title ENDFB(G);
+      "TITLE     %s\n", container->title ENDFB(G);
     }
   }
 
@@ -164,14 +163,13 @@ ObjectMolecule * ObjectMoleculeReadMmtfStr(PyMOLGlobals * G, ObjectMolecule * I,
   I->NCSet = container->numModels;
   I->Bond = pymol::vla<BondType>(container->numBonds);
   VLASize(I->AtomInfo, AtomInfoType, I->NAtom);
-  VLASize(I->CSet, CoordSet *, I->NCSet);
+  VLASize(I->CSet, CoordSet*, I->NCSet);
 
   int nindexEstimate = container->numAtoms / std::max(1, container->numModels);
   bool use_auth = SettingGetGlobal_b(G, cSetting_cif_use_auth);
 
   // symmetry
-  if (container->spaceGroup &&
-      container->spaceGroup[0]) {
+  if (container->spaceGroup && container->spaceGroup[0]) {
     I->Symmetry.reset(new CSymmetry(G));
     I->Symmetry->Crystal.setDims(container->unitCell);
     I->Symmetry->Crystal.setAngles(container->unitCell + 3);
@@ -180,7 +178,8 @@ ObjectMolecule * ObjectMoleculeReadMmtfStr(PyMOLGlobals * G, ObjectMolecule * I,
 
   // entities
   auto chain2entity = std::vector<MMTF_Entity const*>(container->numChains);
-  for (int entityIndex = 0; entityIndex < container->entityListCount; ++entityIndex) {
+  for (int entityIndex = 0; entityIndex < container->entityListCount;
+       ++entityIndex) {
     auto const entity = &container->entityList[entityIndex];
 
     for (int i = 0; i < entity->chainIndexListCount; ++i) {
@@ -192,7 +191,7 @@ ObjectMolecule * ObjectMoleculeReadMmtfStr(PyMOLGlobals * G, ObjectMolecule * I,
   for (int modelIndex = 0; modelIndex < container->numModels; ++modelIndex) {
     int modelChainCount = container->chainsPerModel[modelIndex];
 
-    CoordSet * cset = CoordSetNew(G);
+    CoordSet* cset = CoordSetNew(G);
     cset->Coord.reserve(3 * nindexEstimate);
     cset->IdxToAtm.reserve(nindexEstimate);
     cset->Obj = I;
@@ -211,9 +210,8 @@ ObjectMolecule * ObjectMoleculeReadMmtfStr(PyMOLGlobals * G, ObjectMolecule * I,
 
       // groups (residues)
       for (int k = 0; k < chainGroupCount; ++k, ++groupIndex) {
-        const MMTF_GroupType * group =
-          container->groupList +
-          container->groupTypeList[groupIndex];
+        const MMTF_GroupType* group =
+            container->groupList + container->groupTypeList[groupIndex];
 
         if (container->secStructList) {
           size_t i = container->secStructList[groupIndex] + 1;
@@ -237,7 +235,8 @@ ObjectMolecule * ObjectMoleculeReadMmtfStr(PyMOLGlobals * G, ObjectMolecule * I,
         }
 
         // bonds
-        for (int l = 0, offset = atomIndex; l < group->bondAtomListCount / 2; ++l) {
+        for (int l = 0, offset = atomIndex; l < group->bondAtomListCount / 2;
+             ++l) {
           VLACheck(I->Bond, BondType, I->NBond); // PYMOL-3026
           BondTypeInit2(I->Bond + (I->NBond++),
               offset + group->bondAtomList[l * 2],
@@ -249,7 +248,7 @@ ObjectMolecule * ObjectMoleculeReadMmtfStr(PyMOLGlobals * G, ObjectMolecule * I,
 
         // atoms
         for (int l = 0; l < groupAtomCount; ++l, ++atomIndex) {
-          AtomInfoType * ai = I->AtomInfo + atomIndex;
+          AtomInfoType* ai = I->AtomInfo + atomIndex;
           AtomInfoCopy(G, &tai, ai);
 
           ai->rank = atomIndex;
@@ -295,24 +294,23 @@ ObjectMolecule * ObjectMoleculeReadMmtfStr(PyMOLGlobals * G, ObjectMolecule * I,
 
   if (atomIndex != I->NAtom) {
     PRINTFB(G, FB_ObjectMolecule, FB_Warnings)
-      " MMTF-Inconsistency-Warning: atom count mismatch (%d != numAtoms=%d)\n",
-      atomIndex, I->NAtom ENDFB(G);
+    " MMTF-Inconsistency-Warning: atom count mismatch (%d != numAtoms=%d)\n",
+        atomIndex, I->NAtom ENDFB(G);
   }
 
   AtomInfoPurge(G, &tai);
 
   for (int l = 0; l < container->bondAtomListCount / 2; ++l) {
     VLACheck(I->Bond, BondType, I->NBond); // PYMOL-3026
-    BondTypeInit2(I->Bond + (I->NBond++),
-        container->bondAtomList[l * 2],
+    BondTypeInit2(I->Bond + (I->NBond++), container->bondAtomList[l * 2],
         container->bondAtomList[l * 2 + 1],
         container->bondOrderListCount ? container->bondOrderList[l] : 1);
   }
 
   if (container->numBonds != I->NBond) {
     PRINTFB(G, FB_ObjectMolecule, FB_Warnings)
-      " MMTF-Inconsistency-Warning: bond count mismatch (%d != numBonds=%d)\n",
-      I->NBond, container->numBonds ENDFB(G);
+    " MMTF-Inconsistency-Warning: bond count mismatch (%d != numBonds=%d)\n",
+        I->NBond, container->numBonds ENDFB(G);
   }
 
   if (discrete < 1) {
@@ -323,8 +321,8 @@ ObjectMolecule * ObjectMoleculeReadMmtfStr(PyMOLGlobals * G, ObjectMolecule * I,
 
   // assemblies
   if (!I->DiscreteFlag && I->NCSet > 0) {
-    CoordSet ** assembly_csets = get_assembly_csets(G, container,
-        I->AtomInfo, I->CSet[0]);
+    CoordSet** assembly_csets =
+        get_assembly_csets(G, container, I->AtomInfo, I->CSet[0]);
 
     ObjectMoleculeSetAssemblyCSets(I, assembly_csets);
   }

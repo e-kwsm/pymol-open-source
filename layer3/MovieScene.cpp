@@ -5,21 +5,21 @@
  * (c) 2014 Schrodinger, Inc.
  */
 
-#include "os_python.h"
-#include "PyMOLGlobals.h"
-#include "Util2.h"
+#include "AtomIterators.h"
+#include "Err.h"
+#include "Executive.h"
+#include "Feedback.h"
 #include "Movie.h"
 #include "P.h"
 #include "PConv.h"
 #include "PConvArgs.h"
-#include "Setting.h"
-#include "View.h"
+#include "PyMOLGlobals.h"
 #include "Selector.h"
-#include "Executive.h"
-#include "Err.h"
+#include "Setting.h"
 #include "SpecRec.h"
-#include "AtomIterators.h"
-#include "Feedback.h"
+#include "Util2.h"
+#include "View.h"
+#include "os_python.h"
 
 #include <algorithm>
 #include <map>
@@ -30,12 +30,13 @@
 
 #include "MovieScene.h"
 
-void SceneSetNames(PyMOLGlobals * G, const std::vector<std::string> &list);
+void SceneSetNames(PyMOLGlobals* G, const std::vector<std::string>& list);
 
 /**
  * Get read-only pointer to G->scenes->order
  */
-const std::vector<std::string> & MovieSceneGetOrder(PyMOLGlobals * G) {
+const std::vector<std::string>& MovieSceneGetOrder(PyMOLGlobals* G)
+{
   return G->scenes->order;
 }
 
@@ -81,18 +82,18 @@ std::string CMovieScenes::getUniqueKey()
  * move c to the top with:  order("c", "top")
  * c a b d e
  *
- * @param names space separated list of names to (optionally) sort and to move to
- *        given location
+ * @param names space separated list of names to (optionally) sort and to move
+ * to given location
  * @param location current|top|botton
  */
-pymol::Result<> MovieSceneOrder(PyMOLGlobals * G, const char * names, bool sort,
-    const char * location)
+pymol::Result<> MovieSceneOrder(
+    PyMOLGlobals* G, const char* names, bool sort, const char* location)
 {
   return MovieSceneOrder(G, strsplit(names), sort, location);
 }
 
-pymol::Result<> MovieSceneOrder(PyMOLGlobals* G, std::vector<std::string> names_list,
-    bool sort, const char* location)
+pymol::Result<> MovieSceneOrder(PyMOLGlobals* G,
+    std::vector<std::string> names_list, bool sort, const char* location)
 {
   std::vector<std::string> new_order;
   bool is_all = false;
@@ -170,17 +171,10 @@ pymol::Result<> MovieSceneOrder(PyMOLGlobals* G, std::vector<std::string> names_
  * @param store_frame     store movie frame
  * @param store_thumbnail store the thumbnail
  */
-pymol::Result<> MovieSceneStore(PyMOLGlobals * G, const char * name,
-    const char * message,
-    bool store_view,
-    bool store_color,
-    bool store_active,
-    bool store_rep,
-    bool store_frame,
-    bool store_thumbnail,
-    const char * sele,
-    size_t stack,
-    bool quiet)
+pymol::Result<> MovieSceneStore(PyMOLGlobals* G, const char* name,
+    const char* message, bool store_view, bool store_color, bool store_active,
+    bool store_rep, bool store_frame, bool store_thumbnail, const char* sele,
+    size_t stack, bool quiet)
 {
   const bool is_defaultstack = stack == cMovieSceneStackDefault;
   auto scenes = G->scenes + stack;
@@ -201,16 +195,14 @@ pymol::Result<> MovieSceneStore(PyMOLGlobals * G, const char * name,
     SettingSetGlobal_s(G, cSetting_scene_current_name, key.c_str());
   }
 
-  MovieScene &scene = scenes->dict[key];
+  MovieScene& scene = scenes->dict[key];
 
   // storemask
-  scene.storemask = (
-      (store_view ? STORE_VIEW : 0) |
-      (store_active ? STORE_ACTIVE : 0) |
-      (store_color ? STORE_COLOR : 0) |
-      (store_rep ? STORE_REP : 0) |
-      (store_frame ? STORE_FRAME : 0) |
-      (store_thumbnail ? STORE_THUMBNAIL : 0));
+  scene.storemask =
+      ((store_view ? STORE_VIEW : 0) | (store_active ? STORE_ACTIVE : 0) |
+          (store_color ? STORE_COLOR : 0) | (store_rep ? STORE_REP : 0) |
+          (store_frame ? STORE_FRAME : 0) |
+          (store_thumbnail ? STORE_THUMBNAIL : 0));
 
   // message
   scene.message = message ? message : "";
@@ -224,7 +216,8 @@ pymol::Result<> MovieSceneStore(PyMOLGlobals * G, const char * name,
   // thumbnail
   if (store_thumbnail) {
     auto& thumbnailImage = scene.thumbnail;
-    thumbnailImage.resize(MovieScene::THUMBNAIL_WIDTH, MovieScene::THUMBNAIL_HEIGHT);
+    thumbnailImage.resize(
+        MovieScene::THUMBNAIL_WIDTH, MovieScene::THUMBNAIL_HEIGHT);
     SceneUpdate(G, false); // Make sure scene is on screen
     Extent2D extent{static_cast<std::uint32_t>(thumbnailImage.getWidth()),
         static_cast<std::uint32_t>(thumbnailImage.getHeight())};
@@ -239,12 +232,12 @@ pymol::Result<> MovieSceneStore(PyMOLGlobals * G, const char * name,
     for (SeleAtomIterator iter(G, sele); iter.next();) {
 
       // don't store atom data for disabled objects
-      if (!((pymol::CObject*)iter.obj)->Enabled && is_defaultstack)
+      if (!((pymol::CObject*) iter.obj)->Enabled && is_defaultstack)
         continue;
 
-      AtomInfoType * ai = iter.getAtomInfo();
+      AtomInfoType* ai = iter.getAtomInfo();
       int unique_id = AtomInfoCheckUniqueID(G, ai);
-      MovieSceneAtom &sceneatom = scene.atomdata[unique_id];
+      MovieSceneAtom& sceneatom = scene.atomdata[unique_id];
 
       sceneatom.color = ai->color;
       sceneatom.visRep = ai->visRep;
@@ -253,9 +246,9 @@ pymol::Result<> MovieSceneStore(PyMOLGlobals * G, const char * name,
 
   // objectdata
   for (ObjectIterator iter(G); iter.next();) {
-    const SpecRec * rec = iter.getSpecRec();
-    pymol::CObject * obj = iter.getObject();
-    MovieSceneObject &sceneobj = scene.objectdata[obj->Name];
+    const SpecRec* rec = iter.getSpecRec();
+    pymol::CObject* obj = iter.getObject();
+    MovieSceneObject& sceneobj = scene.objectdata[obj->Name];
 
     sceneobj.color = obj->Color;
     sceneobj.visRep = obj->visRep;
@@ -273,22 +266,20 @@ pymol::Result<> MovieSceneStore(PyMOLGlobals * G, const char * name,
 }
 
 pymol::Result<MovieScene> MovieSceneStoreNoStore(PyMOLGlobals* G,
-    pymol::zstring_view name, pymol::null_safe_zstring_view message, bool store_view,
-    bool store_color, bool store_active, bool store_rep, bool store_frame,
-    bool store_thumbnail, pymol::zstring_view sele)
+    pymol::zstring_view name, pymol::null_safe_zstring_view message,
+    bool store_view, bool store_color, bool store_active, bool store_rep,
+    bool store_frame, bool store_thumbnail, pymol::zstring_view sele)
 {
   std::string key{name.c_str()};
 
   MovieScene scene{};
 
   // storemask
-  scene.storemask = (
-      (store_view ? STORE_VIEW : 0) |
-      (store_active ? STORE_ACTIVE : 0) |
-      (store_color ? STORE_COLOR : 0) |
-      (store_rep ? STORE_REP : 0) |
-      (store_frame ? STORE_FRAME : 0) |
-      (store_thumbnail ? STORE_THUMBNAIL : 0));
+  scene.storemask =
+      ((store_view ? STORE_VIEW : 0) | (store_active ? STORE_ACTIVE : 0) |
+          (store_color ? STORE_COLOR : 0) | (store_rep ? STORE_REP : 0) |
+          (store_frame ? STORE_FRAME : 0) |
+          (store_thumbnail ? STORE_THUMBNAIL : 0));
 
   // message
   scene.message = message.c_str();
@@ -321,9 +312,9 @@ pymol::Result<MovieScene> MovieSceneStoreNoStore(PyMOLGlobals* G,
       // if (!((pymol::CObject*)iter.obj)->Enabled && is_defaultstack)
       //   continue;
 
-      AtomInfoType * ai = iter.getAtomInfo();
+      AtomInfoType* ai = iter.getAtomInfo();
       int unique_id = AtomInfoCheckUniqueID(G, ai);
-      MovieSceneAtom &sceneatom = scene.atomdata[unique_id];
+      MovieSceneAtom& sceneatom = scene.atomdata[unique_id];
 
       sceneatom.color = ai->color;
       sceneatom.visRep = ai->visRep;
@@ -332,9 +323,9 @@ pymol::Result<MovieScene> MovieSceneStoreNoStore(PyMOLGlobals* G,
 
   // objectdata
   for (ObjectIterator iter(G); iter.next();) {
-    const SpecRec * rec = iter.getSpecRec();
-    pymol::CObject * obj = iter.getObject();
-    MovieSceneObject &sceneobj = scene.objectdata[obj->Name];
+    const SpecRec* rec = iter.getSpecRec();
+    pymol::CObject* obj = iter.getObject();
+    MovieSceneObject& sceneobj = scene.objectdata[obj->Name];
 
     sceneobj.color = obj->Color;
     sceneobj.visRep = obj->visRep;
@@ -349,7 +340,7 @@ pymol::Result<MovieScene> MovieSceneStoreNoStore(PyMOLGlobals* G,
 /**
  * Display a message (with the message wizard)
  */
-static void MovieSceneRecallMessage(PyMOLGlobals * G, const std::string &message)
+static void MovieSceneRecallMessage(PyMOLGlobals* G, const std::string& message)
 {
 #ifndef _PYMOL_NOPY
   // we can't just call python functions because we might be in the wrong
@@ -401,7 +392,7 @@ pymol::Result<> MovieSceneSetMessage(
  * Set the frame or state, depending on whether a movie is defined and/or
  * playing, and depending on the scene_frame_mode setting.
  */
-static void MovieSceneRecallFrame(PyMOLGlobals * G, int frame)
+static void MovieSceneRecallFrame(PyMOLGlobals* G, int frame)
 {
   int mode = 4;
 
@@ -411,7 +402,7 @@ static void MovieSceneRecallFrame(PyMOLGlobals * G, int frame)
     return;
   } else {
     int scene_frame_mode = SettingGetGlobal_i(G, cSetting_scene_frame_mode);
-    if(scene_frame_mode == 0 || (scene_frame_mode < 0 && MovieDefined(G)))
+    if (scene_frame_mode == 0 || (scene_frame_mode < 0 && MovieDefined(G)))
       return;
   }
 
@@ -419,14 +410,16 @@ static void MovieSceneRecallFrame(PyMOLGlobals * G, int frame)
   SceneSetFrame(G, mode, frame);
 #else
   // PBlock fails with SceneSetFrame. Workaround: call from Python
-  PXDecRef(PYOBJECT_CALLMETHOD(G->P_inst->cmd, "set_frame", "ii", frame + 1, mode));
+  PXDecRef(
+      PYOBJECT_CALLMETHOD(G->P_inst->cmd, "set_frame", "ii", frame + 1, mode));
 #endif
 }
 
 /**
  * Scene animation duration from settings
  */
-static float get_scene_animation_duration(PyMOLGlobals * G) {
+static float get_scene_animation_duration(PyMOLGlobals* G)
+{
   auto enabled = SettingGetGlobal_i(G, cSetting_scene_animation);
   if (enabled < 0)
     enabled = SettingGetGlobal_b(G, cSetting_animation);
@@ -437,8 +430,8 @@ static float get_scene_animation_duration(PyMOLGlobals * G) {
   return SettingGetGlobal_f(G, cSetting_scene_animation_duration);
 }
 
-pymol::Result<> MovieSceneRecallAllInstant(PyMOLGlobals * G, pymol::zstring_view name,
-    std::size_t stack)
+pymol::Result<> MovieSceneRecallAllInstant(
+    PyMOLGlobals* G, pymol::zstring_view name, std::size_t stack)
 {
   return MovieSceneRecall(
       G, name.c_str(), 0.0f, true, true, true, true, true, "all", stack);
@@ -455,14 +448,9 @@ pymol::Result<> MovieSceneRecallAllInstant(PyMOLGlobals * G, pymol::zstring_view
  * @param store_rep       restore reps
  * @return False if no scene named `name` exists
  */
-pymol::Result<> MovieSceneRecall(PyMOLGlobals * G, const char * name, float animate,
-    bool recall_view,
-    bool recall_color,
-    bool recall_active,
-    bool recall_rep,
-    bool recall_frame,
-    const char * sele,
-    size_t stack)
+pymol::Result<> MovieSceneRecall(PyMOLGlobals* G, const char* name,
+    float animate, bool recall_view, bool recall_color, bool recall_active,
+    bool recall_rep, bool recall_frame, const char* sele, size_t stack)
 {
   auto scenes = G->scenes + stack;
   auto it = scenes->dict.find(name);
@@ -476,7 +464,7 @@ pymol::Result<> MovieSceneRecall(PyMOLGlobals * G, const char * name, float anim
     SettingSetGlobal_s(G, cSetting_scene_current_name, name);
   }
 
-  const MovieScene &scene = it->second;
+  const MovieScene& scene = it->second;
   MovieSceneRecallImpl(G, scene, animate, recall_view, recall_color,
       recall_active, recall_rep, recall_frame, sele);
   return {};
@@ -504,12 +492,12 @@ pymol::Result<> MovieSceneRecallImpl(PyMOLGlobals* G, const MovieScene& scene,
 
     // fill atomdata dict
     for (SeleAtomIterator iter(G, sele); iter.next();) {
-      AtomInfoType * ai = iter.getAtomInfo();
+      AtomInfoType* ai = iter.getAtomInfo();
       auto it = scene.atomdata.find(ai->unique_id);
       if (it == scene.atomdata.end())
         continue;
 
-      const MovieSceneAtom &sceneatom = it->second;
+      const MovieSceneAtom& sceneatom = it->second;
 
       if (recall_color) {
         if (ai->color != sceneatom.color)
@@ -536,12 +524,12 @@ pymol::Result<> MovieSceneRecallImpl(PyMOLGlobals* G, const MovieScene& scene,
 
   // objectdata
   for (ObjectIterator iter(G); iter.next();) {
-    pymol::CObject * obj = iter.getObject();
+    pymol::CObject* obj = iter.getObject();
     auto it = scene.objectdata.find(obj->Name);
     if (it == scene.objectdata.end())
       continue;
 
-    const MovieSceneObject &sceneobj = it->second;
+    const MovieSceneObject& sceneobj = it->second;
 
     if (recall_color) {
       if (obj->Color != sceneobj.color)
@@ -560,7 +548,7 @@ pymol::Result<> MovieSceneRecallImpl(PyMOLGlobals* G, const MovieScene& scene,
 
     // "enabled" state is first bit in visRep
     int enabled = GET_BIT(sceneobj.visRep, 0);
-    if(recall_active && enabled) {
+    if (recall_active && enabled) {
       // need to control SpecRec
       ExecutiveSetObjVisib(G, obj->Name, enabled, false);
     }
@@ -568,7 +556,8 @@ pymol::Result<> MovieSceneRecallImpl(PyMOLGlobals* G, const MovieScene& scene,
 
   // invalidate
   for (auto& item : objectstoinvalidate) {
-    item.first->invalidate(cRepAll, item.second ? cRepInvVisib : cRepInvColor, -1);
+    item.first->invalidate(
+        cRepAll, item.second ? cRepInvVisib : cRepInvColor, -1);
   }
 
   // camera view
@@ -596,7 +585,9 @@ pymol::Result<> MovieSceneRecallImpl(PyMOLGlobals* G, const MovieScene& scene,
  * @param name name to rename or delete, or "*" to delete all
  * @param new_name new scene name to rename, or nullptr to delete
  */
-pymol::Result<> MovieSceneRename(PyMOLGlobals * G, const char * name, const char * new_name) {
+pymol::Result<> MovieSceneRename(
+    PyMOLGlobals* G, const char* name, const char* new_name)
+{
 
   if (strcmp(name, "*") == 0) {
     // delete all scenes
@@ -620,10 +611,12 @@ pymol::Result<> MovieSceneRename(PyMOLGlobals * G, const char * name, const char
     G->scenes->dict.erase(it);
 
     // does a scene named "new_name" already exist?
-    auto old_new = std::find(G->scenes->order.begin(), G->scenes->order.end(), new_name);
+    auto old_new =
+        std::find(G->scenes->order.begin(), G->scenes->order.end(), new_name);
 
     // replace in or remove from "G->scenes->order" list
-    auto v_it = std::find(G->scenes->order.begin(), G->scenes->order.end(), name);
+    auto v_it =
+        std::find(G->scenes->order.begin(), G->scenes->order.end(), name);
     if (v_it == G->scenes->order.end()) {
       printf("this is a bug, name must be in G->scenes->order\n");
     } else {
@@ -643,8 +636,7 @@ pymol::Result<> MovieSceneRename(PyMOLGlobals * G, const char * name, const char
     SceneSetNames(G, G->scenes->order);
 
     // update scene_current_name
-    if (0 == strcmp(name, SettingGetGlobal_s(G,
-            cSetting_scene_current_name))) {
+    if (0 == strcmp(name, SettingGetGlobal_s(G, cSetting_scene_current_name))) {
       SettingSetGlobal_s(G, cSetting_scene_current_name, new_name);
     }
 
@@ -659,9 +651,11 @@ pymol::Result<> MovieSceneRename(PyMOLGlobals * G, const char * name, const char
  *
  * @param name scene name or "*" to delete all scenes (for default stack)
  */
-pymol::Result<> MovieSceneDelete(PyMOLGlobals* G, const char* name, size_t stack) {
+pymol::Result<> MovieSceneDelete(
+    PyMOLGlobals* G, const char* name, size_t stack)
+{
   if (stack != cMovieSceneStackDefault) {
-    if(G->scenes[stack].dict.erase(name) != 0) {
+    if (G->scenes[stack].dict.erase(name) != 0) {
       return {};
     }
     return pymol::make_error(name, " not found.");
@@ -674,17 +668,18 @@ pymol::Result<> MovieSceneDelete(PyMOLGlobals* G, const char* name, size_t stack
 /**
  * Print current scene order
  */
-static pymol::Result<> MovieScenePrintOrder(PyMOLGlobals * G) {
+static pymol::Result<> MovieScenePrintOrder(PyMOLGlobals* G)
+{
   PRINTFB(G, FB_Scene, FB_Details)
-    " scene: current order:\n" ENDFB(G);
+  " scene: current order:\n" ENDFB(G);
 
   for (auto it = G->scenes->order.begin(); it != G->scenes->order.end(); ++it) {
     PRINTFB(G, FB_Scene, FB_Details)
-      " %s", it->c_str() ENDFB(G);
+    " %s", it->c_str() ENDFB(G);
   }
 
   PRINTFB(G, FB_Scene, FB_Details)
-    "\n" ENDFB(G);
+  "\n" ENDFB(G);
 
   return {};
 }
@@ -697,14 +692,16 @@ static pymol::Result<> MovieScenePrintOrder(PyMOLGlobals * G) {
  *
  * @param next true = next, false = previous
  */
-static const char * MovieSceneGetNextKey(PyMOLGlobals * G, bool next) {
-  const char * current_name = SettingGetGlobal_s(G, cSetting_scene_current_name);
+static const char* MovieSceneGetNextKey(PyMOLGlobals* G, bool next)
+{
+  const char* current_name = SettingGetGlobal_s(G, cSetting_scene_current_name);
   int scene_loop = SettingGetGlobal_b(G, cSetting_scene_loop);
 
   if (!current_name[0])
     scene_loop = true;
 
-  auto it = std::find(G->scenes->order.begin(), G->scenes->order.end(), current_name);
+  auto it =
+      std::find(G->scenes->order.begin(), G->scenes->order.end(), current_name);
 
   if (next) {
     if (it < G->scenes->order.end() - 1) {
@@ -730,10 +727,11 @@ static const char * MovieSceneGetNextKey(PyMOLGlobals * G, bool next) {
 /**
  * Move the current scene (scene_current_name) before or after "key"
  */
-static pymol::Result<> MovieSceneOrderBeforeAfter(PyMOLGlobals * G, const char * key, bool before)
+static pymol::Result<> MovieSceneOrderBeforeAfter(
+    PyMOLGlobals* G, const char* key, bool before)
 {
-  const char * location = nullptr;
-  const char * key2 = SettingGetGlobal_s(G, cSetting_scene_current_name);
+  const char* location = nullptr;
+  const char* key2 = SettingGetGlobal_s(G, cSetting_scene_current_name);
 
   if (before) {
     auto it = std::find(G->scenes->order.begin(), G->scenes->order.end(), key);
@@ -762,11 +760,12 @@ pymol::Result<> MovieSceneFunc(PyMOLGlobals* G, const MovieSceneFuncArgs& args)
   pymol::zstring_view key = args.key;
 
   PRINTFB(G, FB_Scene, FB_Blather)
-    " MovieScene: key=%s action=%s message=%s store_view=%d store_color=%d"
-    " store_active=%d store_rep=%d store_thumbnail=%d animate=%f new_key=%s hand=%d\n",
-    key.c_str(), action.c_str(), args.message.c_str(), args.store_view, args.store_color, args.store_active,
-    args.store_rep, args.store_thumbnail, args.animate, args.new_key.c_str(), args.hand
-    ENDFB(G);
+  " MovieScene: key=%s action=%s message=%s store_view=%d store_color=%d"
+  " store_active=%d store_rep=%d store_thumbnail=%d animate=%f new_key=%s "
+  "hand=%d\n",
+      key.c_str(), action.c_str(), args.message.c_str(), args.store_view,
+      args.store_color, args.store_active, args.store_rep, args.store_thumbnail,
+      args.animate, args.new_key.c_str(), args.hand ENDFB(G);
 
   // insert_before, insert_after
   if (action.starts_with("insert_")) {
@@ -801,18 +800,20 @@ pymol::Result<> MovieSceneFunc(PyMOLGlobals* G, const MovieSceneFuncArgs& args)
       MovieSceneRecallMessage(G, "");
     } else {
       status = MovieSceneRecall(G, key.c_str(), args.animate, args.store_view,
-      args.store_color, args.store_active, args.store_rep, args.store_frame,
-      args.sele.c_str(), args.stack);
+          args.store_color, args.store_active, args.store_rep, args.store_frame,
+          args.sele.c_str(), args.stack);
     }
 
   } else if (action == "store") {
-    status = MovieSceneStore(G, key.c_str(), args.message.c_str(), args.store_view,
-    args.store_color, args.store_active, args.store_rep, args.store_frame, args.store_thumbnail,
-    args.sele.c_str(), args.stack, args.quiet);
+    status = MovieSceneStore(G, key.c_str(), args.message.c_str(),
+        args.store_view, args.store_color, args.store_active, args.store_rep,
+        args.store_frame, args.store_thumbnail, args.sele.c_str(), args.stack,
+        args.quiet);
 
     // insert_before, insert_after
     if (status && beforeafter)
-      status = MovieSceneOrderBeforeAfter(G, prev_name.c_str(), beforeafter == 1);
+      status =
+          MovieSceneOrderBeforeAfter(G, prev_name.c_str(), beforeafter == 1);
 
   } else if (action == "delete") {
     status = MovieSceneDelete(G, key.c_str(), args.stack);
@@ -826,7 +827,7 @@ pymol::Result<> MovieSceneFunc(PyMOLGlobals* G, const MovieSceneFuncArgs& args)
     status = MovieSceneOrder(G, key.c_str(), false, "top");
   } else {
     PRINTFB(G, FB_Scene, FB_Errors)
-      " Error: invalid action '%s'\n", action.c_str() ENDFB(G);
+    " Error: invalid action '%s'\n", action.c_str() ENDFB(G);
   }
 
   // trigger GUI updates (scene buttons, Tcl/Tk menu)
@@ -843,12 +844,14 @@ ok_exceptNOSCENES:
  * Init/Free to set up PyMOLGlobals in PyMOL_Start
  */
 
-void MovieScenesInit(PyMOLGlobals * G) {
+void MovieScenesInit(PyMOLGlobals* G)
+{
   MovieScenesFree(G);
   G->scenes = new CMovieScenes[cMovieSceneStack_SIZE];
 }
 
-void MovieScenesFree(PyMOLGlobals * G) {
+void MovieScenesFree(PyMOLGlobals* G)
+{
   if (G->scenes) {
     delete[] G->scenes;
     G->scenes = nullptr;
@@ -861,16 +864,19 @@ void MovieScenesFree(PyMOLGlobals * G) {
  * Convertion to/from Python objects for all MovieScene types
  */
 
-static PyObject * PConvToPyObject(const MovieSceneAtom &v) {
+static PyObject* PConvToPyObject(const MovieSceneAtom& v)
+{
   return PConvArgsToPyList(v.color, v.visRep);
 }
 
-static PyObject * PConvToPyObject(const MovieSceneObject &v) {
+static PyObject* PConvToPyObject(const MovieSceneObject& v)
+{
   return PConvArgsToPyList(v.color, v.visRep);
 }
 
-static PyObject * PConvToPyObject(const MovieScene &v) {
-  PyObject * obj = PyList_New(6);
+static PyObject* PConvToPyObject(const MovieScene& v)
+{
+  PyObject* obj = PyList_New(6);
   PyList_SET_ITEM(obj, 0, PConvToPyObject(v.storemask));
   PyList_SET_ITEM(obj, 1, PConvToPyObject(v.frame));
   PyList_SET_ITEM(obj, 2, PConvToPyObject(v.message.c_str()));
@@ -880,15 +886,19 @@ static PyObject * PConvToPyObject(const MovieScene &v) {
   return obj;
 }
 
-static bool PConvFromPyObject(PyMOLGlobals *, PyObject * obj, MovieSceneAtom &out) {
+static bool PConvFromPyObject(PyMOLGlobals*, PyObject* obj, MovieSceneAtom& out)
+{
   return PConvArgsFromPyList(nullptr, obj, out.color, out.visRep);
 }
 
-static bool PConvFromPyObject(PyMOLGlobals *, PyObject * obj, MovieSceneObject &out) {
+static bool PConvFromPyObject(
+    PyMOLGlobals*, PyObject* obj, MovieSceneObject& out)
+{
   return PConvArgsFromPyList(nullptr, obj, out.color, out.visRep);
 }
 
-static bool PConvFromPyObject(PyMOLGlobals * G, PyObject * obj, MovieScene &out) {
+static bool PConvFromPyObject(PyMOLGlobals* G, PyObject* obj, MovieScene& out)
+{
   std::map<int, MovieSceneAtom> atomdata_old_ids;
 
   if (!G) {
@@ -915,11 +925,13 @@ static bool PConvFromPyObject(PyMOLGlobals * G, PyObject * obj, MovieScene &out)
  * For get_session
  */
 
-PyObject * MovieScenesAsPyList(PyMOLGlobals * G) {
+PyObject* MovieScenesAsPyList(PyMOLGlobals* G)
+{
   return PConvArgsToPyList(G->scenes->order, G->scenes->dict);
 }
 
-void MovieScenesFromPyList(PyMOLGlobals * G, PyObject * o) {
+void MovieScenesFromPyList(PyMOLGlobals* G, PyObject* o)
+{
   // delete existing scenes
   MovieSceneRename(G, "*");
 

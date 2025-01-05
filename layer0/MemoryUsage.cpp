@@ -14,7 +14,7 @@
 #elif defined(_WIN32)
 #include <windows.h>
 // must come *after* windows.h
-# include <psapi.h>
+#include <psapi.h>
 #endif
 
 #include <cstdio>

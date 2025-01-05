@@ -35,14 +35,15 @@ SOFTWARE.
 #include "OpenVRUtils.h"
 
 // system headers
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 #include <string>
 
 // pymol headers
 #include "MyPNG.h"
 
-namespace OpenVRUtils {
+namespace OpenVRUtils
+{
 
 static GLuint CompileShader(GLenum shaderType, char const* shader)
 {
@@ -56,12 +57,15 @@ static GLuint CompileShader(GLenum shaderType, char const* shader)
     int infoLogLength = 0;
     glGetShaderiv(shaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
     if (infoLogLength > 0) {
-      char *infoLog = new char[infoLogLength];
+      char* infoLog = new char[infoLogLength];
       glGetShaderInfoLog(shaderID, infoLogLength, 0, infoLog);
       printf("GLSL shader compilation failed, log follows:\n"
-        "=============================================================================\n"
-        "%s"
-        "=============================================================================\n", infoLog);
+             "================================================================="
+             "============\n"
+             "%s"
+             "================================================================="
+             "============\n",
+          infoLog);
       delete[] infoLog;
     }
     glDeleteShader(shaderID);
@@ -70,7 +74,8 @@ static GLuint CompileShader(GLenum shaderType, char const* shader)
   return shaderID;
 }
 
-GLuint CompileProgram(char const* vertexShader,  char const* fragmentShader, char const* attributes[] /* = 0 */)
+GLuint CompileProgram(char const* vertexShader, char const* fragmentShader,
+    char const* attributes[] /* = 0 */)
 {
   GLuint vertexShaderID = CompileShader(GL_VERTEX_SHADER, vertexShader);
   GLuint fragmentShaderID = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
@@ -93,12 +98,15 @@ GLuint CompileProgram(char const* vertexShader,  char const* fragmentShader, cha
       int infoLogLength = 0;
       glGetProgramiv(programID, GL_INFO_LOG_LENGTH, &infoLogLength);
       if (infoLogLength > 0) {
-        char *infoLog = new char[infoLogLength];
+        char* infoLog = new char[infoLogLength];
         glGetProgramInfoLog(programID, infoLogLength, 0, infoLog);
         printf("GLSL program linking failed, log follows:\n"
-          "=============================================================================\n"
-          "%s"
-          "=============================================================================\n", infoLog);
+               "==============================================================="
+               "==============\n"
+               "%s"
+               "==============================================================="
+               "==============\n",
+            infoLog);
         delete[] infoLog;
       }
 
@@ -130,13 +138,15 @@ GLuint LoadTexture(unsigned width, unsigned height, unsigned char const* ptr)
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
 
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptr);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
+      GL_UNSIGNED_BYTE, ptr);
   glGenerateMipmap(GL_TEXTURE_2D);
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(
+      GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
   GLfloat maxAniso;
   glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maxAniso);
@@ -178,8 +188,8 @@ void VectorCrossProduct(float const v1[], float const v2[], float cross[])
 
 void MatrixFastInverseGLGL(float const srcGL44[], float dstGL44[])
 {
-  float const (*src)[4] = (float const (*)[4])srcGL44;
-  float (*dst)[4] = (float (*)[4])dstGL44;
+  float const(*src)[4] = (float const(*)[4]) srcGL44;
+  float(*dst)[4] = (float(*)[4]) dstGL44;
 
   // transpose rotation
   dst[0][0] = src[0][0];
@@ -194,48 +204,66 @@ void MatrixFastInverseGLGL(float const srcGL44[], float dstGL44[])
   dst[2][1] = src[1][2];
   dst[2][2] = src[2][2];
   dst[2][3] = 0.0f;
-  
+
   // transpose-rotated negative translation
-  dst[3][0] = -(src[0][0] * src[3][0] + src[0][1] * src[3][1] + src[0][2] * src[3][2]);
-  dst[3][1] = -(src[1][0] * src[3][0] + src[1][1] * src[3][1] + src[1][2] * src[3][2]);
-  dst[3][2] = -(src[2][0] * src[3][0] + src[2][1] * src[3][1] + src[2][2] * src[3][2]);
+  dst[3][0] =
+      -(src[0][0] * src[3][0] + src[0][1] * src[3][1] + src[0][2] * src[3][2]);
+  dst[3][1] =
+      -(src[1][0] * src[3][0] + src[1][1] * src[3][1] + src[1][2] * src[3][2]);
+  dst[3][2] =
+      -(src[2][0] * src[3][0] + src[2][1] * src[3][1] + src[2][2] * src[3][2]);
   dst[3][3] = 1.0f;
 }
 
 void MatrixFastInverseVRGL(float const srcVR34[], float dstGL44[])
 {
-    float const (*src)[4] = (float const (*)[4])srcVR34;
-    float (*dst)[4] = (float (*)[4])dstGL44;
+  float const(*src)[4] = (float const(*)[4]) srcVR34;
+  float(*dst)[4] = (float(*)[4]) dstGL44;
 
-    // transpose rotation
-    dst[0][0] = src[0][0];
-    dst[0][1] = src[0][1];
-    dst[0][2] = src[0][2];
-    dst[0][3] = 0.0f;
-    dst[1][0] = src[1][0];
-    dst[1][1] = src[1][1];
-    dst[1][2] = src[1][2];
-    dst[1][3] = 0.0f;
-    dst[2][0] = src[2][0];
-    dst[2][1] = src[2][1];
-    dst[2][2] = src[2][2];
-    dst[2][3] = 0.0f;
-    
-    // transpose-rotated negative translation
-    dst[3][0] = -(src[0][0] * src[0][3] + src[1][0] * src[1][3] + src[2][0] * src[2][3]);
-    dst[3][1] = -(src[0][1] * src[0][3] + src[1][1] * src[1][3] + src[2][1] * src[2][3]);
-    dst[3][2] = -(src[0][2] * src[0][3] + src[1][2] * src[1][3] + src[2][2] * src[2][3]);
-    dst[3][3] = 1.0f;
+  // transpose rotation
+  dst[0][0] = src[0][0];
+  dst[0][1] = src[0][1];
+  dst[0][2] = src[0][2];
+  dst[0][3] = 0.0f;
+  dst[1][0] = src[1][0];
+  dst[1][1] = src[1][1];
+  dst[1][2] = src[1][2];
+  dst[1][3] = 0.0f;
+  dst[2][0] = src[2][0];
+  dst[2][1] = src[2][1];
+  dst[2][2] = src[2][2];
+  dst[2][3] = 0.0f;
+
+  // transpose-rotated negative translation
+  dst[3][0] =
+      -(src[0][0] * src[0][3] + src[1][0] * src[1][3] + src[2][0] * src[2][3]);
+  dst[3][1] =
+      -(src[0][1] * src[0][3] + src[1][1] * src[1][3] + src[2][1] * src[2][3]);
+  dst[3][2] =
+      -(src[0][2] * src[0][3] + src[1][2] * src[1][3] + src[2][2] * src[2][3]);
+  dst[3][3] = 1.0f;
 }
 
 void MatrixCopyVRGL(float const srcVR34[], float dstGL44[])
 {
-  float const (*src)[4] = (float const (*)[4])srcVR34;
-  float (*dst)[4] = (float(*)[4])dstGL44;
-  dst[0][0] = src[0][0]; dst[0][1] = src[1][0]; dst[0][2] = src[2][0]; dst[0][3] = 0.0f;
-  dst[1][0] = src[0][1]; dst[1][1] = src[1][1]; dst[1][2] = src[2][1]; dst[1][3] = 0.0f;
-  dst[2][0] = src[0][2]; dst[2][1] = src[1][2]; dst[2][2] = src[2][2]; dst[2][3] = 0.0f;
-  dst[3][0] = src[0][3]; dst[3][1] = src[1][3]; dst[3][2] = src[2][3]; dst[3][3] = 1.0f;
+  float const(*src)[4] = (float const(*)[4]) srcVR34;
+  float(*dst)[4] = (float(*)[4]) dstGL44;
+  dst[0][0] = src[0][0];
+  dst[0][1] = src[1][0];
+  dst[0][2] = src[2][0];
+  dst[0][3] = 0.0f;
+  dst[1][0] = src[0][1];
+  dst[1][1] = src[1][1];
+  dst[1][2] = src[2][1];
+  dst[1][3] = 0.0f;
+  dst[2][0] = src[0][2];
+  dst[2][1] = src[1][2];
+  dst[2][2] = src[2][2];
+  dst[2][3] = 0.0f;
+  dst[3][0] = src[0][3];
+  dst[3][1] = src[1][3];
+  dst[3][2] = src[2][3];
+  dst[3][3] = 1.0f;
 }
 
 } // namespace OpenVRUtils

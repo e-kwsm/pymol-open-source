@@ -1,29 +1,29 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2002 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2002 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_gl.h"
-#include"Base.h"
-#include"Block.h"
-#include"Ortho.h"
-#include"ScrollBar.h"
-#include"CGO.h"
+#include "ScrollBar.h"
+#include "Base.h"
+#include "Block.h"
+#include "CGO.h"
+#include "Ortho.h"
+#include "os_gl.h"
 
 bool ScrollBar::isMaxed() const
 {
-  if(m_ValueMax > 0.0F) {
+  if (m_ValueMax > 0.0F) {
     return m_Value == m_ValueMax;
   } else
     return false;
@@ -33,20 +33,20 @@ void ScrollBar::update()
 {
   int range;
 
-  if(m_HorV) {
+  if (m_HorV) {
     range = (rect.right - rect.left);
   } else {
     range = (rect.top - rect.bottom);
   }
   m_ExactBarSize = (range * m_DisplaySize) / static_cast<float>(m_ListSize);
-  m_BarSize = static_cast<int> (0.499F + m_ExactBarSize);
-  if(m_BarSize < 4)
+  m_BarSize = static_cast<int>(0.499F + m_ExactBarSize);
+  if (m_BarSize < 4)
     m_BarSize = DIP2PIXEL(4);
   m_BarRange = range - m_BarSize;
-  if(m_BarRange < 2)
+  if (m_BarRange < 2)
     m_BarRange = 2;
   m_ValueMax = static_cast<float>(m_ListSize - m_DisplaySize);
-  if(m_ValueMax < 1)
+  if (m_ValueMax < 1)
     m_ValueMax = 1;
   m_Value = std::clamp(m_Value, 0.0f, m_ValueMax);
 }
@@ -73,7 +73,7 @@ void ScrollBar::drawImpl(bool bFill, CGO* orthoCGO)
 
   float value = std::min(m_Value, m_ValueMax);
 
-  if(m_HorV) {
+  if (m_HorV) {
     top = rect.top - 1;
     bottom = rect.bottom + 1;
     left = (int) (0.499F + rect.left + (m_BarRange * value) / m_ValueMax);
@@ -89,9 +89,9 @@ void ScrollBar::drawImpl(bool bFill, CGO* orthoCGO)
     m_BarMax = bottom;
   }
 
-  if(m_G->HaveGUI && m_G->ValidContext) {
+  if (m_G->HaveGUI && m_G->ValidContext) {
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.8F, 0.8F, 0.8F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, right, top, 0.f);
@@ -109,7 +109,7 @@ void ScrollBar::drawImpl(bool bFill, CGO* orthoCGO)
       glEnd();
     }
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.3F, 0.3F, 0.3F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, right, top - 1, 0.f);
@@ -127,7 +127,7 @@ void ScrollBar::drawImpl(bool bFill, CGO* orthoCGO)
       glEnd();
     }
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.3F, 0.3F, 0.3F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, right, bottom + 1, 0.f);
@@ -145,7 +145,7 @@ void ScrollBar::drawImpl(bool bFill, CGO* orthoCGO)
       glEnd();
     }
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColorv(orthoCGO, m_BarColor);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, right - 1, top - 1, 0.f);
@@ -172,7 +172,7 @@ void ScrollBar::drawHandle(float alpha, CGO* orthoCGO)
 
   value = std::min(m_Value, m_ValueMax);
 
-  if(m_HorV) {
+  if (m_HorV) {
     top = rect.top - 1;
     bottom = rect.bottom + 1;
     left = (int) (0.499F + rect.left + (m_BarRange * value) / m_ValueMax);
@@ -184,10 +184,10 @@ void ScrollBar::drawHandle(float alpha, CGO* orthoCGO)
     right = rect.right - 1;
   }
 
-  if(m_G->HaveGUI && m_G->ValidContext) {
+  if (m_G->HaveGUI && m_G->ValidContext) {
 
     glEnable(GL_BLEND);
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOAlpha(orthoCGO, alpha);
       CGOColor(orthoCGO, 0.8F, 0.8F, 0.8F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
@@ -207,7 +207,7 @@ void ScrollBar::drawHandle(float alpha, CGO* orthoCGO)
       glEnd();
     }
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOAlpha(orthoCGO, alpha);
       CGOColor(orthoCGO, 0.3F, 0.3F, 0.3F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
@@ -227,7 +227,7 @@ void ScrollBar::drawHandle(float alpha, CGO* orthoCGO)
       glEnd();
     }
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOAlpha(orthoCGO, alpha);
       CGOColor(orthoCGO, 0.3F, 0.3F, 0.3F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
@@ -247,7 +247,7 @@ void ScrollBar::drawHandle(float alpha, CGO* orthoCGO)
       glEnd();
     }
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOAlpha(orthoCGO, alpha);
       CGOColor(orthoCGO, m_BarColor[0], m_BarColor[1], m_BarColor[2]);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
@@ -274,31 +274,31 @@ int ScrollBar::click(int button, int x, int y, int mod)
 {
   int grab = 0;
 
-  if(button == P_GLUT_MIDDLE_BUTTON) {
-    if(m_HorV) {
-      if(x < m_BarMin || x > m_BarMax)
-        setValue((m_ListSize * (x - rect.left)) /
-            (rect.right - rect.left) - m_DisplaySize * 0.5F);
+  if (button == P_GLUT_MIDDLE_BUTTON) {
+    if (m_HorV) {
+      if (x < m_BarMin || x > m_BarMax)
+        setValue((m_ListSize * (x - rect.left)) / (rect.right - rect.left) -
+                 m_DisplaySize * 0.5F);
       grab = x;
     } else {
-      if(y > m_BarMin || y < m_BarMax)
-        setValue((m_ListSize * (y - rect.top)) /
-            (rect.bottom - rect.top) - m_DisplaySize * 0.5F);
+      if (y > m_BarMin || y < m_BarMax)
+        setValue((m_ListSize * (y - rect.top)) / (rect.bottom - rect.top) -
+                 m_DisplaySize * 0.5F);
       grab = y;
     }
   } else {
-    if(m_HorV) {
-      if(x > m_BarMax) {
+    if (m_HorV) {
+      if (x > m_BarMax) {
         m_Value += m_DisplaySize;
-      } else if(x < m_BarMin) {
+      } else if (x < m_BarMin) {
         m_Value -= m_DisplaySize;
       } else {
         grab = x;
       }
     } else {
-      if(y > m_BarMin) {
+      if (y > m_BarMin) {
         m_Value -= m_DisplaySize;
-      } else if(y < m_BarMax) {
+      } else if (y < m_BarMax) {
         m_Value += m_DisplaySize;
       } else {
         grab = y;
@@ -306,7 +306,7 @@ int ScrollBar::click(int button, int x, int y, int mod)
     }
   }
 
-  if(grab) {
+  if (grab) {
     OrthoGrab(m_G, this);
     m_StartPos = grab;
     m_StartValue = m_Value;
@@ -319,7 +319,7 @@ int ScrollBar::click(int button, int x, int y, int mod)
 int ScrollBar::drag(int x, int y, int mod)
 {
   int displ;
-  if(m_HorV)
+  if (m_HorV)
     displ = m_StartPos - x;
   else
     displ = y - m_StartPos;
@@ -349,4 +349,3 @@ void ScrollBar::setBox(int top, int left, int bottom, int right)
   rect.bottom = bottom;
   rect.right = right;
 }
-

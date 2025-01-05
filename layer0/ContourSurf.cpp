@@ -65,9 +65,9 @@ static const int* get_winding_indices(cIsosurfaceSide side)
  */
 static cIsosurfaceSide get_adjusted_side(float level, cIsosurfaceSide side)
 {
-  return level >= 0 ? side
-                    : (side == cIsosurfaceSide::front) ? cIsosurfaceSide::back
-                                                       : cIsosurfaceSide::front;
+  return level >= 0                         ? side
+         : (side == cIsosurfaceSide::front) ? cIsosurfaceSide::back
+                                            : cIsosurfaceSide::front;
 }
 
 #ifdef _PYMOL_VTKM

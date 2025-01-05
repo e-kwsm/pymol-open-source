@@ -14,10 +14,8 @@
 /**
  * Create a coordset for a segi (chain) selection
  */
-CoordSet * CoordSetCopyFilterChains(
-    const CoordSet * other,
-    const AtomInfoType * atInfo,
-    const std::set<lexborrow_t> & chains_set)
+CoordSet* CoordSetCopyFilterChains(const CoordSet* other,
+    const AtomInfoType* atInfo, const std::set<lexborrow_t>& chains_set)
 {
   std::vector<int> idxmap;
   idxmap.reserve(other->NIndex);
@@ -43,8 +41,7 @@ CoordSet * CoordSetCopyFilterChains(
  * Replace coordinate sets and set all_states
  */
 void ObjectMoleculeSetAssemblyCSets(
-    ObjectMolecule * I,
-    CoordSet ** assembly_csets)
+    ObjectMolecule* I, CoordSet** assembly_csets)
 {
   if (!assembly_csets)
     return;

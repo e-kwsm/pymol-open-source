@@ -1934,8 +1934,7 @@ void CGOFreeVBOs(CGO* I)
       mx[2] = *(pt + 2);                                                       \
   }
 
-struct CGOCount
-{
+struct CGOCount {
   int num_total_vertices{};
   int num_total_indexes{};
   int num_total_vertices_lines{};
@@ -2872,11 +2871,10 @@ static bool OptimizeVertsToVBONotIndexed(const CGO* I, CGO* cgo,
   unsigned mul =
       VERTEX_POS_SIZE + VERTEX_PICKCOLOR_SIZE + VERTEX_ACCESSIBILITY_SIZE;
   mul += SettingGet<bool>(G, cSetting_cgo_shader_ub_normal)
-              ? 1
-              : VERTEX_NORMAL_SIZE;
-  mul += SettingGet<bool>(G, cSetting_cgo_shader_ub_color)
-              ? 1
-              : VERTEX_COLOR_SIZE;
+             ? 1
+             : VERTEX_NORMAL_SIZE;
+  mul +=
+      SettingGet<bool>(G, cSetting_cgo_shader_ub_color) ? 1 : VERTEX_COLOR_SIZE;
   auto const tot = size_t(count.num_total_indexes) * mul;
 
   std::vector<float> vertexValsVec(tot);
@@ -2907,8 +2905,8 @@ static bool OptimizeVertsToVBONotIndexed(const CGO* I, CGO* cgo,
   if (!ok) {
     if (!G->Interrupt)
       PRINTFB(G, FB_CGO, FB_Errors)
-      "ERROR: CGOProcessCGOtoArrays() could not allocate enough "
-      "memory\n" ENDFB(G);
+    "ERROR: CGOProcessCGOtoArrays() could not allocate enough "
+    "memory\n" ENDFB(G);
     return false;
   }
   if (ok) {
@@ -2946,7 +2944,7 @@ static bool OptimizeVertsToVBONotIndexed(const CGO* I, CGO* cgo,
     if (ok) {
       float* newPickColorVals;
       int arrays = CGO_VERTEX_ARRAY | CGO_NORMAL_ARRAY | CGO_COLOR_ARRAY |
-                    CGO_PICK_COLOR_ARRAY;
+                   CGO_PICK_COLOR_ARRAY;
       if (ambient_occlusion) {
         arrays |= CGO_ACCESSIBILITY_ARRAY;
       }
@@ -3296,8 +3294,9 @@ CGO* CGOOptimizeToVBONotIndexed(const CGO* I, int est, bool addshaders)
     }
   }
 
-  if (ok && (count.num_total_vertices > 0 || count.num_total_vertices_lines > 0 ||
-                count.num_total_vertices_points > 0)) {
+  if (ok &&
+      (count.num_total_vertices > 0 || count.num_total_vertices_lines > 0 ||
+          count.num_total_vertices_points > 0)) {
     ok &= CGOBoundingBox(cgo, min, max);
   }
 
@@ -3338,7 +3337,7 @@ static bool OptimizeVertsToVBOIndexed(const CGO* I, CGO* cgo,
         n_tri * sizeof(float) +
         2 * n_tri * sizeof(int) +
         256 * sizeof(int); // z_value (float * n_tri), ix (n_tri * int),
-                            // sort_mem ((n_tri + 256) * int)
+                           // sort_mem ((n_tri + 256) * int)
     // round to 4 byte words for the length of the CGO
     n_data = bytes_to_allocate / 4 + (((bytes_to_allocate % 4) == 0) ? 0 : 1);
   }
@@ -3347,11 +3346,10 @@ static bool OptimizeVertsToVBOIndexed(const CGO* I, CGO* cgo,
   unsigned mul =
       VERTEX_POS_SIZE + VERTEX_PICKCOLOR_SIZE + VERTEX_ACCESSIBILITY_SIZE;
   mul += SettingGet<bool>(G, cSetting_cgo_shader_ub_normal)
-              ? 1
-              : VERTEX_NORMAL_SIZE;
-  mul += SettingGet<bool>(G, cSetting_cgo_shader_ub_color)
-              ? 1
-              : VERTEX_COLOR_SIZE;
+             ? 1
+             : VERTEX_NORMAL_SIZE;
+  mul +=
+      SettingGet<bool>(G, cSetting_cgo_shader_ub_color) ? 1 : VERTEX_COLOR_SIZE;
   auto const tot = size_t(count.num_total_vertices) * mul;
 
   std::vector<float> vertexValsVec(tot);
@@ -3411,8 +3409,8 @@ static bool OptimizeVertsToVBOIndexed(const CGO* I, CGO* cgo,
       }
       if (shouldCompress) {
         int cnt, nxtn = 3;
-        float *vertexValsDA = 0, *nxtVals = 0, *colorValsDA = 0,
-              *normalValsDA, *accessibilityValsDA;
+        float *vertexValsDA = 0, *nxtVals = 0, *colorValsDA = 0, *normalValsDA,
+              *accessibilityValsDA;
         float *pickColorValsDA, *pickColorValsTMP, *accessibilityValsTMP;
 
         nxtVals = vertexValsDA = sp->floatdata;
@@ -3467,8 +3465,7 @@ static bool OptimizeVertsToVBOIndexed(const CGO* I, CGO* cgo,
           } else {
             uchar col[4] = {CLIP_COLOR_VALUE(cgo->color[0]),
                 CLIP_COLOR_VALUE(cgo->color[1]),
-                CLIP_COLOR_VALUE(cgo->color[2]),
-                CLIP_COLOR_VALUE(cgo->alpha)};
+                CLIP_COLOR_VALUE(cgo->color[2]), CLIP_COLOR_VALUE(cgo->alpha)};
             for (cnt = 0; cnt < sp->nverts * 4; cnt++) {
               colorValsUC[plc + cnt] = col[cnt % 4];
             }
@@ -3575,7 +3572,7 @@ static bool OptimizeVertsToVBOIndexed(const CGO* I, CGO* cgo,
     VertexBuffer* vbo = I->G->ShaderMgr->newGPUBuffer<VertexBuffer>();
     ok &= vbo->bufferData(
         {BufferDesc{"a_Vertex", VertexFormat::Float3,
-              sizeof(float) * count.num_total_vertices * 3, vertexVals},
+             sizeof(float) * count.num_total_vertices * 3, vertexVals},
             BufferDesc{"a_Normal", fmt.normalFormat,
                 count.num_total_vertices * fmt.normalSize, normalVals},
             BufferDesc{"a_Color", fmt.colorFormat,
@@ -3585,7 +3582,8 @@ static bool OptimizeVertsToVBOIndexed(const CGO* I, CGO* cgo,
 
     IndexBuffer* ibo = I->G->ShaderMgr->newGPUBuffer<IndexBuffer>();
     ok &= ibo->bufferData({BufferDesc{nullptr, VertexFormat::UInt,
-        sizeof(VertexIndex_t) * count.num_total_indexes, vertexIndices.data()}});
+        sizeof(VertexIndex_t) * count.num_total_indexes,
+        vertexIndices.data()}});
 
     size_t vboid = vbo->get_hash_id();
     size_t iboid = ibo->get_hash_id();
@@ -3593,7 +3591,7 @@ static bool OptimizeVertsToVBOIndexed(const CGO* I, CGO* cgo,
     VertexBuffer* pickvbo = I->G->ShaderMgr->newGPUBuffer<VertexBuffer>(
         buffer_layout::SEQUENTIAL, GL_DYNAMIC_DRAW);
     ok &= pickvbo->bufferData({BufferDesc{"a_Color", VertexFormat::UByte4Norm,
-                                    sizeof(float) * count.num_total_indexes},
+                                   sizeof(float) * count.num_total_indexes},
         BufferDesc{"a_Color", VertexFormat::UByte4Norm,
             sizeof(float) * count.num_total_indexes}});
     size_t pickvboid = pickvbo->get_hash_id();
@@ -3601,15 +3599,15 @@ static bool OptimizeVertsToVBOIndexed(const CGO* I, CGO* cgo,
     if (ok) {
       float* newPickColorVals;
       int arrays = CGO_VERTEX_ARRAY | CGO_NORMAL_ARRAY | CGO_COLOR_ARRAY |
-                    CGO_PICK_COLOR_ARRAY;
+                   CGO_PICK_COLOR_ARRAY;
       if (ambient_occlusion) {
         arrays |= CGO_ACCESSIBILITY_ARRAY;
       }
       if (addshaders)
         CGOEnable(cgo, GL_DEFAULT_SHADER);
       newPickColorVals = cgo->add<cgo::draw::buffers_indexed>(GL_TRIANGLES,
-          arrays, count.num_total_indexes, count.num_total_vertices, vboid, iboid, n_data,
-          pickvboid);
+          arrays, count.num_total_indexes, count.num_total_vertices, vboid,
+          iboid, n_data, pickvboid);
       if (embedTransparencyInfo) {
         int n_tri = count.num_total_indexes / 3;
         float* sumarray;
@@ -3623,8 +3621,7 @@ static bool OptimizeVertsToVBOIndexed(const CGO* I, CGO* cgo,
         for (idxpl = 0; idxpl < count.num_total_indexes; idxpl += 3) {
           add3f(&vertexVals[3 * vertexIndices[idxpl]],
               &vertexVals[3 * vertexIndices[idxpl + 1]], sumarray);
-          add3f(
-              &vertexVals[3 * vertexIndices[idxpl + 2]], sumarray, sumarray);
+          add3f(&vertexVals[3 * vertexIndices[idxpl + 2]], sumarray, sumarray);
           sumarray += 3;
         }
         memcpy(vertexIndicesOriginalTI, vertexIndices.data(),
@@ -3669,12 +3666,11 @@ static bool OptimizeLinesToVBOIndexed(const CGO* I, CGO* cgo,
   unsigned mul = VERTEX_POS_SIZE + VERTEX_PICKCOLOR_SIZE;
   if (hasNormals) {
     mul += SettingGet<bool>(G, cSetting_cgo_shader_ub_normal)
-                ? 1
-                : VERTEX_NORMAL_SIZE;
+               ? 1
+               : VERTEX_NORMAL_SIZE;
   }
-  mul += SettingGet<bool>(G, cSetting_cgo_shader_ub_color)
-              ? 1
-              : VERTEX_COLOR_SIZE;
+  mul +=
+      SettingGet<bool>(G, cSetting_cgo_shader_ub_color) ? 1 : VERTEX_COLOR_SIZE;
   auto const tot = size_t(count.num_total_vertices_lines) * mul;
 
   std::vector<float> vertexValsVec(tot);
@@ -3778,8 +3774,7 @@ static bool OptimizeLinesToVBOIndexed(const CGO* I, CGO* cgo,
           } else {
             uchar col[4] = {CLIP_COLOR_VALUE(cgo->color[0]),
                 CLIP_COLOR_VALUE(cgo->color[1]),
-                CLIP_COLOR_VALUE(cgo->color[2]),
-                CLIP_COLOR_VALUE(cgo->alpha)};
+                CLIP_COLOR_VALUE(cgo->color[2]), CLIP_COLOR_VALUE(cgo->alpha)};
             for (cnt = 0; cnt < sp->nverts * 4; cnt++) {
               colorValsUC[plc + cnt] = col[cnt % 4];
             }
@@ -3878,7 +3873,7 @@ static bool OptimizeLinesToVBOIndexed(const CGO* I, CGO* cgo,
     VertexBuffer* pickvbo = I->G->ShaderMgr->newGPUBuffer<VertexBuffer>(
         buffer_layout::SEQUENTIAL, GL_DYNAMIC_DRAW);
     ok &= pickvbo->bufferData({BufferDesc("a_Color", VertexFormat::UByte4Norm,
-                                    sizeof(float) * count.num_total_indexes),
+                                   sizeof(float) * count.num_total_indexes),
         BufferDesc("a_Color", VertexFormat::UByte4Norm,
             sizeof(float) * count.num_total_indexes)});
     size_t pickvboid = pickvbo->get_hash_id();
@@ -3986,7 +3981,8 @@ CGO* CGOOptimizeToVBOIndexed(const CGO* I, int est, const float* color,
       return nullptr;
     }
   }
-  if (ok && (count.num_total_vertices > 0 || count.num_total_vertices_lines > 0)) {
+  if (ok &&
+      (count.num_total_vertices > 0 || count.num_total_vertices_lines > 0)) {
     ok &= CGOBoundingBox(cgo, min, max);
   }
 
@@ -4821,7 +4817,8 @@ CGO* CGOOptimizeTextures(const CGO* I, int est)
 {
   CGO* cgo = nullptr;
   int ok = true;
-  auto num_total_textures = CGOCountNumberOfOperationsOfType(I, CGO_DRAW_TEXTURE);
+  auto num_total_textures =
+      CGOCountNumberOfOperationsOfType(I, CGO_DRAW_TEXTURE);
   //  printf("CGOOptimizeTextures: num_total_textures=%d\n",
   //  num_total_textures);
   if (num_total_textures) {
@@ -4829,7 +4826,8 @@ CGO* CGOOptimizeTextures(const CGO* I, int est)
     std::vector<float> worldPos(num_total_textures * 18);
     std::vector<float> screenValues(num_total_textures * 18);
     std::vector<float> textExtents(num_total_textures * 12);
-    std::vector<float> pickColorValsVec(num_total_textures * 12); /* pick index and bond */
+    std::vector<float> pickColorValsVec(
+        num_total_textures * 12); /* pick index and bond */
     auto* pickColorVals = pickColorValsVec.data();
 
     cgo = CGONewSized(I->G, 0);
@@ -4904,13 +4902,13 @@ CGO* CGOOptimizeTextures(const CGO* I, int est)
     if (ok) {
       VertexBuffer* vbo = I->G->ShaderMgr->newGPUBuffer<VertexBuffer>(
           buffer_layout::SEQUENTIAL);
-      ok &= vbo->bufferData(
-          {BufferDesc("attr_worldpos", VertexFormat::Float3,
-               sizeof(float) * num_total_textures * 18, worldPos.data()),
-              BufferDesc("attr_screenoffset", VertexFormat::Float3,
-                  sizeof(float) * num_total_textures * 18, screenValues.data()),
-              BufferDesc("attr_texcoords", VertexFormat::Float3,
-                  sizeof(float) * num_total_textures * 18, textExtents.data())});
+      ok &= vbo->bufferData({BufferDesc("attr_worldpos", VertexFormat::Float3,
+                                 sizeof(float) * num_total_textures * 18,
+                                 worldPos.data()),
+          BufferDesc("attr_screenoffset", VertexFormat::Float3,
+              sizeof(float) * num_total_textures * 18, screenValues.data()),
+          BufferDesc("attr_texcoords", VertexFormat::Float3,
+              sizeof(float) * num_total_textures * 18, textExtents.data())});
       size_t vboid = vbo->get_hash_id();
 
       if (ok) {
@@ -5141,9 +5139,9 @@ CGO* CGOOptimizeLabels(const CGO* I, int est, bool addshaders)
       // Static Vertex Data
       VertexBuffer* vbo = I->G->ShaderMgr->newGPUBuffer<VertexBuffer>(
           buffer_layout::SEQUENTIAL);
-      ok &=
-          vbo->bufferData({BufferDesc("attr_worldpos", VertexFormat::Float3,
-                               sizeof(float) * num_total_labels * 18, worldPos.data()),
+      ok &= vbo->bufferData(
+          {BufferDesc("attr_worldpos", VertexFormat::Float3,
+               sizeof(float) * num_total_labels * 18, worldPos.data()),
               BufferDesc("attr_targetpos", VertexFormat::Float3,
                   sizeof(float) * num_total_labels * 18, targetPos),
               BufferDesc("attr_screenoffset", VertexFormat::Float3,
@@ -5214,19 +5212,25 @@ CGO* CGOOptimizeConnectors(const CGO* I, int est)
   if (num_total_connectors) {
     uchar* isCenterPt = nullptr;
     int place3 = 0, place2 = 0, place = 0;
-    std::vector<float> targetPt3d(num_total_connectors * 20 *
-                             factor, 0); /* too much, relativeMode only needs 1
-                                         byte per vertex, instead of 1 float */
-    auto* labelCenterPt3d = targetPt3d.data() + (num_total_connectors * 3 * factor);
+    std::vector<float> targetPt3d(num_total_connectors * 20 * factor,
+        0); /* too much, relativeMode only needs 1
+            byte per vertex, instead of 1 float */
+    auto* labelCenterPt3d =
+        targetPt3d.data() + (num_total_connectors * 3 * factor);
     auto* indentFactor = labelCenterPt3d + (num_total_connectors * 3 * factor);
-    auto* screenWorldOffset = indentFactor + (num_total_connectors * 2 * factor);
-    auto* connectorColor = screenWorldOffset + (num_total_connectors * 3 * factor);
+    auto* screenWorldOffset =
+        indentFactor + (num_total_connectors * 2 * factor);
+    auto* connectorColor =
+        screenWorldOffset + (num_total_connectors * 3 * factor);
     auto* textSize = connectorColor + (num_total_connectors * factor);
-    auto* relativeMode = (uchar*) (textSize + (num_total_connectors * 2 * factor));
+    auto* relativeMode =
+        (uchar*) (textSize + (num_total_connectors * 2 * factor));
     auto* drawBkgrd = (uchar*) (relativeMode + (num_total_connectors * factor));
     auto* bkgrdColor = (float*) (drawBkgrd + (num_total_connectors * factor));
-    auto* relExtLength = (float*) (bkgrdColor + (num_total_connectors * factor));
-    auto* connectorWidth = (float*) (relExtLength + (num_total_connectors * factor));
+    auto* relExtLength =
+        (float*) (bkgrdColor + (num_total_connectors * factor));
+    auto* connectorWidth =
+        (float*) (relExtLength + (num_total_connectors * factor));
     if (!use_geometry_shaders)
       isCenterPt = (uchar*) (connectorWidth + (num_total_connectors * factor));
     else

@@ -15,8 +15,8 @@
 #include <iostream>
 #include <numeric>
 #include <string>
-#include <vector>
 #include <variant>
+#include <vector>
 
 #include "CifFile.h"
 #include "File.h"
@@ -27,13 +27,27 @@
 #include <msgpack.hpp>
 #endif
 
-namespace pymol {
-namespace _cif_detail {
+namespace pymol
+{
+namespace _cif_detail
+{
 
-template <> const char* raw_to_typed(const char* s) { return s; }
-template <> std::string raw_to_typed(const char* s) { return s; }
-template <> char        raw_to_typed(const char* s) { return s[0]; }
-template <> int         raw_to_typed(const char* s) { return atoi(s); }
+template <> const char* raw_to_typed(const char* s)
+{
+  return s;
+}
+template <> std::string raw_to_typed(const char* s)
+{
+  return s;
+}
+template <> char raw_to_typed(const char* s)
+{
+  return s[0];
+}
+template <> int raw_to_typed(const char* s)
+{
+  return atoi(s);
+}
 
 /**
  * Convert to floating point number, ignores uncertainty notation
@@ -58,27 +72,32 @@ template <> float raw_to_typed(const char* s)
 // basic IO and string handling
 
 // Return true if "c" is whitespace or null
-static bool iswhitespace0(char c) {
+static bool iswhitespace0(char c)
+{
   return strchr(" \t\r\n", c) ? true : false;
 }
 
 // Return true if "c" is whitespace
-static bool iswhitespace(char c) {
+static bool iswhitespace(char c)
+{
   return (c && iswhitespace0(c));
 }
 
 // Return true if "c" is line feed or carriage return
-static bool islinefeed(char c) {
+static bool islinefeed(char c)
+{
   return (c == '\r' || c == '\n');
 }
 
 // Return true if "c" is line feed or carriage return or null
-static bool islinefeed0(char c) {
+static bool islinefeed0(char c)
+{
   return (!c || islinefeed(c));
 }
 
 // Return true if "c" is double or single quote
-static bool isquote(char c) {
+static bool isquote(char c)
+{
   return (c == '"' || c == '\'');
 }
 
@@ -88,17 +107,17 @@ static bool isquote(char c) {
 #endif
 
 // Return true if token is a STAR keyword
-static bool isspecial(const char *token) {
-  return (token[0] == '_'
-      || strncasecmp("data_", token, 5) == 0
-      || strncasecmp("save_", token, 5) == 0
-      || strcasecmp("loop_", token) == 0
-      || strcasecmp("stop_", token) == 0
-      || strcasecmp("global_", token) == 0);
+static bool isspecial(const char* token)
+{
+  return (token[0] == '_' || strncasecmp("data_", token, 5) == 0 ||
+          strncasecmp("save_", token, 5) == 0 ||
+          strcasecmp("loop_", token) == 0 || strcasecmp("stop_", token) == 0 ||
+          strcasecmp("global_", token) == 0);
 }
 
 // convert all chars to lowercase
-static void tolowerinplace(char *p) {
+static void tolowerinplace(char* p)
+{
   for (; *p; p++) {
     if (*p <= 'Z' && *p >= 'A')
       *p -= 'Z' - 'z';
@@ -113,25 +132,28 @@ static const cif_array EMPTY_ARRAY(nullptr);
  * Class to store CIF loops. Only for parsing, do not use in any higher level
  * reading functions.
  */
-class cif_loop {
+class cif_loop
+{
 public:
   int ncols;
   int nrows;
-  const char **values;
+  const char** values;
 
   // methods
-  const char * get_value_raw(int row, int col) const;
+  const char* get_value_raw(int row, int col) const;
 };
 
 // get table value, return nullptr if indices out of bounds
-const char * cif_loop::get_value_raw(int row, int col) const {
+const char* cif_loop::get_value_raw(int row, int col) const
+{
   if (row >= nrows)
     return nullptr;
   return values[row * ncols + col];
 }
 
 // get the number of elements in this array
-unsigned cif_array::size() const {
+unsigned cif_array::size() const
+{
   if (auto arr = std::get_if<cif_detail::cif_str_array>(&m_array)) {
     return (arr->col == cif_detail::cif_str_array::NOT_IN_LOOP)
                ? 1
@@ -151,7 +173,8 @@ const char* cif_detail::cif_str_array::get_value_raw(unsigned pos) const
 }
 
 // true if all values in ['.', '?']
-bool cif_array::is_missing_all() const {
+bool cif_array::is_missing_all() const
+{
   for (unsigned i = 0, n = size(); i != n; ++i) {
     if (!is_missing(i))
       return false;
@@ -170,7 +193,8 @@ bool cif_array::is_missing_all() const {
  *
  * @param key data name, must be lower case
  */
-const cif_array * cif_data::get_arr(const char * key) const {
+const cif_array* cif_data::get_arr(const char* key) const
+{
   if (auto data = std::get_if<pymol::cif_detail::cif_str_data>(&m_data)) {
     const auto& dict = data->m_dict;
     const char* p = strchr(key, '?');
@@ -236,11 +260,13 @@ const char* cif_data::code() const
   return "";
 }
 
-const cif_array* cif_data::empty_array() {
+const cif_array* cif_data::empty_array()
+{
   return &EMPTY_ARRAY;
 }
 
-const cif_detail::cif_str_data* cif_data::get_saveframe(const char* code) const {
+const cif_detail::cif_str_data* cif_data::get_saveframe(const char* code) const
+{
   if (auto data = std::get_if<pymol::cif_detail::cif_str_data>(&m_data)) {
     const auto& saveframes = data->m_saveframes;
     auto it = saveframes.find(code);
@@ -250,7 +276,8 @@ const cif_detail::cif_str_data* cif_data::get_saveframe(const char* code) const 
   return nullptr;
 }
 
-bool cif_file::parse_file(const char* filename) {
+bool cif_file::parse_file(const char* filename)
+{
   char* contents = FileGetContents(filename, nullptr);
 
   if (!contents) {
@@ -261,16 +288,19 @@ bool cif_file::parse_file(const char* filename) {
   return parse(std::move(contents));
 }
 
-bool cif_file::parse_string(const char* contents) {
+bool cif_file::parse_string(const char* contents)
+{
   return parse(std::move(mstrdup(contents)));
 }
 
-void cif_file::error(const char* msg) {
+void cif_file::error(const char* msg)
+{
   std::cout << "ERROR " << msg << std::endl;
 }
 
 // constructor
-cif_file::cif_file(const char* filename, const char* contents_) {
+cif_file::cif_file(const char* filename, const char* contents_)
+{
   if (contents_) {
     parse_string(contents_);
   } else if (filename) {
@@ -288,7 +318,8 @@ cif_file& cif_file::operator=(cif_file&&) = default;
 // destructor
 cif_file::~cif_file() = default;
 
-bool cif_file::parse(char*&& p) {
+bool cif_file::parse(char*&& p)
+{
   m_datablocks.clear();
   m_tokens.clear();
   m_contents.reset(p);
@@ -313,13 +344,15 @@ bool cif_file::parse(char*&& p) {
       break;
 
     if (*p == '#') {
-      while (!(islinefeed0(*++p)));
+      while (!(islinefeed0(*++p)))
+        ;
       prev = *p;
     } else if (isquote(*p)) { // will nullptr the closing quote
       quote = *p;
       keypossible.push_back(false);
       tokens.push_back(p + 1);
-      while (*++p && !(*p == quote && iswhitespace0(p[1])));
+      while (*++p && !(*p == quote && iswhitespace0(p[1])))
+        ;
       if (*p)
         *(p++) = 0;
       prev = *p;
@@ -329,7 +362,8 @@ bool cif_file::parse(char*&& p) {
       keypossible.push_back(false);
       tokens.push_back(p + 1);
       // advance until `\n;`
-      while (*++p && !(islinefeed(*p) && p[1] == ';'));
+      while (*++p && !(islinefeed(*p) && p[1] == ';'))
+        ;
       // step to next line and null the line feed
       if (*p) {
         *p = 0;
@@ -341,8 +375,9 @@ bool cif_file::parse(char*&& p) {
       }
       prev = ';';
     } else { // will null the whitespace
-      char * q = p++;
-      while (!iswhitespace0(*p)) ++p;
+      char* q = p++;
+      while (!iswhitespace0(*p))
+        ++p;
       prev = *p;
       if (p - q == 1 && (*q == '?' || *q == '.')) {
         // store values '.' (inapplicable) and '?' (unknown) as null-pointers
@@ -393,7 +428,7 @@ bool cif_file::parse(char*&& p) {
 
       int ncols = 0;
       int nrows = 0;
-      cif_loop *loop = nullptr;
+      cif_loop* loop = nullptr;
 
       // loop data
       loop = new cif_loop;
@@ -412,7 +447,7 @@ bool cif_file::parse(char*&& p) {
 
       if (loop) {
         // loop data
-        loop->values = (const char **) &tokens[i];
+        loop->values = (const char**) &tokens[i];
         loop->ncols = ncols;
       }
 
@@ -458,7 +493,7 @@ bool cif_file::parse(char*&& p) {
           return false;
         }
 
-        const char * key(tokens[i] + 5);
+        const char* key(tokens[i] + 5);
         current_frame = &current_frame->m_saveframes[key];
         frame_stack.push_back(current_frame);
       } else {
@@ -482,10 +517,8 @@ bool cif_file::parse(char*&& p) {
   return true;
 }
 
-
 #if !defined(_PYMOL_NO_MSGPACKC)
-enum class DataTypes
-{
+enum class DataTypes {
   Int8 = 1,
   Int16 = 2,
   Int32 = 3,
@@ -505,18 +538,19 @@ void decodeAndPushBack(const std::vector<unsigned char>& bytes, std::size_t& i,
   result.push_back(value);
 }
 
-static std::vector<CifArrayElement> byte_array_decode(const std::vector<unsigned char>& bytes, DataTypes dataType)
+static std::vector<CifArrayElement> byte_array_decode(
+    const std::vector<unsigned char>& bytes, DataTypes dataType)
 {
   std::vector<CifArrayElement> result;
   std::unordered_map<DataTypes, std::size_t> dataTypeSize = {
-    {DataTypes::Int8, sizeof(std::int8_t)},
-    {DataTypes::Int16, sizeof(std::int16_t)},
-    {DataTypes::Int32, sizeof(std::int32_t)},
-    {DataTypes::UInt8, sizeof(std::uint8_t)},
-    {DataTypes::UInt16, sizeof(std::uint16_t)},
-    {DataTypes::UInt32, sizeof(std::uint32_t)},
-    {DataTypes::Float32, sizeof(float)},
-    {DataTypes::Float64, sizeof(double)},
+      {DataTypes::Int8, sizeof(std::int8_t)},
+      {DataTypes::Int16, sizeof(std::int16_t)},
+      {DataTypes::Int32, sizeof(std::int32_t)},
+      {DataTypes::UInt8, sizeof(std::uint8_t)},
+      {DataTypes::UInt16, sizeof(std::uint16_t)},
+      {DataTypes::UInt32, sizeof(std::uint32_t)},
+      {DataTypes::Float32, sizeof(float)},
+      {DataTypes::Float64, sizeof(double)},
   };
 
   auto size = dataTypeSize[dataType];
@@ -569,11 +603,13 @@ static std::vector<CifArrayElement> integer_packing_decode(
 
   auto as_int = [isUnsigned, byteCount](auto&& elem) -> std::int32_t {
     if (isUnsigned) {
-      return byteCount == 1 ? static_cast<std::int32_t>(std::get<std::uint8_t>(elem))
-                            : static_cast<std::int32_t>(std::get<std::uint16_t>(elem));
+      return byteCount == 1
+                 ? static_cast<std::int32_t>(std::get<std::uint8_t>(elem))
+                 : static_cast<std::int32_t>(std::get<std::uint16_t>(elem));
     } else {
-      return byteCount == 1 ? static_cast<std::int32_t>(std::get<std::int8_t>(elem))
-                            : static_cast<std::int32_t>(std::get<std::int16_t>(elem));
+      return byteCount == 1
+                 ? static_cast<std::int32_t>(std::get<std::int8_t>(elem))
+                 : static_cast<std::int32_t>(std::get<std::int16_t>(elem));
     }
   };
 
@@ -603,7 +639,8 @@ static std::vector<CifArrayElement> delta_decode(
   auto add_int32_t = [](auto&& a, auto&& b) -> std::int32_t {
     return std::get<std::int32_t>(a) + std::get<std::int32_t>(b);
   };
-  std::inclusive_scan(result.begin(), result.end(), result.begin(), add_int32_t);
+  std::inclusive_scan(
+      result.begin(), result.end(), result.begin(), add_int32_t);
   return result;
 }
 
@@ -690,17 +727,20 @@ static void parse_bcif_decode_kind(const std::string& kind,
   } else if (kind == "FixedPoint") {
     auto factor = dataEncoding["factor"].as<int>();
     auto srcType = dataEncoding["srcType"].as<int>();
-    result = fixed_array_decode(result, factor, static_cast<DataTypes>(srcType));
+    result =
+        fixed_array_decode(result, factor, static_cast<DataTypes>(srcType));
   } else if (kind == "IntervalQuantization") {
     auto min = dataEncoding["min"].as<float>();
     auto max = dataEncoding["max"].as<float>();
     auto numSteps = dataEncoding["numSteps"].as<float>();
     auto srcType = dataEncoding["srcType"].as<int>();
-    result = interval_quant_decode(result, min, max, numSteps, static_cast<DataTypes>(srcType));
+    result = interval_quant_decode(
+        result, min, max, numSteps, static_cast<DataTypes>(srcType));
   } else if (kind == "RunLength") {
     auto srcType = dataEncoding["srcType"].as<int>();
     auto srcSize = dataEncoding["srcSize"].as<int>();
-    result = run_length_decode(result, static_cast<DataTypes>(srcType), srcSize);
+    result =
+        run_length_decode(result, static_cast<DataTypes>(srcType), srcSize);
   } else if (kind == "Delta") {
     auto origin = dataEncoding["origin"].as<int>();
     auto srcType = dataEncoding["srcType"].as<int>();
@@ -711,26 +751,32 @@ static void parse_bcif_decode_kind(const std::string& kind,
     auto isUnsigned = dataEncoding["isUnsigned"].as<bool>();
     result = integer_packing_decode(result, byteCount, srcSize, isUnsigned);
   } else if (kind == "StringArray") {
-    auto indicesEncoding = dataEncoding["dataEncoding"].as<std::vector<std::map<std::string, msgpack::object>>>();
+    auto indicesEncoding =
+        dataEncoding["dataEncoding"]
+            .as<std::vector<std::map<std::string, msgpack::object>>>();
     auto stringData = dataEncoding["stringData"].as<std::string>();
     auto offsets = dataEncoding["offsets"].as<std::vector<unsigned char>>();
-    auto offsetEncoding = dataEncoding["offsetEncoding"].as<std::vector<std::map<std::string, msgpack::object>>>();
-    result = string_array_decode(rawData, indicesEncoding, stringData, offsets, offsetEncoding);
+    auto offsetEncoding =
+        dataEncoding["offsetEncoding"]
+            .as<std::vector<std::map<std::string, msgpack::object>>>();
+    result = string_array_decode(
+        rawData, indicesEncoding, stringData, offsets, offsetEncoding);
   }
 }
 
-static std::vector<CifArrayElement> parse_bcif_decode(const std::vector<unsigned char>& rawData,
+static std::vector<CifArrayElement> parse_bcif_decode(
+    const std::vector<unsigned char>& rawData,
     std::vector<std::map<std::string, msgpack::object>>& dataEncoding)
 {
   std::vector<CifArrayElement> result;
-  for (auto it = std::rbegin(dataEncoding); it != std::rend(dataEncoding); ++it) {
+  for (auto it = std::rbegin(dataEncoding); it != std::rend(dataEncoding);
+       ++it) {
     auto& dataEncode = *it;
     parse_bcif_decode_kind(
         dataEncode["kind"].as<std::string>(), rawData, result, dataEncode);
   }
   return result;
 }
-
 
 bool cif_file::parse_bcif(const char* bytes, std::size_t size)
 {
@@ -745,23 +791,29 @@ bool cif_file::parse_bcif(const char* bytes, std::size_t size)
   for (const auto& block : dataBlocksRaw) {
     auto blockMap = block.as<std::map<std::string, msgpack::object>>();
     auto header = blockMap["header"].as<std::string>();
-    auto categoriesRaw = blockMap["categories"].as<std::vector<msgpack::object>>();
-    auto& categoriesData = m_datablocks[header].m_data.emplace<pymol::cif_detail::bcif_data>();
+    auto categoriesRaw =
+        blockMap["categories"].as<std::vector<msgpack::object>>();
+    auto& categoriesData =
+        m_datablocks[header].m_data.emplace<pymol::cif_detail::bcif_data>();
     for (const auto& category : categoriesRaw) {
       auto categoryMap = category.as<std::map<std::string, msgpack::object>>();
       auto categoryName = categoryMap["name"].as<std::string>();
       std::transform(categoryName.begin(), categoryName.end(),
           categoryName.begin(), ::tolower);
-      auto columnsRaw = categoryMap["columns"].as<std::vector<msgpack::object>>();
+      auto columnsRaw =
+          categoryMap["columns"].as<std::vector<msgpack::object>>();
       auto& columns = categoriesData.m_dict[categoryName];
       for (const auto& column : columnsRaw) {
         auto columnMap = column.as<std::map<std::string, msgpack::object>>();
         auto columnName = columnMap["name"].as<std::string>();
-        std::transform(columnName.begin(), columnName.end(),
-          columnName.begin(), ::tolower);
-        auto dataRaw = columnMap["data"].as<std::map<std::string, msgpack::object>>();
+        std::transform(columnName.begin(), columnName.end(), columnName.begin(),
+            ::tolower);
+        auto dataRaw =
+            columnMap["data"].as<std::map<std::string, msgpack::object>>();
         auto dataData = dataRaw["data"].as<std::vector<unsigned char>>();
-        auto dataEncoding = dataRaw["encoding"].as<std::vector<std::map<std::string, msgpack::object>>>();
+        auto dataEncoding =
+            dataRaw["encoding"]
+                .as<std::vector<std::map<std::string, msgpack::object>>>();
         columns[columnName] = parse_bcif_decode(dataData, dataEncoding);
       }
     }

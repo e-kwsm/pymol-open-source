@@ -14,15 +14,15 @@
 
 #include "MolV3000.h"
 
-#include "MemoryDebug.h"
-#include "Feedback.h"
-#include "Parse.h"
-#include "Vector.h"
-#include "Rep.h"
-#include "Lex.h"
-#include "strcasecmp.h"
-#include "PyMOLGlobals.h"
 #include "AtomInfo.h"
+#include "Feedback.h"
+#include "Lex.h"
+#include "MemoryDebug.h"
+#include "Parse.h"
+#include "PyMOLGlobals.h"
+#include "Rep.h"
+#include "Vector.h"
+#include "strcasecmp.h"
 
 /**
  * Read a MOL/SDF V3000 line into the `out` buffer, stripping the leading
@@ -32,8 +32,8 @@
  *
  * Return false if line doesn't start with "M  V30 ".
  */
-static
-bool MOLV3000ReadLine(const char * &p, std::string &out) {
+static bool MOLV3000ReadLine(const char*& p, std::string& out)
+{
   out.clear();
 
   for (bool continued = true; continued;) {
@@ -46,8 +46,10 @@ bool MOLV3000ReadLine(const char * &p, std::string &out) {
 
     // find end of line
     auto last = next;
-    if (last > p && last[-1] == '\n') --last;
-    if (last > p && last[-1] == '\r') --last;
+    if (last > p && last[-1] == '\n')
+      --last;
+    if (last > p && last[-1] == '\r')
+      --last;
 
     // check for line continuation (hyphen)
     if ((continued = last > p && last[-1] == '-')) {
@@ -66,13 +68,12 @@ bool MOLV3000ReadLine(const char * &p, std::string &out) {
 /**
  * Parse the next keyword=value pair from `p` and advance `p`.
  */
-static
-bool MOLV3000ReadKeyValue(const char *& p,
-    std::string &key,
-    std::string &value)
+static bool MOLV3000ReadKeyValue(
+    const char*& p, std::string& key, std::string& value)
 {
   // skip whitespace
-  while (*p && (*p == ' ' || *p == '\t')) ++p;
+  while (*p && (*p == ' ' || *p == '\t'))
+    ++p;
 
   auto begin = p;
   auto termchars = " \t";
@@ -93,8 +94,10 @@ bool MOLV3000ReadKeyValue(const char *& p,
   }
 
   // parse value
-  while (!strchr(termchars, *p)) ++p;
-  if (*begin == '(' && *p == ')') ++p;
+  while (!strchr(termchars, *p))
+    ++p;
+  if (*begin == '(' && *p == ')')
+    ++p;
   value.assign(begin, p);
 
   return true;
@@ -113,21 +116,17 @@ bool MOLV3000ReadKeyValue(const char *& p,
  * nAtom:  output variable for number of atoms
  * nBond:  output variable for number of bonds
  */
-const char * MOLV3000Parse(PyMOLGlobals * G,
-    const char * buffer,
-    AtomInfoType *& atInfo,
-    BondType     *& bond,
-    float        *& coord,
-    int & nAtom,
-    int & nBond)
+const char* MOLV3000Parse(PyMOLGlobals* G, const char* buffer,
+    AtomInfoType*& atInfo, BondType*& bond, float*& coord, int& nAtom,
+    int& nBond)
 {
   char cc[16]; // buffer for short words like "BEGIN" or "COUNTS"
   bool inside_atom = false;
   bool inside_bond = false;
-  bool inside_any  = false;
+  bool inside_any = false;
   int auto_show = RepGetAutoShowMask(G);
-  const char * error = nullptr;
-  AtomInfoType * ai = nullptr;
+  const char* error = nullptr;
+  AtomInfoType* ai = nullptr;
   std::string line;
   std::string key, value;
 
@@ -154,8 +153,8 @@ const char * MOLV3000Parse(PyMOLGlobals * G,
       int index, p_offset;
       char type[4];
       float xyz[3];
-      auto n = sscanf(p_data, "%d %3s %f %f %f%n %*d%n", &index, type,
-            xyz, xyz + 1, xyz + 2, &p_offset, &p_offset);
+      auto n = sscanf(p_data, "%d %3s %f %f %f%n %*d%n", &index, type, xyz,
+          xyz + 1, xyz + 2, &p_offset, &p_offset);
 
       if (n != 5) {
         error = "failed to parse atom line";
@@ -197,8 +196,8 @@ const char * MOLV3000Parse(PyMOLGlobals * G,
       }
 
       int index, type, atom1, atom2, p_offset;
-      auto n = sscanf(p_data, "%d %d %d %d%n", &index, &type,
-          &atom1, &atom2, &p_offset);
+      auto n = sscanf(
+          p_data, "%d %d %d %d%n", &index, &type, &atom1, &atom2, &p_offset);
 
       if (n != 4) {
         error = "failed to parse bond line";
@@ -237,11 +236,11 @@ const char * MOLV3000Parse(PyMOLGlobals * G,
         error = "COUNTS parsing failed";
         break;
       } else {
-        if(atInfo)
+        if (atInfo)
           VLACheck(atInfo, AtomInfoType, nAtom);
-        if(coord)
+        if (coord)
           VLACheck(coord, float, 3 * nAtom);
-        if(bond)
+        if (bond)
           VLACheck(bond, BondType, nBond);
       }
     } else {
@@ -255,7 +254,7 @@ const char * MOLV3000Parse(PyMOLGlobals * G,
 
   if (error) {
     PRINTFB(G, FB_ObjectMolecule, FB_Errors)
-      " MOL-V3000-Error: %s.\n", error ENDFB(G);
+    " MOL-V3000-Error: %s.\n", error ENDFB(G);
     return nullptr;
   }
 

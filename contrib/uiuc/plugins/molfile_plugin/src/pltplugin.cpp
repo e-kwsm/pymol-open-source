@@ -20,57 +20,57 @@
  *
  ***************************************************************************/
 
-/* 
+/*
  * plt format electron density maps from gOpenMol.
  *
- * More info for format can be found at 
+ * More info for format can be found at
  * <http://www.csc.fi/gopenmol/developers/plt_format.phtml>
- * 
+ *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if defined(_AIX)
 #include <strings.h>
 #endif
 
-#include "molfile_plugin.h"
 #include "endianswap.h"
+#include "molfile_plugin.h"
 
 typedef struct {
-  FILE *fd;
+  FILE* fd;
   int nsets;
   int swap;
-  molfile_volumetric_t *vol;
+  molfile_volumetric_t* vol;
 } plt_t;
 
-
-static void *open_plt_read(const char *filepath, const char *filetype,
-    int *natoms) {
-  FILE *fd;
-  plt_t *plt;
-  int swap=0;
+static void* open_plt_read(
+    const char* filepath, const char* filetype, int* natoms)
+{
+  FILE* fd;
+  plt_t* plt;
+  int swap = 0;
   // File header data:
   int intHeader[5];
   float floatHeader[6];
-  
+
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "pltplugin) Error opening file.\n");
     return NULL;
   }
 
-  // Integer header info: rank (always 3), surface type, z length, y length, 
+  // Integer header info: rank (always 3), surface type, z length, y length,
   // x length.
   fread(intHeader, sizeof(int), 5, fd);
   if (intHeader[0] != 3) {
     // check if the bytes need to be swapped
     swap4_aligned(intHeader, 5);
-    if (intHeader[0] == 3) 
+    if (intHeader[0] == 3)
       swap = 1;
     else {
       fprintf(stderr, "pltplugin) Incorrect header.\n");
@@ -107,7 +107,7 @@ static void *open_plt_read(const char *filepath, const char *filetype,
   plt->vol[0].yaxis[0] = 0;
   plt->vol[0].yaxis[1] = floatHeader[3] - floatHeader[2];
   plt->vol[0].yaxis[2] = 0;
-  
+
   plt->vol[0].zaxis[0] = 0;
   plt->vol[0].zaxis[1] = 0;
   plt->vol[0].zaxis[2] = floatHeader[1] - floatHeader[0];
@@ -121,42 +121,44 @@ static void *open_plt_read(const char *filepath, const char *filetype,
   return plt;
 }
 
-static int read_plt_metadata(void *v, int *nsets, 
-  molfile_volumetric_t **metadata) {
-  plt_t *plt = (plt_t *)v;
-  *nsets = plt->nsets; 
-  *metadata = plt->vol;  
+static int read_plt_metadata(
+    void* v, int* nsets, molfile_volumetric_t** metadata)
+{
+  plt_t* plt = (plt_t*) v;
+  *nsets = plt->nsets;
+  *metadata = plt->vol;
 
   return MOLFILE_SUCCESS;
 }
 
-static int read_plt_data(void *v, int set, float *datablock,
-                         float *colorblock) {
-  plt_t *plt = (plt_t *)v;
+static int read_plt_data(void* v, int set, float* datablock, float* colorblock)
+{
+  plt_t* plt = (plt_t*) v;
   int swap, ndata;
-  FILE *fd = plt->fd;
+  FILE* fd = plt->fd;
 
   swap = plt->swap;
   ndata = plt->vol[0].xsize * plt->vol[0].ysize * plt->vol[0].zsize;
 
   // Read the densities. Order for file is x fast, y medium, z slow
-  if ( fread(datablock, sizeof(float), ndata, fd) != ndata ) {
+  if (fread(datablock, sizeof(float), ndata, fd) != ndata) {
     fprintf(stderr, "pltplugin) Error reading data, not enough values read.\n");
     return MOLFILE_ERROR;
   }
 
-  if (swap) 
+  if (swap)
     swap4_aligned(datablock, ndata);
 
   return MOLFILE_SUCCESS;
 }
 
-static void close_plt_read(void *v) {
-  plt_t *plt = (plt_t *)v;
+static void close_plt_read(void* v)
+{
+  plt_t* plt = (plt_t*) v;
 
   fclose(plt->fd);
   if (plt->vol != NULL)
-    delete [] plt->vol; 
+    delete[] plt->vol;
   delete plt;
 }
 
@@ -165,7 +167,8 @@ static void close_plt_read(void *v) {
  */
 static molfile_plugin_t plugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) {
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -183,10 +186,13 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
-
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}

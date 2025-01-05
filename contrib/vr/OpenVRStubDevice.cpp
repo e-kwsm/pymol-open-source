@@ -37,17 +37,22 @@ SOFTWARE.
 // system headers
 #include <string.h>
 
-namespace vr {
-namespace stub {
+namespace vr
+{
+namespace stub
+{
 
 const Device_t DeviceList_t::devices[] = {{
-  TrackedDeviceClass_HMD, {
-    DeviceProperty_t(Prop_ModelNumber_String, "Stub HMD"),
-    DeviceProperty_t(Prop_SerialNumber_String, "0DD-F00D0000"),
-  },
+    TrackedDeviceClass_HMD,
+    {
+        DeviceProperty_t(Prop_ModelNumber_String, "Stub HMD"),
+        DeviceProperty_t(Prop_SerialNumber_String, "0DD-F00D0000"),
+    },
 }};
 
-unsigned DeviceProperty_t::Get(char* buffer, unsigned bufferSize, ETrackedPropertyError* error) const {
+unsigned DeviceProperty_t::Get(
+    char* buffer, unsigned bufferSize, ETrackedPropertyError* error) const
+{
   // validate prop type
   if (m_type != k_unStringPropertyTag) {
     if (error)
@@ -69,7 +74,8 @@ unsigned DeviceProperty_t::Get(char* buffer, unsigned bufferSize, ETrackedProper
   return size;
 }
 
-DeviceProperty_t const* Device_t::FindProperty(ETrackedDeviceProperty prop) const
+DeviceProperty_t const* Device_t::FindProperty(
+    ETrackedDeviceProperty prop) const
 {
   for (unsigned i = 0; i < MAX_DEVICE_PROPERTIES && props[i].IsValid(); ++i) {
     if (props[i].Is(prop)) {
@@ -81,9 +87,11 @@ DeviceProperty_t const* Device_t::FindProperty(ETrackedDeviceProperty prop) cons
 
 Device_t const* DeviceList_t::GetDevice(unsigned index)
 {
-  return index >= MAX_DEVICES || devices[index].deviceClass == TrackedDeviceClass_Invalid ? nullptr : &devices[index];
+  return index >= MAX_DEVICES ||
+                 devices[index].deviceClass == TrackedDeviceClass_Invalid
+             ? nullptr
+             : &devices[index];
 }
 
-} // stub
-} // vr 
-
+} // namespace stub
+} // namespace vr
