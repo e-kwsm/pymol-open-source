@@ -56,7 +56,8 @@ public:
 
   /**
    * Takes ownership of a legacy VLA pointer
-   * @param ptr Pointer to a legacy VLA which was constructed with VLAlloc (or a related function)
+   * @param ptr Pointer to a legacy VLA which was constructed with VLAlloc (or a
+   * related function)
    */
   template <typename U> friend vla<U> vla_take_ownership(U* ptr);
 
@@ -67,7 +68,8 @@ public:
   explicit vla(std::size_t size) { m_vla = VLACalloc(T, size); }
 
   // constructor with initializer list
-  // Empty list constructs a nullptr VLA to be consistent with default constructor
+  // Empty list constructs a nullptr VLA to be consistent with default
+  // constructor
   vla(std::initializer_list<T> init)
   {
     if (init.size() == 0)
@@ -117,7 +119,8 @@ public:
   /// legacy pointer arithmetic
   template <typename S> T* operator+(S i) { return m_vla + i; }
 
-  // note: VS2015 32bit fails with "overloads have similar conversions" if this is not a template
+  // note: VS2015 32bit fails with "overloads have similar conversions" if this
+  // is not a template
   /**
    * Returns a reference to the element at specified location @a i. No bounds
    * checking is performed.

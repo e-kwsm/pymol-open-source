@@ -1,47 +1,45 @@
 
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* Copyright (c) Schrodinger, LLC. 
+C* Copyright (c) Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
 #ifndef _H_ListMacros
 #define _H_ListMacros
 
-
 /* simplest possible single-linked list */
 
-#include"MemoryDebug.h"
-#include"Err.h"
-#include"Result.h"
+#include "Err.h"
+#include "MemoryDebug.h"
+#include "Result.h"
 
 #define ListInit(List) List = nullptr
 
-#define ListAppend(List,Elem,Link,ElemType) \
-{ \
-  ElemType *current = (List); \
-  ElemType *previous = nullptr; \
-  while(current) \
-	 { \
-		previous = current; \
-		current = current->Link; \
-	 } \
-  if(previous) \
-	 previous->Link = Elem; \
-  else \
-	 (List) = Elem; \
-  (Elem)->Link = nullptr; \
-}
+#define ListAppend(List, Elem, Link, ElemType)                                 \
+  {                                                                            \
+    ElemType* current = (List);                                                \
+    ElemType* previous = nullptr;                                              \
+    while (current) {                                                          \
+      previous = current;                                                      \
+      current = current->Link;                                                 \
+    }                                                                          \
+    if (previous)                                                              \
+      previous->Link = Elem;                                                   \
+    else                                                                       \
+      (List) = Elem;                                                           \
+    (Elem)->Link = nullptr;                                                    \
+  }
 
 /**
  * @brief appends element to list
@@ -50,58 +48,55 @@ Z* -------------------------------------------------------------------
  * @tparam ElemType type of the element
  */
 
-template<typename ElemType>
-void ListAppendT(ElemType*& list, ElemType* ele){
+template <typename ElemType> void ListAppendT(ElemType*& list, ElemType* ele)
+{
   ElemType* current = list;
   ElemType* previous = nullptr;
-  while(current){
+  while (current) {
     previous = current;
     current = current->next;
   }
-  if(previous){
+  if (previous) {
     previous->next = ele;
-  } else{
+  } else {
     list = ele;
   }
   ele->next = nullptr;
 }
 
-#define ListFree(List,Link,ElemType) \
-{ \
-  ElemType *current = List; \
-  ElemType *previous = nullptr; \
-  while(current) \
-	 { \
-      if(previous) \
-		  mfree(previous); \
-		previous = current; \
-		current = current->Link; \
-	 } \
-  if(previous) \
-	 mfree(previous); \
-  (List) = nullptr; \
-}
+#define ListFree(List, Link, ElemType)                                         \
+  {                                                                            \
+    ElemType* current = List;                                                  \
+    ElemType* previous = nullptr;                                              \
+    while (current) {                                                          \
+      if (previous)                                                            \
+        mfree(previous);                                                       \
+      previous = current;                                                      \
+      current = current->Link;                                                 \
+    }                                                                          \
+    if (previous)                                                              \
+      mfree(previous);                                                         \
+    (List) = nullptr;                                                          \
+  }
 
-#define ListDetach(List,Elem,Link,ElemType) \
-{ \
-  ElemType *current = List; \
-  ElemType *previous = nullptr; \
-  while(current) \
-	 { \
-		if(current == (Elem)) \
-		  break; \
-		previous = current; \
-		current = current->Link; \
-	 } \
-  if(current) \
-	 { \
-		if(previous) \
-		  previous->Link = current->Link; \
-        else \
-          (List) = current->Link; \
-	  (Elem)->Link = nullptr; \
-	 } \
-}
+#define ListDetach(List, Elem, Link, ElemType)                                 \
+  {                                                                            \
+    ElemType* current = List;                                                  \
+    ElemType* previous = nullptr;                                              \
+    while (current) {                                                          \
+      if (current == (Elem))                                                   \
+        break;                                                                 \
+      previous = current;                                                      \
+      current = current->Link;                                                 \
+    }                                                                          \
+    if (current) {                                                             \
+      if (previous)                                                            \
+        previous->Link = current->Link;                                        \
+      else                                                                     \
+        (List) = current->Link;                                                \
+      (Elem)->Link = nullptr;                                                  \
+    }                                                                          \
+  }
 
 /**
  * @brief removes element from list
@@ -112,22 +107,22 @@ void ListAppendT(ElemType*& list, ElemType* ele){
  * @note Removed element should be same as ele input.
  */
 
-template<typename ElemType>
-ElemType* ListDetachT(ElemType*& list, ElemType* ele){
+template <typename ElemType>
+ElemType* ListDetachT(ElemType*& list, ElemType* ele)
+{
   ElemType* current = list;
   ElemType* previous = nullptr;
-  while(current){
-    if(current == ele){
+  while (current) {
+    if (current == ele) {
       break;
     }
     previous = current;
     current = current->next;
   }
-  if(current){
-    if(previous){
+  if (current) {
+    if (previous) {
       previous->next = current->next;
-    }
-    else{
+    } else {
       list = current->next;
     }
     ele->next = nullptr;
@@ -135,38 +130,39 @@ ElemType* ListDetachT(ElemType*& list, ElemType* ele){
   return ele;
 }
 
-#define ListDelete(List,Elem,Link,ElemType) \
-{ \
-   ElemType *copy = (Elem); \
-   ListDetach(List,copy,Link,ElemType); \
-   mfree(copy); \
-}
+#define ListDelete(List, Elem, Link, ElemType)                                 \
+  {                                                                            \
+    ElemType* copy = (Elem);                                                   \
+    ListDetach(List, copy, Link, ElemType);                                    \
+    mfree(copy);                                                               \
+  }
 
-#define ListIterate(List,Counter,Link) \
-   ( (Counter) = ((List) ? (((Counter) ? (Counter)->Link : (List))) : nullptr))
-
+#define ListIterate(List, Counter, Link)                                       \
+  ((Counter) = ((List) ? (((Counter) ? (Counter)->Link : (List))) : nullptr))
 
 /* Elem handling routines */
 
-#define ListElemAlloc(G,Elem,ElemType)		\
-{						\
-    if(!(Elem))					\
-      {							\
-	(Elem) = pymol::malloc<ElemType>(1);		\
-	ErrChkPtr(G,Elem);				\
-      }							\
-}
+#define ListElemAlloc(G, Elem, ElemType)                                       \
+  {                                                                            \
+    if (!(Elem)) {                                                             \
+      (Elem) = pymol::malloc<ElemType>(1);                                     \
+      ErrChkPtr(G, Elem);                                                      \
+    }                                                                          \
+  }
 
-#define ListElemCalloc(G,Elem,ElemType) \
-{						\
-  if(!(Elem))						  \
-    {							  \
-      (Elem) = pymol::calloc<ElemType>(1);		  \
-      ErrChkPtr(G,Elem);				  \
-    }							  \
-}
+#define ListElemCalloc(G, Elem, ElemType)                                      \
+  {                                                                            \
+    if (!(Elem)) {                                                             \
+      (Elem) = pymol::calloc<ElemType>(1);                                     \
+      ErrChkPtr(G, Elem);                                                      \
+    }                                                                          \
+  }
 
-#define ListElemFree(Elem) { mfree(Elem); Elem = nullptr; }
+#define ListElemFree(Elem)                                                     \
+  {                                                                            \
+    mfree(Elem);                                                               \
+    Elem = nullptr;                                                            \
+  }
 
 /**
  * Retrives position of element in list
@@ -174,7 +170,7 @@ ElemType* ListDetachT(ElemType*& list, ElemType* ele){
  * @return position in list
  */
 
-template<typename ElemType>
+template <typename ElemType>
 pymol::Result<std::size_t> ListGetPosition(ElemType*& list, ElemType* ele)
 {
   ElemType* current = list;
@@ -193,7 +189,7 @@ pymol::Result<std::size_t> ListGetPosition(ElemType*& list, ElemType* ele)
  * @param pos position in list
  */
 
-template<typename ElemType>
+template <typename ElemType>
 pymol::Result<> ListInsertAt(ElemType*& list, ElemType* ele, std::size_t pos)
 {
   ElemType* current = list;

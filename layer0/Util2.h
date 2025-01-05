@@ -11,34 +11,35 @@
 #include <string>
 #include <vector>
 
-#include <string.h>
 #include <sstream>
+#include <string.h>
 
 #include "pymol/type_traits.h"
 #include "pymol/zstring_view.h"
 
-std::vector<std::string> strsplit(const std::string &s, char delim=0);
+std::vector<std::string> strsplit(const std::string& s, char delim = 0);
 
-bool cstrlessnat(const char * a, const char * b);
+bool cstrlessnat(const char* a, const char* b);
 bool strlessnat(const std::string& a, const std::string& b);
 
 /**
  * C string comparison class
  */
 struct cstrless_t {
-  bool operator()(const char * a, const char * b) const {
+  bool operator()(const char* a, const char* b) const
+  {
     return strcmp(a, b) < 0;
   }
 };
 
-bool p_strstartswith(const char * s, const char * prefix);
-bool p_strcasestartswith(const char * s, const char * prefix);
+bool p_strstartswith(const char* s, const char* prefix);
+bool p_strcasestartswith(const char* s, const char* prefix);
 
 namespace pymol
 {
 namespace join_to_string_detail
 {
-inline void join_to_string_impl(std::ostringstream&){};
+inline void join_to_string_impl(std::ostringstream&) {};
 
 template <typename T, typename... OtherTs>
 void join_to_string_impl(std::ostringstream& stream, T&& t, OtherTs&&... ts)
@@ -153,10 +154,7 @@ template <typename T> struct cache_value {
 
   cache_value(const cache_value&) {}
   cache_value& operator=(const cache_value&) { return *this; }
-  cache_value(cache_value&& other)
-  {
-    std::swap(value, other.value);
-  }
+  cache_value(cache_value&& other) { std::swap(value, other.value); }
   cache_value& operator=(cache_value&& other)
   {
     std::swap(value, other.value);

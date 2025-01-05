@@ -103,7 +103,8 @@ private:
   pointer m_list{};
 };
 
-template <typename T> ListAdapter<T> make_list_adapter(T *list) {
+template <typename T> ListAdapter<T> make_list_adapter(T* list)
+{
   return ListAdapter<T>(list);
 }
 

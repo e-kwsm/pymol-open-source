@@ -1,7 +1,7 @@
 #pragma once
 
-#include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
+#include <glm/vec3.hpp>
 
 constexpr std::size_t cSceneViewSize = 25u;
 using SceneViewType = float[cSceneViewSize];
@@ -11,10 +11,7 @@ struct SceneView {
     float m_front;
     float m_back;
   };
-  enum class ProjectionMode {
-    Perspective,
-    Orthographics
-  };
+  enum class ProjectionMode { Perspective, Orthographics };
 
   SceneView() = default;
   SceneView(SceneViewType view);

@@ -1,17 +1,17 @@
 
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* Copyright (c) Schrodinger, LLC. 
+C* Copyright (c) Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
@@ -34,12 +34,13 @@ struct CMatch {
   int n_pair{};
 };
 
-CMatch *MatchNew(PyMOLGlobals * G, unsigned int na, unsigned int nb, int dist_mats);
-int MatchResidueToCode(CMatch * I, int *vla, int n);
-int MatchMatrixFromFile(CMatch * I, const char *fname, int quiet);
-int MatchPreScore(CMatch * I, int *vla1, int n1, int *vla2, int n2, int quiet);
-void MatchFree(CMatch * I);
-int MatchAlign(CMatch * I, float gap_penalty, float ext_penalty,
-               int max_gap, int max_skip, int quiet, int window, float ante);
+CMatch* MatchNew(
+    PyMOLGlobals* G, unsigned int na, unsigned int nb, int dist_mats);
+int MatchResidueToCode(CMatch* I, int* vla, int n);
+int MatchMatrixFromFile(CMatch* I, const char* fname, int quiet);
+int MatchPreScore(CMatch* I, int* vla1, int n1, int* vla2, int n2, int quiet);
+void MatchFree(CMatch* I);
+int MatchAlign(CMatch* I, float gap_penalty, float ext_penalty, int max_gap,
+    int max_skip, int quiet, int window, float ante);
 
 #endif

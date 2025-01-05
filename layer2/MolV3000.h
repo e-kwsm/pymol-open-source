@@ -8,11 +8,6 @@ struct PyMOLGlobals;
 struct AtomInfoType;
 struct BondType;
 
-const char * MOLV3000Parse(PyMOLGlobals * G,
-    const char * buffer,
-    AtomInfoType *& atInfo,
-    BondType     *& bond,
-    float        *& coord,
-    int & nAtom,
-    int & nBond)
-  ;
+const char* MOLV3000Parse(PyMOLGlobals* G, const char* buffer,
+    AtomInfoType*& atInfo, BondType*& bond, float*& coord, int& nAtom,
+    int& nBond);

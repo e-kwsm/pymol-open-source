@@ -1,19 +1,20 @@
 #pragma once
 
-#include <iostream>
-#include <array>
-#include <vector>
-#include <functional>
-#include <cstring>
-#include <string>
-#include <cmath>
-#include "os_python.h"
 #include "PConv.h"
-#include "pymol/type_traits.h"
+#include "os_python.h"
 #include "pymol/algorithm.h"
+#include "pymol/type_traits.h"
+#include <array>
 #include <catch2/catch.hpp>
+#include <cmath>
+#include <cstring>
+#include <functional>
+#include <iostream>
+#include <string>
+#include <vector>
 
-namespace pymol {
+namespace pymol
+{
 
 /**
  * Basic PyMOL Instance & Globals for C-testing purposes.
@@ -32,16 +33,19 @@ public:
    * @return PyMOLGlobals pointer
    */
   PyMOLGlobals* G() noexcept;
+
 private:
   CPyMOL* m_Inst;
   PyMOLGlobals* m_G;
 };
 
-namespace test {
+namespace test
+{
 
 // Checks whether obj is zero'd out (Struct of all PoD Types without non-default
 // values are 0)
-template <typename T> static bool isStructZero(const T &obj) {
+template <typename T> static bool isStructZero(const T& obj)
+{
   const auto size = sizeof(T);
   std::array<char, size> buffer{};
   return std::memcmp(buffer.data(), &obj, size) == 0;
@@ -49,7 +53,8 @@ template <typename T> static bool isStructZero(const T &obj) {
 
 // Checks whether array arr is zeroed
 template <typename T>
-static bool isArrayZero(const T *arr, const std::size_t len) {
+static bool isArrayZero(const T* arr, const std::size_t len)
+{
   auto bytelen = len * sizeof(T);
   std::vector<char> buffer(bytelen, 0);
   return std::memcmp(buffer.data(), arr, bytelen) == 0;
@@ -57,7 +62,8 @@ static bool isArrayZero(const T *arr, const std::size_t len) {
 
 // Checks whether arrays are equal
 template <typename T>
-static bool isArrayEqual(const T *arr1, const T *arr2, const std::size_t len) {
+static bool isArrayEqual(const T* arr1, const T* arr2, const std::size_t len)
+{
   return std::equal(arr1, arr1 + len, arr2);
 }
 
@@ -68,30 +74,30 @@ template <typename T> static bool isRegular()
          std::is_copy_constructible<T>::value &&
          std::is_copy_assignable<T>::value &&
          std::is_move_constructible<T>::value &&
-         std::is_move_assignable<T>::value &&
-         std::is_destructible<T>::value;
-         //std::is_nothrow_swappable<T>::value; C++17
+         std::is_move_assignable<T>::value && std::is_destructible<T>::value;
+  // std::is_nothrow_swappable<T>::value; C++17
 }
 
 // Checks whether ptr is equal to nullptr
-template <typename T> static bool isNullptr(const T *ptr) {
+template <typename T> static bool isNullptr(const T* ptr)
+{
   return ptr == nullptr;
 }
 
 class TmpFILE
 {
   std::string tmpFilename;
+
 public:
   TmpFILE();
   TmpFILE(const TmpFILE&) = delete;
   TmpFILE& operator=(const TmpFILE&) = delete;
   TmpFILE(TmpFILE&&) = default;
   TmpFILE& operator=(TmpFILE&&) = default;
-  ~TmpFILE() {std::remove(tmpFilename.c_str()); }
+  ~TmpFILE() { std::remove(tmpFilename.c_str()); }
   const char* getFilename() const { return tmpFilename.c_str(); }
   const std::string& getFilenameStr() const { return tmpFilename; }
 };
 
 }; // namespace test
 }; // namespace pymol
-

@@ -1,17 +1,17 @@
 
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* Copyright (c) Schrodinger, LLC. 
+C* Copyright (c) Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
@@ -25,7 +25,6 @@ Z* -------------------------------------------------------------------
 #undef _FORTIFY_SOURCE
 #endif
 
-
 /* BEGIN PROPRIETARY CODE SEGMENT (see disclaimer in "os_proprietary.h") */
 
 #ifdef WIN32
@@ -33,7 +32,6 @@ Z* -------------------------------------------------------------------
 #else
 #define PATH_SEP "/"
 #endif
-
 
 /* commercial product */
 
@@ -46,7 +44,6 @@ Z* -------------------------------------------------------------------
 #endif
 #endif
 
-
 /* collaboration product (placarded) */
 
 #ifdef PYMOL_COLL
@@ -57,7 +54,6 @@ Z* -------------------------------------------------------------------
 #define _PYMOL_IP_EXTRAS
 #endif
 #endif
-
 
 /* educational product (placarded) */
 
@@ -70,7 +66,6 @@ Z* -------------------------------------------------------------------
 #endif
 #endif
 
-
 /* evaluation product (placarded) */
 
 #ifdef PYMOL_EVAL
@@ -79,27 +74,26 @@ Z* -------------------------------------------------------------------
 #endif
 #endif
 
-
 /* END PROPRIETARY CODE SEGMENT */
 
 #include <stddef.h>
 
 #if defined(_MSC_VER)
 // conversion from '...' to '...', possible loss of data
-#pragma warning (disable:4244)
+#pragma warning(disable : 4244)
 
 // conversion from 'size_t' to '...', possible loss of data
-#pragma warning (disable:4267)
+#pragma warning(disable : 4267)
 
 // truncation from 'double' to 'float'
-#pragma warning (disable:4305)
+#pragma warning(disable : 4305)
 
 // forcing value to bool (performance warning)
-#pragma warning (disable:4800)
+#pragma warning(disable : 4800)
 
 // '_snprintf', 'sscanf', 'sprintf', 'strcpy', 'strncpy': This function or
 // variable may be unsafe. To disable deprecation, use _CRT_SECURE_NO_WARNINGS.
-#pragma warning (disable:4996)
+#pragma warning(disable : 4996)
 
 // TODO: remove, use std::snprintf instead (C++11)
 #if !defined(snprintf) && (_MSC_VER < 1900)
@@ -110,6 +104,11 @@ Z* -------------------------------------------------------------------
 #include "ov_types.h"
 
 // alternative to std::swap if references are not allowed (e.g. bit fields)
-#define SWAP_NOREF(a, b) {auto _t=(a);(a)=(b);(b)=_t;}
+#define SWAP_NOREF(a, b)                                                       \
+  {                                                                            \
+    auto _t = (a);                                                             \
+    (a) = (b);                                                                 \
+    (b) = _t;                                                                  \
+  }
 
 #endif

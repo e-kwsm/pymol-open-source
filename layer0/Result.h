@@ -73,8 +73,7 @@ private:
  * @param ts collection of printable values to be joined
  * into an error message
  */
-template<typename... PrintableTs>
-Error make_error(PrintableTs&&... ts)
+template <typename... PrintableTs> Error make_error(PrintableTs&&... ts)
 {
   return Error(join_to_string(std::forward<PrintableTs>(ts)...));
 }
@@ -83,7 +82,7 @@ Error make_error(PrintableTs&&... ts)
  * Class that expresses the expected result of a function
  */
 
-template <typename ResultT=Void> class Result
+template <typename ResultT = Void> class Result
 {
 
 public:
@@ -96,7 +95,10 @@ public:
    * param r result returned from function with a type convertible to ResultT
    */
 
-  Result(type r) : m_result(std::move(r)) {}
+  Result(type r)
+      : m_result(std::move(r))
+  {
+  }
 
   /**
    * Constructor alternative that takes in pymol::Error. Value of expected type
@@ -104,7 +106,11 @@ public:
    * @param e error object to express why value should not be used
    */
 
-  Result(Error e) : m_error{std::move(e)}, m_valid{false} {}
+  Result(Error e)
+      : m_error{std::move(e)}
+      , m_valid{false}
+  {
+  }
 
   /**
    * Construct from error code.
@@ -178,13 +184,13 @@ public:
    * Const reference to the expected object. Behavior is undefined if this
    * instance is in error state.
    */
-  const ResultT& operator*() const &
+  const ResultT& operator*() const&
   {
     assert(m_valid);
     return m_result;
   }
 
-  const ResultT&& operator*() const &&
+  const ResultT&& operator*() const&&
   {
     assert(m_valid);
     return std::move(m_result);

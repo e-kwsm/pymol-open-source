@@ -82,4 +82,3 @@ public:
 
   void activateRTAsTexture(std::size_t idx, GLuint textureUnit) override;
 };
-

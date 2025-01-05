@@ -6,4 +6,4 @@
 
 struct ObjectMolecule;
 
-const char * getMOL2Type(ObjectMolecule * obj, int atm);
+const char* getMOL2Type(ObjectMolecule* obj, int atm);
