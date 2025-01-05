@@ -322,7 +322,7 @@ static void *open_xbgf_write(const char *filename, const char *filetype,
   FILE *fd;
   xbgfdata *data;
 
-  if ((fd = fopen(filename, "w")) == nullptr) { 
+  if ((fd = fopen(filename, "w")) == nullptr) {
     printf("xbgfplugin) Error, unable to open xbgf file %s for writing\n",
             filename);
     return nullptr;
@@ -658,7 +658,7 @@ static void close_xbgf_read(void *v) {
 
     if (bgf->meta->remarks != nullptr)
       free(bgf->meta->remarks);
-    if (bgf->meta != nullptr) 
+    if (bgf->meta != nullptr)
       free(bgf->meta);
     free(bgf);
   }

@@ -439,7 +439,7 @@ static int read_cube_timestep(void *v, int natoms, molfile_timestep_t *ts) {
                     " in file '%s' for atom '%d'\n",cube->file_name,i+1);
       return MOLFILE_ERROR;
     } else if (j>=3) {
-      if (ts != nullptr) { 
+      if (ts != nullptr) {
         // Only save coords if we're given a timestep pointer, 
         // otherwise assume that VMD wants us to skip past it.
         
@@ -463,7 +463,7 @@ static int read_cube_timestep(void *v, int natoms, molfile_timestep_t *ts) {
     }
   }
   // set unitcell dimensions from cached data.
-  if (ts != nullptr) { 
+  if (ts != nullptr) {
       ts->A = cube->box.A;
       ts->B = cube->box.B;
       ts->C = cube->box.C;

@@ -64,7 +64,7 @@ static char *phigets(char *s, int n, FILE *stream) {
 
   if (feof(stream)) {
     fprintf(stderr, "phiplugin) Unexpected end-of-file.\n");
-    returnVal = nullptr; 
+    returnVal = nullptr;
   }
   else if (ferror(stream)) {
     fprintf(stderr, "phiplugin) Error reading file.\n");

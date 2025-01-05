@@ -146,10 +146,10 @@ static void *open_uhbd_read(const char *filepath, const char *filetype,
     rewind(fd);
     // Read the header
     if (uhbdgets(inbuf, LINESIZE, fd, 
-        "uhbdplugin) error while skipping header lines\n") == nullptr) 
+        "uhbdplugin) error while skipping header lines\n") == nullptr)
       return nullptr;
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while skipping header lines\n") == nullptr) 
+        "uhbdplugin) error while skipping header lines\n") == nullptr)
       return nullptr;
   
     /* get grid dimensions, spacing and origin */
@@ -162,10 +162,10 @@ static void *open_uhbd_read(const char *filepath, const char *filetype,
       return nullptr;
     }
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while skipping header lines\n") == nullptr) 
+        "uhbdplugin) error while skipping header lines\n") == nullptr)
       return nullptr;
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while skipping header lines\n") == nullptr) 
+        "uhbdplugin) error while skipping header lines\n") == nullptr)
       return nullptr;
   }
 

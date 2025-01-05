@@ -143,7 +143,7 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
 
   /* skip comments */
   do {
-    if (vtkgets(inbuf, LINESIZE, fd) == nullptr) 
+    if (vtkgets(inbuf, LINESIZE, fd) == nullptr)
       return nullptr;
   } while (inbuf[0] == '#');
 

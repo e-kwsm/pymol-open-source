@@ -332,7 +332,7 @@ static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data,
 
         if (retval > 0) {
           // Read each bond in the line
-          for ( curr = bond_records; (next = strchr(curr, ' ')) != nullptr; 
+          for ( curr = bond_records; (next = strchr(curr, ' ')) != nullptr;
                 curr = next+1 ) {
             *next = '\0';
             tmp_to = hash_lookup(&hasharray[mol], curr);

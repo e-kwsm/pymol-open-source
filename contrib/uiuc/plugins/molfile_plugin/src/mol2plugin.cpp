@@ -255,7 +255,7 @@ static int read_mol2_bonds_aux(void *v, int *nbonds, int **fromptr, int **toptr,
     *nbonds = 0;
     *fromptr = nullptr;
     *toptr = nullptr;
-    *bondorderptr = nullptr; 
+    *bondorderptr = nullptr;
   }
     
   rewind(mol2->file);

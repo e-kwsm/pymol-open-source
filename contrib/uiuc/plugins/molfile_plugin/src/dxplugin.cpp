@@ -133,7 +133,7 @@ static void *open_dx_read(const char *filepath, const char *filetype,
 
   /* skip comments */
   do {
-    if (dxgets(inbuf, LINESIZE, fd) == nullptr) 
+    if (dxgets(inbuf, LINESIZE, fd) == nullptr)
       return nullptr;
   } while (inbuf[0] == '#');
 
@@ -179,7 +179,7 @@ static void *open_dx_read(const char *filepath, const char *filetype,
 
   /* skip the next line of the header (described at the beginning of
    * the code), which aren't utilized by APBS-produced DX files.  */
-  if (dxgets(inbuf, LINESIZE, fd) == nullptr) 
+  if (dxgets(inbuf, LINESIZE, fd) == nullptr)
     return nullptr;
   /* The next line tells us whether to expect ascii or binary format.
    * We scan for the word 'binary' somewhere in the line, and if it's found

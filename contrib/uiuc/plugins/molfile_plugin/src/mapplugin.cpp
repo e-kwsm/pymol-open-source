@@ -85,21 +85,21 @@ static void *open_map_read(const char *filepath, const char *filetype,
   }
 
   /* Skip the header */
-  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr)
     return nullptr;
-  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr)
     return nullptr;
-  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr)
     return nullptr;
 
   /* Space between grid points */
-  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr)
     return nullptr;
   if (sscanf(inbuf, "SPACING %f", &spacing) != 1)
     return nullptr;
 
   /* Grid size in grid units */
-  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr)
     return nullptr;
   if (sscanf(inbuf, "NELEMENTS %d %d %d", &xsize, &ysize, &zsize) != 3) {
     fprintf(stderr, "mapplugin) Cannot read NELEMENTS.\n");
@@ -112,7 +112,7 @@ static void *open_map_read(const char *filepath, const char *filetype,
   zsize++;
 
   /* Center of the cell */
-  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr)
     return nullptr;
   if (sscanf(inbuf, "CENTER %f %f %f", &midX, &midY, &midZ) != 3)
     return nullptr;

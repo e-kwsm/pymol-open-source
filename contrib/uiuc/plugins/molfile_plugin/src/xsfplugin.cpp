@@ -700,7 +700,7 @@ static int read_xsf_timestep(void *v, int natoms, molfile_timestep_t *ts) {
                     xsf->file_name, i+1);
             return MOLFILE_ERROR;
           } else if (j>=3) {
-            if (ts != nullptr) { 
+            if (ts != nullptr) {
               // Only save coords if we're given a timestep pointer, 
               // otherwise assume that VMD wants us to skip past it.
               float xf, yf, zf;
@@ -777,7 +777,7 @@ static int read_xsf_timestep(void *v, int natoms, molfile_timestep_t *ts) {
           }
         }
         // (re-)set unitcell dimensions
-        if (ts != nullptr) { 
+        if (ts != nullptr) {
           ts->A = xsf->box.A;
           ts->B = xsf->box.B;
           ts->C = xsf->box.C;

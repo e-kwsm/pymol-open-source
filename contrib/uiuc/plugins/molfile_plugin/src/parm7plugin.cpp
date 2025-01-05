@@ -44,7 +44,7 @@ static void *open_parm7_read(const char *filename, const char *,int *natoms) {
   parm7struct *prm = read_parm7_header(fd);
   if (!prm) {
     close_parm7_file(fd, popn);
-    return nullptr; 
+    return nullptr;
   }
 
   *natoms = prm->Natom;

@@ -112,7 +112,7 @@ static void *open_spider_read(const char *filepath, const char *filetype,
   // read SPIDER file header
   if (fread(&h.cbuf, 1024, 1, fd) < 1) {
     printf("spiderplugin) failed to read file header\n");
-    return nullptr; 
+    return nullptr;
   } 
 
   // perform sanity checks on header values to see if we 

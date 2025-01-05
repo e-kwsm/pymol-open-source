@@ -47,7 +47,7 @@ static void *open_parm_read(const char *filename, const char *,
   if (rp->readparm(parm) != 0) {
     delete rp;
     // XXX should we call close_parm_file???
-    return nullptr; 
+    return nullptr;
   }
   *natoms = rp->get_parm_natoms();
   
