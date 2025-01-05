@@ -3,7 +3,7 @@
 
 OVContext *OVContext_New(void)
 {
-  OVContext *I = NULL;
+  OVContext *I = nullptr;
   OVHeap *heap = (OVHeap*) OVHeap_New();
   if(heap) {
     I = OVHeap_ALLOC(heap, OVContext);
@@ -22,7 +22,7 @@ void OVContext_Del(OVContext * I)
     OVHeap_Free(heap, I);
     OVHeap_Del(heap);
     if(0) {
-      heap = (OVHeap *) 0;      /* suppress warning message */
+      heap = (OVHeap *) nullptr;      /* suppress warning message */
     }
   }
 }

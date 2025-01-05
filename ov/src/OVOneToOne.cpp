@@ -348,7 +348,7 @@ OVstatus OVOneToOne_DelReverse(OVOneToOne * up, ov_word reverse_value)
       if(!rev) {
         return_OVstatus_NOT_FOUND;
       } else {
-        up_element *rev_elem = NULL;
+        up_element *rev_elem = nullptr;
         up_element *elem = up->elem;
         ov_word rev_last = 0;
 
@@ -365,7 +365,7 @@ OVstatus OVOneToOne_DelReverse(OVOneToOne * up, ov_word reverse_value)
           ov_word fwd_hash = HASH(rev_fwd_val, mask);
           ov_word fwd = up->forward[fwd_hash];
           ov_word fwd_last = 0;
-          up_element *fwd_elem = NULL;
+          up_element *fwd_elem = nullptr;
 
           while(fwd) {
             fwd_elem = elem + (fwd - 1);
@@ -418,7 +418,7 @@ OVstatus OVOneToOne_DelForward(OVOneToOne * up, ov_word forward_value)
       if(!fwd) {
         return_OVstatus_NOT_FOUND;
       } else {
-        up_element *fwd_elem = NULL;
+        up_element *fwd_elem = nullptr;
         up_element *elem = up->elem;
         ov_word fwd_last = 0;
 
@@ -435,7 +435,7 @@ OVstatus OVOneToOne_DelForward(OVOneToOne * up, ov_word forward_value)
           ov_word rev_hash = HASH(fwd_rev_val, mask);
           ov_word rev = up->reverse[rev_hash];
           ov_word rev_last = 0;
-          up_element *rev_elem = NULL;
+          up_element *rev_elem = nullptr;
 
           while(rev) {
             rev_elem = elem + (rev - 1);
@@ -531,8 +531,8 @@ OVstatus OVOneToOne_Set(OVOneToOne * up, ov_word forward_value, ov_word reverse_
     ov_word mask = up->mask;
     ov_word fwd_hash = HASH(forward_value, mask);
     ov_word rev_hash = HASH(reverse_value, mask);
-    up_element *fwd_elem = NULL;
-    up_element *rev_elem = NULL;
+    up_element *fwd_elem = nullptr;
+    up_element *rev_elem = nullptr;
     ov_word fwd;
     ov_word rev;
     if(!mask) {

@@ -33,7 +33,7 @@ ov_uword OVLexicon_GetNActive(OVLexicon * uk)
 
 OVLexicon *OVLexicon_New(OVHeap * heap)
 {
-  OVLexicon *I = NULL;
+  OVLexicon *I = nullptr;
   if(heap) {
     I = OVHeap_ALLOC(heap, OVLexicon);
     if(I) {
@@ -144,7 +144,7 @@ OVstatus OVLexicon_Pack(OVLexicon * uk)
     } else {                    /* otherwise, pack the string fields, and track the free entries */
       OVstatus status;
       ov_char8 *old_data = uk->data;
-      uk->data = NULL;
+      uk->data = nullptr;
 
       if(OVreturn_IS_ERROR(status = OVLexicon_CheckStorage(uk, uk->n_entry, new_size))) {
         uk->data = old_data;
@@ -381,5 +381,5 @@ ov_char8 *OVLexicon_FetchCString(OVLexicon * uk, ov_word id)
 {
   if(id <= (ov_word) uk->n_entry)
     return uk->data + uk->entry[id].offset;
-  return NULL;
+  return nullptr;
 }

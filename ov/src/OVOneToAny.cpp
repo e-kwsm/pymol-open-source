@@ -290,7 +290,7 @@ OVstatus OVOneToAny_DelKey(OVOneToAny * up, ov_word forward_value)
       if(!fwd) {
         return_OVstatus_NOT_FOUND;
       } else {
-        up_element *fwd_elem = NULL;
+        up_element *fwd_elem = nullptr;
         up_element *elem = up->elem;
         ov_word fwd_last = 0;
 
@@ -370,8 +370,8 @@ OVstatus OVOneToAny_SetKey(OVOneToAny * up, ov_word forward_value, ov_word rever
   } else {
     ov_word mask = up->mask;
     ov_word fwd_hash = HASH(forward_value, mask);
-    up_element *fwd_elem = NULL;
-    up_element *rev_elem = NULL;
+    up_element *fwd_elem = nullptr;
+    up_element *rev_elem = nullptr;
     ov_word fwd;
     if(!mask) {
       fwd = 0;
