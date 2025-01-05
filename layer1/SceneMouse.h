@@ -22,11 +22,12 @@ struct NamedPicking {
   NamedPicking(const Picking& pick);
 };
 
-void SceneClickObject(PyMOLGlobals* G, pymol::CObject* obj, const NamedPicking& LastPicked,
-    int mode, pymol::zstring_view sel_mode_kw);
-void SceneClickTransformObject(
-    PyMOLGlobals* G, pymol::CObject* obj, const NamedPicking& LastPicked, int mode, bool is_single_click);
-void SceneClickPickBond(PyMOLGlobals* G, int x, int y, int mode, const NamedPicking& LastPicked);
+void SceneClickObject(PyMOLGlobals* G, pymol::CObject* obj,
+    const NamedPicking& LastPicked, int mode, pymol::zstring_view sel_mode_kw);
+void SceneClickTransformObject(PyMOLGlobals* G, pymol::CObject* obj,
+    const NamedPicking& LastPicked, int mode, bool is_single_click);
+void SceneClickPickBond(
+    PyMOLGlobals* G, int x, int y, int mode, const NamedPicking& LastPicked);
 
 /**
  * Handles mouse clicks in the scene
@@ -89,4 +90,3 @@ void SceneMouseMove(Block* block, int x, int y, int mod, double when);
  */
 
 void SceneClickPickNothing(PyMOLGlobals* G, int button, int mod, int mode);
-

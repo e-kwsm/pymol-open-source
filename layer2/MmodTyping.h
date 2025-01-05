@@ -6,4 +6,4 @@
 
 struct AtomInfoType;
 
-int getMacroModelAtomType(const AtomInfoType * ai);
+int getMacroModelAtomType(const AtomInfoType* ai);

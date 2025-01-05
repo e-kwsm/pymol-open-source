@@ -58,7 +58,8 @@ public:
 
 public:
   /**
-   * Construct a new Salt Bridge Criteria object and initialize it's member variables
+   * Construct a new Salt Bridge Criteria object and initialize it's member
+   * variables
    */
   SaltBridgeCriteria(PyMOLGlobals* G);
 };
@@ -101,4 +102,4 @@ DistSet* FindHalogenBondInteractions(PyMOLGlobals* G, DistSet* ds, int sele1,
  */
 DistSet* FindSaltBridgeInteractions(PyMOLGlobals* G, DistSet* ds, int sele1,
     int state1, int sele2, int state2, float cutoff, float* result);
-}
+} // namespace pymol

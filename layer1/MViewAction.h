@@ -1,7 +1,6 @@
 #pragma once
 
-enum class MViewAction
-{
+enum class MViewAction {
   Store = 0,
   Clear = 1,
   Interpolate = 2,

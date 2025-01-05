@@ -1,30 +1,29 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
 #ifndef _H_ObjectSurface
 #define _H_ObjectSurface
 
-#include"os_gl.h"
-#include"ObjectMap.h"
-#include"Result.h"
-#include"CGO.h"
-#include"PyMOLEnums.h"
+#include "CGO.h"
+#include "ObjectMap.h"
+#include "PyMOLEnums.h"
+#include "Result.h"
+#include "os_gl.h"
 
-struct ObjectSurfaceState : public CObjectState
-{
+struct ObjectSurfaceState : public CObjectState {
   ObjectNameType MapName;
   int MapState;
   CCrystal Crystal;
@@ -69,17 +68,19 @@ struct ObjectSurface : public pymol::CObject {
   pymol::CObject* clone() const override;
 };
 
-ObjectSurface *ObjectSurfaceFromBox(PyMOLGlobals * G, ObjectSurface * obj,
-                                    ObjectMap * map, int map_state, int state, float *mn,
-                                    float *mx, float level, cIsosurfaceMode, float carve,
-                                    pymol::vla<float>&& vert_vla, cIsosurfaceSide, int quiet);
-void ObjectSurfaceDump(ObjectSurface * I, const char *fname, int state, int quiet);
+ObjectSurface* ObjectSurfaceFromBox(PyMOLGlobals* G, ObjectSurface* obj,
+    ObjectMap* map, int map_state, int state, float* mn, float* mx, float level,
+    cIsosurfaceMode, float carve, pymol::vla<float>&& vert_vla, cIsosurfaceSide,
+    int quiet);
+void ObjectSurfaceDump(
+    ObjectSurface* I, const char* fname, int state, int quiet);
 
-int ObjectSurfaceNewFromPyList(PyMOLGlobals * G, PyObject * list,
-				   ObjectSurface ** result);
-PyObject *ObjectSurfaceAsPyList(ObjectSurface * I);
-int ObjectSurfaceSetLevel(ObjectSurface * I, float level, int state, int quiet);
-pymol::Result<float> ObjectSurfaceGetLevel(ObjectSurface * I, int state);
-int ObjectSurfaceInvalidateMapName(ObjectSurface * I, const char *name, const char * new_name);
+int ObjectSurfaceNewFromPyList(
+    PyMOLGlobals* G, PyObject* list, ObjectSurface** result);
+PyObject* ObjectSurfaceAsPyList(ObjectSurface* I);
+int ObjectSurfaceSetLevel(ObjectSurface* I, float level, int state, int quiet);
+pymol::Result<float> ObjectSurfaceGetLevel(ObjectSurface* I, int state);
+int ObjectSurfaceInvalidateMapName(
+    ObjectSurface* I, const char* name, const char* new_name);
 
 #endif

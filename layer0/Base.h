@@ -1,26 +1,26 @@
 
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* Copyright (c) Schrodinger, LLC. 
+C* Copyright (c) Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
 #ifndef _H_Base
 #define _H_Base
 
+#include "RenderPass.h"
 #include "os_limits.h"
 #include "os_types.h"
-#include "RenderPass.h"
 
 #ifndef PI
 #define PI 3.14159265358979323846
@@ -30,7 +30,7 @@ typedef unsigned char uchar;
 
 typedef unsigned int uint;
 
-#define MAX_VDW 2.5F            /* this has to go */
+#define MAX_VDW 2.5F /* this has to go */
 
 #ifndef R_SMALL4
 #define R_SMALL4 0.0001F
@@ -41,16 +41,16 @@ typedef unsigned int uint;
 #endif
 
 #define cPuttyTransformNormalizedNonlinear 0
-#define cPuttyTransformRelativeNonlinear   1
-#define cPuttyTransformScaledNonlinear     2
-#define cPuttyTransformAbsoluteNonlinear   3
+#define cPuttyTransformRelativeNonlinear 1
+#define cPuttyTransformScaledNonlinear 2
+#define cPuttyTransformAbsoluteNonlinear 3
 
-#define cPuttyTransformNormalizedLinear    4
-#define cPuttyTransformRelativeLinear      5
-#define cPuttyTransformScaledLinear        6
-#define cPuttyTransformAbsoluteLinear      7
+#define cPuttyTransformNormalizedLinear 4
+#define cPuttyTransformRelativeLinear 5
+#define cPuttyTransformScaledLinear 6
+#define cPuttyTransformAbsoluteLinear 7
 
-#define cPuttyTransformImpliedRMS          8
+#define cPuttyTransformImpliedRMS 8
 
 typedef struct LabPosType {
   int mode;
@@ -63,12 +63,10 @@ typedef struct RefPosType {
   int specified;
 } RefPosType;
 
-
 /* not a global, but CRay widely used and Ray.h definitely isn't a
  * lightweight include... */
 
 typedef struct _CRay CRay;
-
 
 /* likewise */
 

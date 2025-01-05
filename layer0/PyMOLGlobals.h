@@ -1,17 +1,17 @@
 
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* Copyright (c) Schrodinger, LLC. 
+C* Copyright (c) Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
@@ -26,18 +26,22 @@ class cif_data;
 
 /* retina scale factor for ortho gui */
 extern int _gScaleFactor;
-inline int DIP2PIXEL(int v) { return v * _gScaleFactor; }
-inline float DIP2PIXEL(float v) { return v * _gScaleFactor; }
+inline int DIP2PIXEL(int v)
+{
+  return v * _gScaleFactor;
+}
+inline float DIP2PIXEL(float v)
+{
+  return v * _gScaleFactor;
+}
 
 /* all of the private singleton classes associated with a PyMOL instance */
-
 
 /* this gets included in virtually every PyMOL source file, so keep it
    short and sweet */
 
 typedef int lexidx_t;
 typedef int lexborrow_t;
-
 
 constexpr unsigned int OrthoLineLength = 1024u;
 using OrthoLineType = char[OrthoLineLength];
@@ -48,7 +52,7 @@ using WordType = char[WordLength];
 using SelectorID_t = int;
 using SelectorMemberOffset_t = int;
 
-using StateIndex_t = int; ///< 0-based state index (C/C++/JavaScript)
+using StateIndex_t = int;       ///< 0-based state index (C/C++/JavaScript)
 using StateIndexPython_t = int; ///< 1-based state index (Python/Settings)
 
 constexpr StateIndex_t cStateAll = -1;
@@ -131,99 +135,101 @@ struct PyMOLGlobals {
 
   /* singleton objects */
 
-  CMemoryCache *MemoryCache;    /* could probably eliminate this... */
-  CIsosurf *Isosurf;
-  CTetsurf *Tetsurf;
-  CSphere *Sphere;
-  CFeedback *Feedback;
-  CUtil *Util;
-  CColor *Color;
-  CMovie *Movie;
-  CControl *Control;
-  CButMode *ButMode;
-  COrtho *Ortho;
-  CWord *Word;
-  CCGORenderer *CGORenderer;
-  CCharacter *Character;
-  CPop *Pop;
-  CScene *Scene;
-  CGO *DebugCGO;                /* for debugging rendering */
-  CSeq *Seq;
+  CMemoryCache* MemoryCache; /* could probably eliminate this... */
+  CIsosurf* Isosurf;
+  CTetsurf* Tetsurf;
+  CSphere* Sphere;
+  CFeedback* Feedback;
+  CUtil* Util;
+  CColor* Color;
+  CMovie* Movie;
+  CControl* Control;
+  CButMode* ButMode;
+  COrtho* Ortho;
+  CWord* Word;
+  CCGORenderer* CGORenderer;
+  CCharacter* Character;
+  CPop* Pop;
+  CScene* Scene;
+  CGO* DebugCGO; /* for debugging rendering */
+  CSeq* Seq;
   CSetting *Setting, *Default;
-  CSettingUnique *SettingUnique;
-  CText *Text;
-  CWizard *Wizard;
-  CAtomInfo *AtomInfo;
-  CSculptCache *SculptCache;
-  CVFont *VFont;
-  CEditor *Editor;
-  CExecutive *Executive;
-  CSeeker *Seeker;
+  CSettingUnique* SettingUnique;
+  CText* Text;
+  CWizard* Wizard;
+  CAtomInfo* AtomInfo;
+  CSculptCache* SculptCache;
+  CVFont* VFont;
+  CEditor* Editor;
+  CExecutive* Executive;
+  CSeeker* Seeker;
   CSelectorManager* SelectorMgr;
-  CSelector *Selector;
-  CTexture *Texture;
-  CType *Type;
-  OVContext *Context;
-  CMain *Main;                  /* host/platform-specific "main" code */
-  CPyMOLOptions *Option;
-  CPyMOL *PyMOL;                /* the instance */
-  OVLexicon *Lexicon;           /* lexicon for data (e.g. label) strings */
-  CPlugIOManager *PlugIOManager;
+  CSelector* Selector;
+  CTexture* Texture;
+  CType* Type;
+  OVContext* Context;
+  CMain* Main; /* host/platform-specific "main" code */
+  CPyMOLOptions* Option;
+  CPyMOL* PyMOL;      /* the instance */
+  OVLexicon* Lexicon; /* lexicon for data (e.g. label) strings */
+  CPlugIOManager* PlugIOManager;
   CShaderMgr* ShaderMgr;
   COpenVR* OpenVR;
   GFXManager* GFXMgr;
 #ifndef _PYMOL_NOPY
-  CP_inst *P_inst;
+  CP_inst* P_inst;
 #endif
 
   /* global variables */
 
-  int HaveGUI;                  /* do we have an OpenGL graphics window or are we
-                                 * command-line only? */
+  int HaveGUI; /* do we have an OpenGL graphics window or are we
+                * command-line only? */
 
-  int ValidContext;             /* are we guaranteed to have a valid OpenGL
-                                 * context at this exact moment? */
+  int ValidContext; /* are we guaranteed to have a valid OpenGL
+                     * context at this exact moment? */
 
-  int Ready;                    /* is the program fully initialized and ready to receive
-                                 * messages? */
+  int Ready; /* is the program fully initialized and ready to receive
+              * messages? */
 
-  int Interrupt;                /* set when we are attempting to abort time-consuming calculations */
+  int Interrupt; /* set when we are attempting to abort time-consuming
+                    calculations */
 
-  int Terminating;              /* is the program shutting down? */
+  int Terminating; /* is the program shutting down? */
 
   /* note that the following four options are also contained in
    * PyMOLOption global -- they exist here as independent globals only
    * because changes haven't yet been made throughout code */
 
-  int StereoCapable;            /* the current graphics context quad buffered? */
+  int StereoCapable; /* the current graphics context quad buffered? */
 
-  int LaunchStatus;             /* to enable deferred output regarding launch status */
+  int LaunchStatus; /* to enable deferred output regarding launch status */
 
-  int Security;                 /* do we warn before potentially executing any
-                                 * Python code and ask for their informed consent? */
+  int Security; /* do we warn before potentially executing any
+                 * Python code and ask for their informed consent? */
 
-  int DragDirtyFlag;            /* do we need an extra callback to handle a mouse drag? */
+  int DragDirtyFlag; /* do we need an extra callback to handle a mouse drag? */
 
 #ifdef _PYMOL_LIB
-  void *CallbackObject;
-  void (*enabledCallback)(void *, const char *, int );
+  void* CallbackObject;
+  void (*enabledCallback)(void*, const char*, int);
 #endif
 
   // user defined scenes
-  CMovieScenes * scenes;
+  CMovieScenes* scenes;
 
-  struct { lexidx_t
+  struct {
+    lexidx_t
 #include "lex_constants.h"
-    _; } lex_const;
+        _;
+  } lex_const;
 };
-
 
 /* if we're running PyMOL as a global singleton (old way / backward
    compatible) then this global variable will contain a pointer to
    PyMOL global state variables */
 
 #ifndef _PYMOL_NOPY
-extern PyMOLGlobals *SingletonPyMOLGlobals;
+extern PyMOLGlobals* SingletonPyMOLGlobals;
 #endif
 
 #endif

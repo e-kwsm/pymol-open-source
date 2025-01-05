@@ -1,24 +1,23 @@
 
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* Copyright (c) Schrodinger, LLC. 
+C* Copyright (c) Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
 #ifndef _H_os_proprietary
 
 #include "os_predef.h"
-
 
 /* PROPRIETARY CODE SEGMENT DISCLAIMER:
  *
@@ -39,7 +38,7 @@ Z* -------------------------------------------------------------------
  * productive business relationships with defined mutual benefits.  In
  * other words, if you depend on PyMOL to run well on proprietary
  * operating systems in your profession or business, then it is likely
- * in your interest to gain access to our proprietary builds 
+ * in your interest to gain access to our proprietary builds
  * through paid software subscriptions and licenses, through software
  * development partnerships, or by participating in one or more of our
  * consortium projects.
@@ -57,11 +56,11 @@ Z* -------------------------------------------------------------------
  * PROVIDED AS IS AND FOR USE AT YOUR OWN RISK WITH NO ASSURANCES OF
  * FUTURE FUNCTION OR AVAILABILITY.  WE STRONGLY CAUTION THAT YOU DO
  * NOT RELY UPON PROPRIETARY CODE SEGMENTS SINCE THEY MAY BE ALTERED
- * OR REMOVED AT ANY TIME AND WITHOUT NOTICE OF ANY KIND.   
+ * OR REMOVED AT ANY TIME AND WITHOUT NOTICE OF ANY KIND.
  * SCHRODINGER, LLC DISCLAIMS ALL WARRANTIES WITH
  * REGARD TO PROPRIETARY CODE SEGMENTS, INCLUDING ALL IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS.  IN NO EVENT SHALL
- * SCHRODINGER, LLC BE LIABLE FOR ANY SPECIAL, 
+ * SCHRODINGER, LLC BE LIABLE FOR ANY SPECIAL,
  * INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
  * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING

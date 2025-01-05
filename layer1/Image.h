@@ -1,10 +1,10 @@
 #pragma once
 
+#include "pymol/algorithm.h"
+#include "pymol/type_traits.h"
 #include <cstdint>
 #include <exception>
 #include <vector>
-#include "pymol/algorithm.h"
-#include "pymol/type_traits.h"
 
 using png_outbuf_t = std::vector</* png_byte */ unsigned char>;
 
@@ -50,7 +50,9 @@ public:
    * @param stereo Make a stereo image (doubles the buffer size)
    */
   Image(int width, int height, bool stereo = false)
-      : m_width(width), m_height(height), m_stereo(stereo)
+      : m_width(width)
+      , m_height(height)
+      , m_stereo(stereo)
   {
     if (m_width < 0 || m_height < 0) {
       throw ill_informed_image{};
@@ -249,16 +251,13 @@ public:
   }
 
   /*
-  * Return the entire vector stored in m_data
-  */
-  std::vector<unsigned char> getVecData() const
-  {
-    return m_data;
-  }
+   * Return the entire vector stored in m_data
+   */
+  std::vector<unsigned char> getVecData() const { return m_data; }
 
   /*
-  * Store an entire vector in m_data
-  */
+   * Store an entire vector in m_data
+   */
   void setVecData(std::vector<unsigned char> VecData)
   {
     m_data = std::move(VecData);

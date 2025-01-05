@@ -43,15 +43,14 @@ struct SelectionInfoRec {
   }
 };
 
-
 struct MemberType {
   SelectorID_t selection;
-  int tag;                      /* must not be zero since it is also used as a boolean test for membership */
+  int tag; /* must not be zero since it is also used as a boolean test for
+              membership */
   SelectorMemberOffset_t next;
 };
 
-struct CSelectorManager
-{
+struct CSelectorManager {
   std::vector<MemberType> Member;
   SelectorMemberOffset_t FreeMember = 0;
   std::vector<SelectionInfoRec> Info;

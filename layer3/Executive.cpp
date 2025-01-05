@@ -42,7 +42,6 @@
 #include "Feedback.h"
 #include "Lex.h"
 #include "List.h"
-#include "List.h"
 #include "ListMacros.h"
 #include "Map.h"
 #include "Match.h"

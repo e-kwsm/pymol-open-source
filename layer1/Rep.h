@@ -1,16 +1,16 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
@@ -36,10 +36,10 @@ Z* -------------------------------------------------------------------
 
 // show/hide/... codes
 enum {
-  cVis_HIDE,            // 0
-  cVis_SHOW,            // 1
-  cVis_AS,              // 2
-  cVis_TOGGLE,          // 3
+  cVis_HIDE,   // 0
+  cVis_SHOW,   // 1
+  cVis_AS,     // 2
+  cVis_TOGGLE, // 3
 };
 
 /* WARNING: don't change these -- you'll break sessions!
@@ -81,27 +81,27 @@ inline cRep_t& operator++(cRep_t& rep)
 
 using cRepBitmask_t = int;
 
-#define cRepCylBit             (1 << 0)
-#define cRepSphereBit          (1 << 1)
-#define cRepSurfaceBit         (1 << 2)
-#define cRepLabelBit           (1 << 3)
+#define cRepCylBit (1 << 0)
+#define cRepSphereBit (1 << 1)
+#define cRepSurfaceBit (1 << 2)
+#define cRepLabelBit (1 << 3)
 #define cRepNonbondedSphereBit (1 << 4)
-#define cRepCartoonBit         (1 << 5)
-#define cRepRibbonBit          (1 << 6)
-#define cRepLineBit            (1 << 7)
-#define cRepMeshBit            (1 << 8)
-#define cRepDotBit             (1 << 9)
-#define cRepDashBit            (1 << 10)
-#define cRepNonbondedBit       (1 << 11)
-#define cRepCellBit            (1 << 12)
-#define cRepCGOBit             (1 << 13)
-#define cRepCallbackBit        (1 << 14)
-#define cRepExtentBit          (1 << 15)
-#define cRepSliceBit           (1 << 16)
-#define cRepAngleBit           (1 << 17)
-#define cRepDihedralBit        (1 << 18)
-#define cRepEllipsoidBit       (1 << 19)
-#define cRepVolumeBit          (1 << 20)
+#define cRepCartoonBit (1 << 5)
+#define cRepRibbonBit (1 << 6)
+#define cRepLineBit (1 << 7)
+#define cRepMeshBit (1 << 8)
+#define cRepDotBit (1 << 9)
+#define cRepDashBit (1 << 10)
+#define cRepNonbondedBit (1 << 11)
+#define cRepCellBit (1 << 12)
+#define cRepCGOBit (1 << 13)
+#define cRepCallbackBit (1 << 14)
+#define cRepExtentBit (1 << 15)
+#define cRepSliceBit (1 << 16)
+#define cRepAngleBit (1 << 17)
+#define cRepDihedralBit (1 << 18)
+#define cRepEllipsoidBit (1 << 19)
+#define cRepVolumeBit (1 << 20)
 
 /* Add other reps here.  Don't forget to
  * update modules/constants.py::repres{}
@@ -110,23 +110,24 @@ using cRepBitmask_t = int;
  * create your RepXYZ.h and RepXYZ.c
  */
 
-#define cRepBitmask        ((1 << cRepCnt) - 1)
+#define cRepBitmask ((1 << cRepCnt) - 1)
 
 // all reps which can be shown for atoms
-constexpr cRepBitmask_t cRepsAtomMask = (cRepCylBit | cRepSphereBit | cRepSurfaceBit |
-    cRepLabelBit | cRepNonbondedSphereBit | cRepCartoonBit | cRepRibbonBit | \
-    cRepLineBit | cRepMeshBit | cRepDotBit | cRepNonbondedBit | cRepEllipsoidBit);
+constexpr cRepBitmask_t cRepsAtomMask =
+    (cRepCylBit | cRepSphereBit | cRepSurfaceBit | cRepLabelBit |
+        cRepNonbondedSphereBit | cRepCartoonBit | cRepRibbonBit | cRepLineBit |
+        cRepMeshBit | cRepDotBit | cRepNonbondedBit | cRepEllipsoidBit);
 
 // all reps which can be shown for objects
-constexpr cRepBitmask_t cRepsObjectMask = (cRepSurfaceBit | cRepMeshBit | cRepDotBit |
-    cRepCellBit | cRepCGOBit | cRepCallbackBit | cRepExtentBit | cRepSliceBit | \
-    cRepAngleBit | cRepDihedralBit | cRepVolumeBit | cRepDashBit);
+constexpr cRepBitmask_t cRepsObjectMask =
+    (cRepSurfaceBit | cRepMeshBit | cRepDotBit | cRepCellBit | cRepCGOBit |
+        cRepCallbackBit | cRepExtentBit | cRepSliceBit | cRepAngleBit |
+        cRepDihedralBit | cRepVolumeBit | cRepDashBit);
 
-/* Hierarchical invalidation scheme - 
- * each higher level event implies all of the lower levels 
+/* Hierarchical invalidation scheme -
+ * each higher level event implies all of the lower levels
  * These used to be used just for graphics, but are now
  * used by the molecular editor as well */
-
 
 /* invalite display (list) */
 
@@ -134,65 +135,65 @@ enum cRepInv_t {
   cRepInvNone = 0,
   cRepInvDisplay = 1,
 
-/* precomputed extents (can change if matrix changes) */
+  /* precomputed extents (can change if matrix changes) */
   cRepInvExtents = 5,
 
-/* invalidate pickable atoms */
+  /* invalidate pickable atoms */
   cRepInvPick = 9,
 
-/* invalidate external atom colors */
+  /* invalidate external atom colors */
   cRepInvExtColor = 10,
 
-/* invalidate atom colors */
+  /* invalidate atom colors */
   cRepInvColor = 15,
 
-/* invalidate label text */
+  /* invalidate label text */
   cRepInvText = 16,
 
-/* invalidate visible atoms */
+  /* invalidate visible atoms */
   cRepInvVisib = 20,
   cRepInvVisib2 = 21,
 
-/* invalidate atomic properties */
+  /* invalidate atomic properties */
   cRepInvProp = 22,
 
-/* invalidate coordinates */
+  /* invalidate coordinates */
   cRepInvCoord = 30,
 
-/* invalidate graphic representation */
+  /* invalidate graphic representation */
   cRepInvRep = 35,
 
-/* don't call ObjectMoleculeUpdateNonbonded */
+  /* don't call ObjectMoleculeUpdateNonbonded */
   cRepInvBondsNoNonbonded = 38,
 
-/* invalidate bond structure */
+  /* invalidate bond structure */
   cRepInvBonds = 40,
 
-/* invalidate atomic structure */
+  /* invalidate atomic structure */
   cRepInvAtoms = 50,
 
-/* invalidate everything about a structure */
+  /* invalidate everything about a structure */
   cRepInvAll = 100,
 
-/* invalidate and furthermore, purge existing representations */
+  /* invalidate and furthermore, purge existing representations */
   cRepInvPurgeMask = 0x80,
   cRepInvPurgeRep = cRepInvRep | cRepInvPurgeMask,
   cRepInvPurgeAll = cRepInvAll | cRepInvPurgeMask,
 
-/* (alias) */
+  /* (alias) */
   cRepInvPurge = cRepInvPurgeRep,
 };
 
 struct CoordSet;
 namespace pymol
 {
-  struct CObject;
+struct CObject;
 }
 struct PyMOLGlobals;
 struct RenderInfo;
 
 struct Rep {
-  PyMOLGlobals *G;
+  PyMOLGlobals* G;
 
   virtual cRep_t type() const = 0;
   virtual void render(RenderInfo* info);
@@ -240,19 +241,18 @@ public:
   Rep(CoordSet*, int state);
 };
 
-cRepBitmask_t RepGetAutoShowMask(PyMOLGlobals * G);
+cRepBitmask_t RepGetAutoShowMask(PyMOLGlobals* G);
 
-class RepIterator {
+class RepIterator
+{
   int end;
 
 public:
   int rep;
 
-  RepIterator(PyMOLGlobals * G, int rep_);
+  RepIterator(PyMOLGlobals* G, int rep_);
 
-  bool next() {
-    return (++rep < end);
-  };
+  bool next() { return (++rep < end); };
 };
 
 #endif

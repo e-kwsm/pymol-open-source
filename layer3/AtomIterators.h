@@ -19,7 +19,8 @@ struct AtomInfoType;
  * The initial state of the iterator points "before" the first atom, there is no
  * current atom until next() is called the first time.
  */
-class AbstractAtomIterator {
+class AbstractAtomIterator
+{
 protected:
   int atm;      //!< Current atom index in object molecule
   int idx = -1; //!< Current coordinate index (atom index in coordset)
@@ -39,25 +40,22 @@ public:
   virtual bool next() = 0;
 
   /// Current atom
-  AtomInfoType * getAtomInfo();
-  const AtomInfoType * getAtomInfo() const;
+  AtomInfoType* getAtomInfo();
+  const AtomInfoType* getAtomInfo() const;
 
   /// Current atom's coordinates
   float* getCoord();
 
   /// Current atom index in object molecule
-  int getAtm() const {
-    return atm;
-  }
+  int getAtm() const { return atm; }
 
   /// Current coordinate index (atom index in coordset)
-  int getIdx() const {
-    return idx;
-  }
+  int getIdx() const { return idx; }
 };
 
 /**
- * State specific iterator over an atom selection. Similar to `cmd.iterate_state`.
+ * State specific iterator over an atom selection. Similar to
+ `cmd.iterate_state`.
  * If state is -1 then iterate over all states.
  *
  * @verbatim
@@ -67,16 +65,18 @@ public:
    }
    @endverbatim
  */
-class SeleCoordIterator : public AbstractAtomIterator {
+class SeleCoordIterator : public AbstractAtomIterator
+{
   PyMOLGlobals* G = nullptr;
-  StateIndex_t statearg; // state argument, can be -1 (all), -2 (current), -3 (effective)
+  StateIndex_t
+      statearg; // state argument, can be -1 (all), -2 (current), -3 (effective)
   StateIndex_t statemax; // largest state in selection
-  bool per_object;              // whether to iterate over object states or global states
-  ObjectMolecule * prev_obj;    // for per_object=true
+  bool per_object; // whether to iterate over object states or global states
+  ObjectMolecule* prev_obj; // for per_object=true
   SelectorID_t sele = -1 /* cSelectionInvalid */;
 
 public:
-  int a;        //!< index in selection
+  int a;              //!< index in selection
   StateIndex_t state; //!< current state
 
   /// Undefined state until copy assigned from a valid state
@@ -88,18 +88,15 @@ public:
   bool next();
 
   /// Return true if iterating over all states
-  bool isMultistate() const {
-    return statearg == cStateAll;
-  }
+  bool isMultistate() const { return statearg == cStateAll; }
 
   /// Return true if iterating over all states of an object before advancing
   /// to the next object, rather than iterating over global states
-  bool isPerObject() const {
-    return per_object;
-  }
+  bool isPerObject() const { return per_object; }
 
   /// @see isPerObject()
-  void setPerObject(bool per_object_) {
+  void setPerObject(bool per_object_)
+  {
     per_object = per_object_ && isMultistate();
   }
 
@@ -119,13 +116,14 @@ private:
    }
    @endverbatim
  */
-class SeleAtomIterator : public AbstractAtomIterator {
-  PyMOLGlobals * G;
-  SelectorID_t sele; //!< selection
+class SeleAtomIterator : public AbstractAtomIterator
+{
+  PyMOLGlobals* G;
+  SelectorID_t sele;    //!< selection
   char* stmp = nullptr; //!< temporary named selection
 
 public:
-  int a;        //!< index in selection
+  int a; //!< index in selection
 
   /// Iterate over an existing atom selection
   /// @pre ::SelectorUpdateTable was called
@@ -136,7 +134,7 @@ public:
     reset();
   };
 
-  SeleAtomIterator(PyMOLGlobals * G_, const char * sele_);
+  SeleAtomIterator(PyMOLGlobals* G_, const char* sele_);
   ~SeleAtomIterator();
 
   void reset();
@@ -153,18 +151,15 @@ public:
    }
    @endverbatim
  */
-class CoordSetAtomIterator : public AbstractAtomIterator {
+class CoordSetAtomIterator : public AbstractAtomIterator
+{
 public:
+  CoordSetAtomIterator(CoordSet* cs_);
 
-  CoordSetAtomIterator(CoordSet * cs_);
-
-  void reset() {
-    atm = -1;
-  }
+  void reset() { atm = -1; }
 
   bool next();
 };
-
 
 #endif
 

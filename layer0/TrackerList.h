@@ -92,10 +92,7 @@ public:
       , m_list_id(list_id)
   {
   }
-  ~TrackerAdapter()
-  {
-    TrackerDelList(m_tracker, m_list_id);
-  }
+  ~TrackerAdapter() { TrackerDelList(m_tracker, m_list_id); }
   iterator begin() { return iterator(m_tracker, m_list_id); }
   const_iterator begin() const { return const_iterator(m_tracker, m_list_id); }
   iterator end() { return iterator(); }

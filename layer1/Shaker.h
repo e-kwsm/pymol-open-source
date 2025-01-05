@@ -1,16 +1,16 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
@@ -39,10 +39,10 @@ typedef struct {
   int type;
 } ShakerTorsCon;
 
-#define cShakerTorsSP3SP3      1
-#define cShakerTorsDisulfide   2
-#define cShakerTorsAmide       3
-#define cShakerTorsFlat        4
+#define cShakerTorsSP3SP3 1
+#define cShakerTorsDisulfide 2
+#define cShakerTorsAmide 3
+#define cShakerTorsFlat 4
 
 typedef struct {
   int at0, at1, at2, at3;
@@ -59,7 +59,7 @@ typedef struct {
 } ShakerLineCon;
 
 struct CShaker {
-  PyMOLGlobals *G;
+  PyMOLGlobals* G;
   pymol::vla<ShakerDistCon> DistCon;
   int NDistCon;
   pymol::vla<ShakerPyraCon> PyraCon;
@@ -70,49 +70,46 @@ struct CShaker {
   int NLineCon;
   pymol::vla<ShakerTorsCon> TorsCon;
   int NTorsCon;
-  CShaker(PyMOLGlobals * G);
+  CShaker(PyMOLGlobals* G);
 };
 
-void ShakerReset(CShaker * I);
-void ShakerAddDistCon(CShaker * I, int atom0, int atom1, float dist, int type,
-                      float weight);
-void ShakerAddTorsCon(CShaker * I, int atom0, int atom1, int atom2, int atom3, int type);
-void ShakerAddPyraCon(CShaker * I, int atom0, int atom1, int atom2, int atom3,
-                      float targ1, float targ2);
-void ShakerAddPlanCon(CShaker * I, int atom0, int atom1, int atom2, int atom3,
-                      float target, int fixed);
+void ShakerReset(CShaker* I);
+void ShakerAddDistCon(
+    CShaker* I, int atom0, int atom1, float dist, int type, float weight);
+void ShakerAddTorsCon(
+    CShaker* I, int atom0, int atom1, int atom2, int atom3, int type);
+void ShakerAddPyraCon(CShaker* I, int atom0, int atom1, int atom2, int atom3,
+    float targ1, float targ2);
+void ShakerAddPlanCon(CShaker* I, int atom0, int atom1, int atom2, int atom3,
+    float target, int fixed);
 
-void ShakerAddLineCon(CShaker * I, int atom0, int atom1, int atom2);
+void ShakerAddLineCon(CShaker* I, int atom0, int atom1, int atom2);
 
-float ShakerGetPyra(float *targ2,
-    const float *v0, const float *v1, const float *v2, const float *v3);
+float ShakerGetPyra(float* targ2, const float* v0, const float* v1,
+    const float* v2, const float* v3);
 
+/* the following fn's have been inlined in Sculpt.c
 
-/* the following fn's have been inlined in Sculpt.c  
-
-float ShakerDoDist(float target,float *v0,float *v1,float *d0to1,float *d1to0,float wt);
+float ShakerDoDist(float target,float *v0,float *v1,float *d0to1,float
+*d1to0,float wt);
 
 float ShakerDoTors(int type, float *v0,float *v1,float *v2,float *v3,
                    float *p0,float *p1,float *p2,float *p3,float wt);
-float ShakerDoDistLimit(float target,float *v0,float *v1,float *d0to1,float *d1to0,float wt);
+float ShakerDoDistLimit(float target,float *v0,float *v1,float *d0to1,float
+*d1to0,float wt);
 
 
 */
 
-float ShakerDoPyra(float targ1, float targ2,
-                   const float *v0, const float *v1, const float *v2, const float *v3,
-                   float *p0, float *p1, float *p2, float *p3, float wt, float inv_wt);
+float ShakerDoPyra(float targ1, float targ2, const float* v0, const float* v1,
+    const float* v2, const float* v3, float* p0, float* p1, float* p2,
+    float* p3, float wt, float inv_wt);
 
-float ShakerDoLine(const float *v0, const float *v1, const float *v2,
-                   float *p0, float *p1, float *p2, float wt);
+float ShakerDoLine(const float* v0, const float* v1, const float* v2, float* p0,
+    float* p1, float* p2, float wt);
 
-float ShakerDoPlan(
-    const float *v0,
-    const float *v1,
-    const float *v2,
-    const float *v3,
-                   float *p0, float *p1, float *p2, float *p3,
-                   float target, int fixed, float wt);
-
+float ShakerDoPlan(const float* v0, const float* v1, const float* v2,
+    const float* v3, float* p0, float* p1, float* p2, float* p3, float target,
+    int fixed, float wt);
 
 #endif

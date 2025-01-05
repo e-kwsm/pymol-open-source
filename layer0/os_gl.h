@@ -1,14 +1,14 @@
 #ifndef _H_os_gl
 #define _H_os_gl
 
-#include"os_predef.h"
-#include"os_proprietary.h"
+#include "os_predef.h"
+#include "os_proprietary.h"
 
 // hardcode either true, or (x)
 #define ALWAYS_IMMEDIATE_OR(x) true
 
 #if 1
-  #define _PYMOL_NO_AA_SHADERS
+#define _PYMOL_NO_AA_SHADERS
 #endif
 
 #if !defined(GL_GLEXT_PROTOTYPES) && !defined(_WIN32)
@@ -32,27 +32,26 @@
 #include <GL/gl.h>
 #endif
 
-#include "os_gl_glut.h"
 #include "Spatial.h"
+#include "os_gl_glut.h"
 
 struct GLFramebufferConfig {
   std::uint32_t framebuffer{};
   GLenum drawBuffer{};
 };
 
-void PyMOLReadPixels(GLint x,
-                     GLint y,
-                     GLsizei width,
-                     GLsizei height, GLenum format, GLenum type, GLvoid * pixels);
+void PyMOLReadPixels(GLint x, GLint y, GLsizei width, GLsizei height,
+    GLenum format, GLenum type, GLvoid* pixels);
 
-void PyMOLDrawPixels(GLsizei width,
-                     GLsizei height, GLenum format, GLenum type, const GLvoid * pixels);
+void PyMOLDrawPixels(GLsizei width, GLsizei height, GLenum format, GLenum type,
+    const GLvoid* pixels);
 
-int PyMOLCheckOpenGLErr(const char *pos);
+int PyMOLCheckOpenGLErr(const char* pos);
 
 #define VertexIndex_t std::uint32_t
 #define VertexIndex_GL_ENUM GL_UNSIGNED_INT
-#define SceneGLClearColor(red,green,blue,alpha) glClearColor(red,green,blue,alpha);
+#define SceneGLClearColor(red, green, blue, alpha)                             \
+  glClearColor(red, green, blue, alpha);
 
 #ifndef GLAPIENTRY
 #define GLAPIENTRY
@@ -61,26 +60,22 @@ int PyMOLCheckOpenGLErr(const char *pos);
 #define hasFrameBufferBinding() false
 
 #ifndef PURE_OPENGL_ES_2
-#define GL_DEBUG_PUSH(title) \
-  GLEW_KHR_debug ? glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, title) : (void)0
+#define GL_DEBUG_PUSH(title)                                                   \
+  GLEW_KHR_debug ? glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, title) \
+                 : (void) 0
 
-#define GL_DEBUG_POP() \
-  GLEW_KHR_debug ? glPopDebugGroup() : (void)0
+#define GL_DEBUG_POP() GLEW_KHR_debug ? glPopDebugGroup() : (void) 0
 
 #ifdef __cplusplus
 
-class glDebugBlock {
+class glDebugBlock
+{
 public:
-  explicit glDebugBlock(char const* title) {
-    GL_DEBUG_PUSH(title);
-  }
-  ~glDebugBlock() {
-    GL_DEBUG_POP();
-  }
+  explicit glDebugBlock(char const* title) { GL_DEBUG_PUSH(title); }
+  ~glDebugBlock() { GL_DEBUG_POP(); }
 };
 
-#define GL_DEBUG_FUN() \
-  glDebugBlock glDebugBlockVariable(__FUNCTION__)
+#define GL_DEBUG_FUN() glDebugBlock glDebugBlockVariable(__FUNCTION__)
 
 #endif /* __cplusplus */
 #else

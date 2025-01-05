@@ -1,69 +1,67 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
 #ifndef _H_ButMode
 #define _H_ButMode
 
-#include"Ortho.h"
-#include"Word.h"
+#include "Ortho.h"
+#include "Word.h"
 
 #define cButModeNothing -1
 
-#define cButModeRotXYZ   0
-#define cButModeTransXY  1
-#define cButModeTransZ   2
-#define cButModeClipNF   3
-#define cButModeRotZ     4
-#define cButModeClipN    5
-#define cButModeClipF    6
-#define cButModeLB       7
-#define cButModeMB       8
-#define cButModeRB       9
+#define cButModeRotXYZ 0
+#define cButModeTransXY 1
+#define cButModeTransZ 2
+#define cButModeClipNF 3
+#define cButModeRotZ 4
+#define cButModeClipN 5
+#define cButModeClipF 6
+#define cButModeLB 7
+#define cButModeMB 8
+#define cButModeRB 9
 #define cButModeAddToLB 10
 #define cButModeAddToMB 11
 #define cButModeAddToRB 12
 #define cButModePickAtom 13
 #define cButModePickBond 14
-#define cButModeRotFrag  15
-#define cButModeTorFrag  16
-#define cButModeMovFrag  17
-#define cButModeOrigAt   18
-#define cButModeRectAdd  19
-#define cButModeRectSub  20
-#define cButModeRect     21
-#define cButModeNone     22
-#define cButModeCent     23
+#define cButModeRotFrag 15
+#define cButModeTorFrag 16
+#define cButModeMovFrag 17
+#define cButModeOrigAt 18
+#define cButModeRectAdd 19
+#define cButModeRectSub 20
+#define cButModeRect 21
+#define cButModeNone 22
+#define cButModeCent 23
 #define cButModePkTorBnd 24
 #define cButModeScaleSlab 25
-#define cButModeMoveSlab  26
+#define cButModeMoveSlab 26
 #define cButModePickAtom1 27
 #define cButModeMoveAtom 28
-#define cButModeMenu     29
+#define cButModeMenu 29
 
-#define cButModeSeleSet  30
+#define cButModeSeleSet 30
 #define cButModeSeleToggle 31
-#define cButModeSeleAddBox  32
-#define cButModeSeleSubBox  33
+#define cButModeSeleAddBox 32
+#define cButModeSeleSubBox 33
 #define cButModeMoveSlabAndZoom 34
-
 
 /* simple click action for JyMOL -- no selections involved */
 
 #define cButModeSimpleClick 35
-
 
 /* new drag actions */
 
@@ -76,7 +74,7 @@ Z* -------------------------------------------------------------------
 #define cButModeMovObjZ 41
 #define cButModeMovFragZ 42
 #define cButModeMoveAtomZ 43
-#define cButModeDragMol  44
+#define cButModeDragMol 44
 
 #define cButModeRotView 45
 #define cButModeMovView 46
@@ -88,9 +86,9 @@ Z* -------------------------------------------------------------------
 #define cButModeInvMoveSlabAndZoom 50
 #define cButModeInvTransZ 51
 
-#define cButModeSeleSetBox  52
+#define cButModeSeleSetBox 52
 
-#define cButModeInvRotZ  53
+#define cButModeInvRotZ 53
 
 /* light editing */
 
@@ -98,8 +96,7 @@ Z* -------------------------------------------------------------------
 #define cButModeMovL 55
 #define cButModeMvzL 56
 
-#define cButModeCount       57
-
+#define cButModeCount 57
 
 /* remainder only used in scene... */
 
@@ -112,100 +109,99 @@ Z* -------------------------------------------------------------------
 #define cButModeZoomForward 107
 #define cButModeZoomBackward 108
 
-
 /* conversion */
 
-#define cButModeLeftNone   0
+#define cButModeLeftNone 0
 #define cButModeMiddleNone 1
-#define cButModeRightNone  2
+#define cButModeRightNone 2
 
-#define cButModeLeftShft   3
+#define cButModeLeftShft 3
 #define cButModeMiddleShft 4
-#define cButModeRightShft  5
+#define cButModeRightShft 5
 
-#define cButModeLeftCtrl   6
+#define cButModeLeftCtrl 6
 #define cButModeMiddleCtrl 7
-#define cButModeRightCtrl  8
+#define cButModeRightCtrl 8
 
-#define cButModeLeftCtSh   9
+#define cButModeLeftCtSh 9
 #define cButModeMiddleCtSh 10
-#define cButModeRightCtSh  11
+#define cButModeRightCtSh 11
 
-#define cButModeWheelNone  12
-#define cButModeWheelShft  13
-#define cButModeWheelCtrl  14
-#define cButModeWheelCtSh  15
+#define cButModeWheelNone 12
+#define cButModeWheelShft 13
+#define cButModeWheelCtrl 14
+#define cButModeWheelCtSh 15
 
-#define cButModeLeftDouble   16
+#define cButModeLeftDouble 16
 #define cButModeMiddleDouble 17
-#define cButModeRightDouble  18
-#define cButModeLeftSingle   19
+#define cButModeRightDouble 18
+#define cButModeLeftSingle 19
 #define cButModeMiddleSingle 20
-#define cButModeRightSingle  21
+#define cButModeRightSingle 21
 
-#define cButModeLeftShftDouble    22
-#define cButModeMiddleShftDouble  23
-#define cButModeRightShftDouble   24
-#define cButModeLeftShftSingle    25
-#define cButModeMiddleShftSingle  26
-#define cButModeRightShftSingle   27
+#define cButModeLeftShftDouble 22
+#define cButModeMiddleShftDouble 23
+#define cButModeRightShftDouble 24
+#define cButModeLeftShftSingle 25
+#define cButModeMiddleShftSingle 26
+#define cButModeRightShftSingle 27
 
-#define cButModeLeftCtrlDouble    28
-#define cButModeMiddleCtrlDouble  29
-#define cButModeRightCtrlDouble   30
-#define cButModeLeftCtrlSingle    31
-#define cButModeMiddleCtrlSingle  32
-#define cButModeRightCtrlSingle   33
+#define cButModeLeftCtrlDouble 28
+#define cButModeMiddleCtrlDouble 29
+#define cButModeRightCtrlDouble 30
+#define cButModeLeftCtrlSingle 31
+#define cButModeMiddleCtrlSingle 32
+#define cButModeRightCtrlSingle 33
 
-#define cButModeLeftCtShDouble    34
-#define cButModeMiddleCtShDouble  35
-#define cButModeRightCtShDouble   36
-#define cButModeLeftCtShSingle    37
-#define cButModeMiddleCtShSingle  38
-#define cButModeRightCtShSingle   39
+#define cButModeLeftCtShDouble 34
+#define cButModeMiddleCtShDouble 35
+#define cButModeRightCtShDouble 36
+#define cButModeLeftCtShSingle 37
+#define cButModeMiddleCtShSingle 38
+#define cButModeRightCtShSingle 39
 
-#define cButModeLeftAltDouble     40
-#define cButModeMiddleAltDouble   41
-#define cButModeRightAltDouble    42
-#define cButModeLeftAltSingle     43
-#define cButModeMiddleAltSingle   44
-#define cButModeRightAltSingle    45
+#define cButModeLeftAltDouble 40
+#define cButModeMiddleAltDouble 41
+#define cButModeRightAltDouble 42
+#define cButModeLeftAltSingle 43
+#define cButModeMiddleAltSingle 44
+#define cButModeRightAltSingle 45
 
-#define cButModeLeftAltShftDouble    46
-#define cButModeMiddleAltShftDouble  47
-#define cButModeRightAltShftDouble   48
-#define cButModeLeftAltShftSingle    49
-#define cButModeMiddleAltShftSingle  50
-#define cButModeRightAltShftSingle   51
+#define cButModeLeftAltShftDouble 46
+#define cButModeMiddleAltShftDouble 47
+#define cButModeRightAltShftDouble 48
+#define cButModeLeftAltShftSingle 49
+#define cButModeMiddleAltShftSingle 50
+#define cButModeRightAltShftSingle 51
 
-#define cButModeLeftCtrlAltDouble    52
-#define cButModeMiddleCtrlAltDouble  53
-#define cButModeRightCtrlAltDouble   54
-#define cButModeLeftCtrlAltSingle    55
-#define cButModeMiddleCtrlAltSingle  56
-#define cButModeRightCtrlAltSingle   57
+#define cButModeLeftCtrlAltDouble 52
+#define cButModeMiddleCtrlAltDouble 53
+#define cButModeRightCtrlAltDouble 54
+#define cButModeLeftCtrlAltSingle 55
+#define cButModeMiddleCtrlAltSingle 56
+#define cButModeRightCtrlAltSingle 57
 
-#define cButModeLeftCtrlAltShftDouble    58
-#define cButModeMiddleCtrlAltShftDouble  59
-#define cButModeRightCtrlAltShftDouble   60
-#define cButModeLeftCtrlAltShftSingle    61
-#define cButModeMiddleCtrlAltShftSingle  62
-#define cButModeRightCtrlAltShftSingle   63
+#define cButModeLeftCtrlAltShftDouble 58
+#define cButModeMiddleCtrlAltShftDouble 59
+#define cButModeRightCtrlAltShftDouble 60
+#define cButModeLeftCtrlAltShftSingle 61
+#define cButModeMiddleCtrlAltShftSingle 62
+#define cButModeRightCtrlAltShftSingle 63
 
-#define cButModeWheelAlt   64
+#define cButModeWheelAlt 64
 #define cButModeWheelAltShft 65
-#define cButModeWheelCtrlAlt  66
-#define cButModeWheelCtrlAltShft  67
+#define cButModeWheelCtrlAlt 66
+#define cButModeWheelCtrlAltShft 67
 
-#define cButModeLeftAlt    68
-#define cButModeMiddleAlt  69
-#define cButModeRightAlt   70
+#define cButModeLeftAlt 68
+#define cButModeMiddleAlt 69
+#define cButModeRightAlt 70
 
 #define cButModeLeftAltShft 71
 #define cButModeMiddleAltShft 72
 #define cButModeRightAltShft 73
 
-#define cButModeLeftCtrlAlt  74
+#define cButModeLeftCtrlAlt 74
 #define cButModeMiddleCtrlAlt 75
 #define cButModeRightCtrlAlt 76
 
@@ -217,15 +213,15 @@ Z* -------------------------------------------------------------------
 
 typedef char CodeType[10];
 
-int ButModeInit(PyMOLGlobals * G);
-void ButModeFree(PyMOLGlobals * G);
-Block *ButModeGetBlock(PyMOLGlobals * G);
-void ButModeSetRate(PyMOLGlobals * G, float renderTime);
-void ButModeResetRate(PyMOLGlobals * G);
-int ButModeGet(PyMOLGlobals * G, int button);
-void ButModeSet(PyMOLGlobals * G, int button, int action);
-int ButModeTranslate(PyMOLGlobals * G, int button, int mod);
-int ButModeCheckPossibleSingleClick(PyMOLGlobals * G, int button, int mod);
-int ButModeGetHeight(PyMOLGlobals * G);
+int ButModeInit(PyMOLGlobals* G);
+void ButModeFree(PyMOLGlobals* G);
+Block* ButModeGetBlock(PyMOLGlobals* G);
+void ButModeSetRate(PyMOLGlobals* G, float renderTime);
+void ButModeResetRate(PyMOLGlobals* G);
+int ButModeGet(PyMOLGlobals* G, int button);
+void ButModeSet(PyMOLGlobals* G, int button, int action);
+int ButModeTranslate(PyMOLGlobals* G, int button, int mod);
+int ButModeCheckPossibleSingleClick(PyMOLGlobals* G, int button, int mod);
+int ButModeGetHeight(PyMOLGlobals* G);
 
 #endif

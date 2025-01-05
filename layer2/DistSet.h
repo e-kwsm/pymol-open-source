@@ -1,15 +1,15 @@
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
@@ -17,10 +17,10 @@ Z* -------------------------------------------------------------------
 #define _H_DistSet
 
 #include "Base.h"
-#include "pymol/math_defines.h"
 #include "PyMOLObject.h"
 #include "Rep.h"
 #include "Result.h"
+#include "pymol/math_defines.h"
 #include "vla.h"
 
 #include <array>
@@ -41,11 +41,11 @@ struct CMeasureInfo {
 };
 
 struct DistSet : CObjectState {
-  DistSet(PyMOLGlobals *);
+  DistSet(PyMOLGlobals*);
 
   // methods
   void update(int state);
-  void render(RenderInfo *);
+  void render(RenderInfo*);
   void invalidateRep(cRep_t type, cRepInv_t level);
 
   /**
@@ -53,7 +53,7 @@ struct DistSet : CObjectState {
    */
   std::unordered_set<const pymol::CObject*> getDependentObjects() const;
 
-  ObjectDist *Obj = nullptr;
+  ObjectDist* Obj = nullptr;
 
   pymol::vla<float> Coord;
   int NIndex = 0;
@@ -78,13 +78,13 @@ struct DistSet : CObjectState {
 };
 
 #define DistSetNew(G) (new DistSet(G))
-PyObject *DistSetAsPyList(DistSet * I);
-DistSet* DistSetFromPyList(PyMOLGlobals * G, PyObject * list);
-int DistSetGetExtent(DistSet * I, float *mn, float *mx);
-int DistSetMoveLabel(DistSet * I, int at, float *v, int mode);
-int DistSetGetLabelVertex(DistSet * I, int at, float *v);
+PyObject* DistSetAsPyList(DistSet* I);
+DistSet* DistSetFromPyList(PyMOLGlobals* G, PyObject* list);
+int DistSetGetExtent(DistSet* I, float* mn, float* mx);
+int DistSetMoveLabel(DistSet* I, int at, float* v, int mode);
+int DistSetGetLabelVertex(DistSet* I, int at, float* v);
 /* -- JV */
-int DistSetMoveWithObject(DistSet* I, struct ObjectMolecule * O);
+int DistSetMoveWithObject(DistSet* I, struct ObjectMolecule* O);
 /* -- JV end */
 
 #endif

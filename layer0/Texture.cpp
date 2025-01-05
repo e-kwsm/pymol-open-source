@@ -205,7 +205,7 @@ bool TextureIsCharTextured(PyMOLGlobals* G, int char_id, float* extent)
                   newDim ENDFB(G);
 
               //	      printf("nrefreshes=%d newDim=%d\n", nrefreshes,
-              //newDim);
+              // newDim);
               I->xpos = POS_START;
               I->ypos = 0;
               I->maxypos = POS_START;

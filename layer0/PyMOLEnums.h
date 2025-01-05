@@ -30,39 +30,30 @@ enum class cIsosurfaceAlgorithm {
   MARCHING_TETRAHEDRA = 2,
 };
 
-enum class InternalGUIMode
-{
+enum class InternalGUIMode {
   Default,
   BG,
   Transparent,
 };
 
-enum class OrthoRenderMode
-{
+enum class OrthoRenderMode {
   VR,
   Main,
   GeoWallLeft = Main,
   GeoWallRight,
 };
 
-enum class ClickSide
-{
-  Left = -1,
-  None = 0,
-  Right = 1
-};
+enum class ClickSide { Left = -1, None = 0, Right = 1 };
 
-enum class GridMode
-{
-  NoGrid = 0, // No Grid
-  ByObject = 1, // One slot per Object
-  ByObjectStates = 2, // One slot per State
+enum class GridMode {
+  NoGrid = 0,          // No Grid
+  ByObject = 1,        // One slot per Object
+  ByObjectStates = 2,  // One slot per State
   ByObjectByState = 3, // One slot per state per object
-  ByCamera = 4, // One slot per camera
+  ByCamera = 4,        // One slot per camera
 };
 
-enum class BgGradient
-{
+enum class BgGradient {
   None = 0,
   Vertical = 1,
   Grid = 2,

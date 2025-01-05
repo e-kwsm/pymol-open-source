@@ -10,4 +10,3 @@ struct SceneElem {
   bool drawn;
   SceneElem(std::string elem_, bool drawn);
 };
-
