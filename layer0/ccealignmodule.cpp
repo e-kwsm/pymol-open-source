@@ -188,7 +188,7 @@ pathCache findPath( double** S, double** dA, double** dB, int lenA, int lenB, fl
     // initialize the paths
     scoreBuffer[i] = 1e6;
     lenBuffer[i] = 0;
-    pathBuffer[i] = 0;
+    pathBuffer[i] = nullptr;
   }
 
   // winCache
@@ -425,7 +425,7 @@ pathCache findPath( double** S, double** dA, double** dB, int lenA, int lenB, fl
 	  lenBuffer[bufferIndex-1] = bestPathLength;
 	}
       }
-      free(curPath); curPath=0;
+      free(curPath); curPath=nullptr;
     } // ROF -- end for iB
   } // ROF -- end for iA
 

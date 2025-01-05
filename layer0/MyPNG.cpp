@@ -384,7 +384,7 @@ std::unique_ptr<pymol::Image> MyPNGRead(const char *file_name)
   int i;
   int ok = true;
   double file_gamma;
-  uchar2p data = {NULL, nullptr};
+  uchar2p data = {nullptr, nullptr};
 
   if(!file_name)
     return nullptr;

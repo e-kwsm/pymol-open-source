@@ -25,7 +25,7 @@
 static const unsigned char ch0data[] = { 0x0 };
 static const FontGLUTBitmapCharRec ch0 = { 1, 1, 0, 0, 9, ch0data };
 #else
-static const FontGLUTBitmapCharRec ch0 = { 0, 0, 0, 0, 9, 0 };
+static const FontGLUTBitmapCharRec ch0 = { 0, 0, 0, 0, 9, nullptr };
 #endif
 
 #ifdef _WIN32
@@ -36,7 +36,7 @@ static const FontGLUTBitmapCharRec ch0 = { 0, 0, 0, 0, 9, 0 };
 static const unsigned char ch32data[] = { 0x0 };
 static const FontGLUTBitmapCharRec ch32 = { 1, 1, 0, 0, 9, ch32data };
 #else
-static const FontGLUTBitmapCharRec ch32 = { 0, 0, 0, 0, 9, 0 };
+static const FontGLUTBitmapCharRec ch32 = { 0, 0, 0, 0, 9, nullptr };
 #endif
 
 #ifdef _WIN32
@@ -47,7 +47,7 @@ static const FontGLUTBitmapCharRec ch32 = { 0, 0, 0, 0, 9, 0 };
 static const unsigned char ch127data[] = { 0x0 };
 static const FontGLUTBitmapCharRec ch127 = { 1, 1, 0, 0, 9, ch127data };
 #else
-static const FontGLUTBitmapCharRec ch127 = { 0, 0, 0, 0, 9, 0 };
+static const FontGLUTBitmapCharRec ch127 = { 0, 0, 0, 0, 9, nullptr };
 #endif
 
 #ifdef _WIN32
@@ -58,7 +58,7 @@ static const FontGLUTBitmapCharRec ch127 = { 0, 0, 0, 0, 9, 0 };
 static const unsigned char ch160data[] = { 0x0 };
 static const FontGLUTBitmapCharRec ch160 = { 1, 1, 0, 0, 9, ch160data };
 #else
-static const FontGLUTBitmapCharRec ch160 = { 0, 0, 0, 0, 9, 0 };
+static const FontGLUTBitmapCharRec ch160 = { 0, 0, 0, 0, 9, nullptr };
 #endif
 
 
@@ -2174,38 +2174,38 @@ static const FontGLUTBitmapCharRec *const chars[] = {
   &ch125,
   &ch126,
   &ch127,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
   &ch160,
   &ch161,
   &ch162,

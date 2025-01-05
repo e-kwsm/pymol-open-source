@@ -895,7 +895,7 @@ static const FontGLUTBitmapCharRec ch161 = { 1, 10, -1, 3, 3, ch161data };
 static const unsigned char ch160data[] = { 0x0 };
 static const FontGLUTBitmapCharRec ch160 = { 1, 1, 0, 0, 4, ch160data };
 #else
-static const FontGLUTBitmapCharRec ch160 = { 0, 0, 0, 0, 4, 0 };
+static const FontGLUTBitmapCharRec ch160 = { 0, 0, 0, 0, 4, nullptr };
 #endif
 
 
@@ -1762,7 +1762,7 @@ static const FontGLUTBitmapCharRec ch33 = { 1, 9, -1, 0, 3, ch33data };
 static const unsigned char ch32data[] = { 0x0 };
 static const FontGLUTBitmapCharRec ch32 = { 1, 1, 0, 0, 4, ch32data };
 #else
-static const FontGLUTBitmapCharRec ch32 = { 0, 0, 0, 0, 4, 0 };
+static const FontGLUTBitmapCharRec ch32 = { 0, 0, 0, 0, 4, nullptr };
 #endif
 
 static const FontGLUTBitmapCharRec *const chars[] = {
@@ -1861,39 +1861,39 @@ static const FontGLUTBitmapCharRec *const chars[] = {
   &ch124,
   &ch125,
   &ch126,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
   &ch160,
   &ch161,
   &ch162,
