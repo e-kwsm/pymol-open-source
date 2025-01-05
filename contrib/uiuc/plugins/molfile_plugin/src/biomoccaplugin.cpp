@@ -66,30 +66,30 @@ static void *open_biomocca_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "r");
   if (!fd) {
     printf("biomoccaplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   if (fscanf(fd, "%f %f %f", orig, orig+1, orig+2) != 3) {
     printf("biomoccaplugin) Error reading grid origin.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* get the number of grid points */
   if (fscanf(fd, "%d %d %d", &xsize, &ysize, &zsize) != 3) {
     printf("biomoccaplugin) Error reading grid dimensions.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* get the voxel scale */
   if (fscanf(fd, "%f", &scale) != 1) {;
     printf("biomoccaplugin) Error reading voxel scale.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* allocate and initialize the biomocca structure */
   biomocca = new biomocca_t;
   biomocca->fd = fd;
-  biomocca->vol = NULL;
+  biomocca->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   biomocca->nsets = 1; /* this file contains only one data set */
 
@@ -160,7 +160,7 @@ static void close_biomocca_read(void *v) {
   biomocca_t *biomocca = (biomocca_t *)v;
   
   fclose(biomocca->fd);
-  if (biomocca->vol != NULL)
+  if (biomocca->vol != nullptr)
     delete [] biomocca->vol; 
   delete biomocca;
 }

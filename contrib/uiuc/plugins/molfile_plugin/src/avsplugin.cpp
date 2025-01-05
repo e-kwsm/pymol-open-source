@@ -75,9 +75,9 @@ enum {AVSFLOAT};                          /* Data types */
  */
 static char *get_string(char *s, int n, FILE *stream) {
   do {
-    if (fgets(s, n, stream) == NULL) {
+    if (fgets(s, n, stream) == nullptr) {
       fprintf(stderr, "avsplugin) Error reading string.\n");
-      return NULL;
+      return nullptr;
     }
   } while (s[0] == '#');
   return s;
@@ -108,7 +108,7 @@ static int read_datasource(char *s, datasource_t *data) {
   }
 
   /* Next should be the integer ID of the data source */
-  tok = strtok(NULL, " \t\n");
+  tok = strtok(nullptr, " \t\n");
   if (!isdigit(*tok)) {
     fprintf(stderr, "avsplugin) Improperly formatted header: expected ID.\n");
     free(src);
@@ -116,7 +116,7 @@ static int read_datasource(char *s, datasource_t *data) {
   }
 
   /* Now read the additional arguments */
-  tok = strtok(NULL, " \t\n");
+  tok = strtok(nullptr, " \t\n");
   while(tok) {
     value = strchr(tok, '=');
     if (!value) {
@@ -166,7 +166,7 @@ static int read_datasource(char *s, datasource_t *data) {
       return 1;
     }
 
-    tok = strtok(NULL, " \t\n");
+    tok = strtok(nullptr, " \t\n");
   }
 
   free(src);
@@ -187,119 +187,119 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
   int ndim, nspace, veclen, xsize, ysize, zsize, 
       index, i, coord_count, var_count;
   float value, origin[3], gridlength[3];
-  datasource_t *coord = NULL, *variable = NULL;
+  datasource_t *coord = nullptr, *variable = nullptr;
 
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "avsplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* Check for an AVS file */
-  if (fgets(inbuf, LINESIZE, fd) == NULL) {
+  if (fgets(inbuf, LINESIZE, fd) == nullptr) {
     fclose(fd);
     fprintf(stderr, "avsplugin) Error reading line.\n");
-    return NULL;
+    return nullptr;
   }
   if (strncmp(inbuf, "# AVS", 5) != 0) {
     fclose(fd);
     fprintf(stderr, "avsplugin) Improperly formatted header.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* Check the number of dimensions */
-  if (get_string(inbuf, LINESIZE, fd) == NULL) {
+  if (get_string(inbuf, LINESIZE, fd) == nullptr) {
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
   if (sscanf(inbuf, "ndim=%d", &ndim) != 1) {
     fprintf(stderr, "avsplugin) Error reading ndim.\n");
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
   if (ndim != 3) {
     fprintf(stderr, "avsplugin) Error: ndim must be 3.\n");
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
 
   /* Find the size of the grid in grid units */
-  if (get_string(inbuf, LINESIZE, fd) == NULL) {
+  if (get_string(inbuf, LINESIZE, fd) == nullptr) {
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
   if (sscanf(inbuf, "dim1=%d", &xsize) != 1) {
     fprintf(stderr, "avsplugin) Error reading dim1.\n");
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
-  if (get_string(inbuf, LINESIZE, fd) == NULL) {
+  if (get_string(inbuf, LINESIZE, fd) == nullptr) {
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
   if (sscanf(inbuf, "dim2=%d", &ysize) != 1) {
     fprintf(stderr, "avsplugin) Error reading dim2.\n");
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
-  if (get_string(inbuf, LINESIZE, fd) == NULL) {
+  if (get_string(inbuf, LINESIZE, fd) == nullptr) {
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
   if (sscanf(inbuf, "dim3=%d", &zsize) != 1) {
     fprintf(stderr, "avsplugin) Error reading dim3.\n");
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
 
   /* Check the number of coordinates per point */
-  if (get_string(inbuf, LINESIZE, fd) == NULL) {
+  if (get_string(inbuf, LINESIZE, fd) == nullptr) {
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
   if (sscanf(inbuf, "nspace=%d", &nspace) != 1) {
     fprintf(stderr, "avsplugin) Error reading nspace.\n");
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
   if (nspace != 3) {
     fprintf(stderr, "avsplugin) Error: nspace must be 3.\n");
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
 
   /* Find out how many values are stored for each point (the length of the
    * vector for the vector field) */
-  if (get_string(inbuf, LINESIZE, fd) == NULL) {
+  if (get_string(inbuf, LINESIZE, fd) == nullptr) {
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
   if (sscanf(inbuf, "veclen=%d", &veclen) != 1) {
     fprintf(stderr, "avsplugin) Error reading veclen.\n");
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
 
   /* Check that the data type is "float" */
-  if (get_string(inbuf, LINESIZE, fd) == NULL) {
+  if (get_string(inbuf, LINESIZE, fd) == nullptr) {
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
   if (strncmp(inbuf, "data=float", 10) != 0) {
     fprintf(stderr, "avsplugin) Error reading data type.\n");
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
 
   /* Check that the field type is "uniform" */
-  if (get_string(inbuf, LINESIZE, fd) == NULL) {
+  if (get_string(inbuf, LINESIZE, fd) == nullptr) {
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
   if (strncmp(inbuf, "field=uniform", 13) != 0) {
     fprintf(stderr, "avsplugin) Error reading field type.\n");
     fclose(fd);
-    return NULL;
+    return nullptr;
   }
 
   /* Allocate space for the coordinate and variable information 
@@ -311,56 +311,56 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
 
   /* Find the coordinate information */
   for (i = 0; i < ndim; i++) {
-    if (get_string(inbuf, LINESIZE, fd) == NULL) {
+    if (get_string(inbuf, LINESIZE, fd) == nullptr) {
       delete[] coord;
       fclose(fd);
-      return NULL;
+      return nullptr;
     }
     if ( (sscanf(inbuf, "coord %d", &coord_count) != 1) || (coord_count != i+1) ) {
     fprintf(stderr, "avsplugin) Error reading coord count.\n");
       delete[] coord;
       fclose(fd);
-      return NULL;
+      return nullptr;
     }
     if (read_datasource(inbuf, &coord[i])) {
       delete[] coord;
       fclose(fd);
-      return NULL;
+      return nullptr;
     }
   }
 
   /* XXX - Ignore the labels (should be used for vol dataname) */
   for (i = 0; i < veclen; i++) {
-    if (get_string(inbuf, LINESIZE, fd) == NULL) {
+    if (get_string(inbuf, LINESIZE, fd) == nullptr) {
       delete[] coord;
       fclose(fd);
-      return NULL;
+      return nullptr;
     }
   }
   
   /* Find the variable information */
   for (i = 0; i < veclen; i++) {
-    if (get_string(inbuf, LINESIZE, fd) == NULL) {
+    if (get_string(inbuf, LINESIZE, fd) == nullptr) {
       delete[] coord;
       fclose(fd);
-      return NULL;
+      return nullptr;
     }
     if ( (sscanf(inbuf, "variable %d", &var_count) != 1) || (var_count != i+1) ) {
       fprintf(stderr, "avsplugin) Error reading variable count.\n");
       delete[] coord;
       fclose(fd);
-      return NULL;
+      return nullptr;
     }
     if (read_datasource(inbuf, &variable[i])) {
       delete[] coord;
       fclose(fd);
-      return NULL;
+      return nullptr;
     }
   }
 
   /* Close the AVS file */
   fclose(fd);
-  fd = NULL;
+  fd = nullptr;
 
   /* Read the coordinate file(s) to find the origin and grid size 
    * XXX - this only works for "uniform" fields
@@ -370,14 +370,14 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
       /* Close the old file if one was open, and open a new one */
       if (fd) {
         fclose(fd);
-        fd = NULL;
+        fd = nullptr;
       }
       strcpy(current_file, coord[i].filename); /* XXX - unsafe */
       fd = fopen(current_file, "rb");
       if (!fd) {
         fprintf(stderr, "avsplugin) Error opening file.\n");
         delete[] coord;
-        return NULL;
+        return nullptr;
       }
     }
     else {
@@ -387,11 +387,11 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
 
     /* Skip the "skip" lines */
     for (index = 0; index < coord[i].skip; index++) {
-      if (fgets(inbuf, LINESIZE, fd) == NULL) {
+      if (fgets(inbuf, LINESIZE, fd) == nullptr) {
         fprintf(stderr, "avsplugin) Error reading line.\n");
         fclose(fd);
         delete[] coord;
-        return NULL;
+        return nullptr;
       }
     }
 
@@ -401,7 +401,7 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
         fprintf(stderr, "avsplugin) Error skipping offset.\n");
         fclose(fd);
         delete[] coord;
-        return NULL;
+        return nullptr;
       }
     }
 
@@ -410,7 +410,7 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
       fprintf(stderr, "avsplugin) Error reading origin.\n");
       fclose(fd);
       delete[] coord;
-      return NULL;
+      return nullptr;
     }
     origin[i] = value;
     for (index = 0; index < coord[i].stride; index++) {
@@ -418,7 +418,7 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
         fprintf(stderr, "avsplugin) Error skipping stride.\n");
         fclose(fd);
         delete[] coord;
-        return NULL;
+        return nullptr;
       }
     }
     gridlength[i] = value - origin[i];
@@ -426,12 +426,12 @@ static void *open_avsfield_read(const char *filepath, const char *filetype, int 
 
   /* Free the coordinates */
   delete[] coord;
-  coord = NULL;
+  coord = nullptr;
   fclose(fd);
 
   /* Allocate and initialize the avsfield structure */
   avsfield = new avsfield_t;
-  avsfield->vol = NULL;
+  avsfield->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
 
   /* AVS field files can have an arbitrary number of sets */
@@ -501,7 +501,7 @@ static int read_avsfield_data(void *v, int set, float *datablock,
 
   /* Skip the "skip" lines */
   for (index = 0; index < skip; index++) {
-    if (fgets(inbuf, LINESIZE, fd) == NULL) {
+    if (fgets(inbuf, LINESIZE, fd) == nullptr) {
       fprintf(stderr, "avsplugin) Error skipping lines.\n");
       fclose(fd);
       return MOLFILE_ERROR;
@@ -544,9 +544,9 @@ static int read_avsfield_data(void *v, int set, float *datablock,
 static void close_avsfield_read(void *v) {
   avsfield_t *avsfield = (avsfield_t *)v;
 
-  if (avsfield->vol != NULL)
+  if (avsfield->vol != nullptr)
     delete [] avsfield->vol;
-  if (avsfield->data != NULL)
+  if (avsfield->data != nullptr)
     delete [] avsfield->data;
   delete avsfield;
 }

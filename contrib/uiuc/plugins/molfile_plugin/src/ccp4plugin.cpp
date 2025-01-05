@@ -94,7 +94,7 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     printf("ccp4plugin) Error opening file %s\n", filepath);
-    return NULL;
+    return nullptr;
   }
 
   if ((fread(extent, sizeof(int), 3, fd) != 3) ||
@@ -105,7 +105,7 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
       (fread(cellAngles, sizeof(float), 3, fd) != 3) ||
       (fread(crs2xyz, sizeof(int), 3, fd) != 3)) {
     printf("ccp4plugin) Error: Improperly formatted line.\n");
-    return NULL;
+    return nullptr;
   }
 
   // Check the number of bytes used for storing symmetry operators
@@ -113,7 +113,7 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
   fseek(fd, 23 * 4, SEEK_SET);
   if ((fread(&symBytes, sizeof(int), 1, fd) != 1) ) {
     printf("ccp4plugin) Error: Failed reading symmetry bytes record.\n");
-    return NULL;
+    return nullptr;
   }
 
   // read MRC2000 Origin record at word 49, byte 196, and use it if necessary
@@ -127,11 +127,11 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
   fseek(fd, 152, SEEK_SET);
   if (fread(&imodstamp, sizeof(int), 1, fd) != 1) {
     printf("ccp4plugin) Error: failed to read IMOD stamp from MRC file.\n");
-    return NULL;
+    return nullptr;
   }
   if (fread(&imodflags, sizeof(int), 1, fd) != 1) {
     printf("ccp4plugin) Error: failed to read IMOD flags from MRC file.\n");
-    return NULL;
+    return nullptr;
   }
 
   // Check file endianism using some heuristics
@@ -174,9 +174,9 @@ static void *open_ccp4_read(const char *filepath, const char *filetype,
 
   // Check for the string "MAP" at word 52 byte 208, indicating a CCP4 file.
   fseek(fd, 52 * 4, SEEK_SET);
-  if (fgets(mapString, 4, fd) == NULL) {
+  if (fgets(mapString, 4, fd) == nullptr) {
     printf("ccp4plugin) Error: unable to read 'MAP' string, not a valid CCP4/IMOD MRC file.\n");
-    return NULL;
+    return nullptr;
   }
   if ((strcmp(mapString, "MAP") != 0) && (imodstamp != IMOD_MAGIC_STAMP)) {
     //Older versions of IMOD (2.6.19 or below) do not have the "MAP " string.
@@ -221,12 +221,12 @@ string so file loading will continue but may fail.\n");
     case MRC_TYPE_SHORT2:
       printf("ccp4plugin) voxel type: short2 (2x 16-bit signed int)\n");
       printf("ccp4plugin) Error: unimplemented voxel format\n");
-      return NULL;
+      return nullptr;
 
     case MRC_TYPE_FLOAT2:
       printf("ccp4plugin) voxel type: float2 (2x 32-bit real)\n");
       printf("ccp4plugin) Error: unimplemented voxel format\n");
-      return NULL;
+      return nullptr;
 
     case MRC_TYPE_USHORT:
       printf("ccp4plugin) voxel type: ushort (16-bit unsigned int)\n");
@@ -238,7 +238,7 @@ string so file loading will continue but may fail.\n");
 
     default:
       printf("ccp4plugin) Error: Only byte, short (16-bit integer) or float (32-bit real) data types are supported.\n");
-      return NULL;
+      return nullptr;
   }
 
 #if 1
@@ -283,7 +283,7 @@ string so file loading will continue but may fail.\n");
       symBytes = 0;
     } else if (dataOffset < CCP4HDSIZE) {
       printf("ccp4plugin) Error: File appears truncated and doesn't match header.\n");
-      return NULL;
+      return nullptr;
     } else if ((dataOffset > CCP4HDSIZE) && (dataOffset < (1024*1024))) {
       // Fix for loading SPIDER files which are larger than usual
       // In this specific case, we must absolutely trust the symBytes record
@@ -292,7 +292,7 @@ string so file loading will continue but may fail.\n");
       printf("ccp4plugin) Warning: Continuing file load, good luck!\n");
     } else {
       printf("ccp4plugin) Error: File is MUCH larger than expected and doesn't match header.\n");
-      return NULL;
+      return nullptr;
     }
   }
 
@@ -323,7 +323,7 @@ string so file loading will continue but may fail.\n");
   // Allocate and initialize the ccp4 structure
   ccp4 = new ccp4_t;
   ccp4->fd = fd;
-  ccp4->vol = NULL;
+  ccp4->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   ccp4->nsets = 1; // this EDM file contains only one data set
   ccp4->voxtype = voxtype;

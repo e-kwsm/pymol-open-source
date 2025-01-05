@@ -72,35 +72,35 @@ static void *open_brix_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "brixplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   // read in BRIX file header information -- stored as a 512-element char array
   fscanf(fd, "%3s", keyWord);
   if (strcmp(keyWord, ":-)") != 0) {
     fprintf(stderr, "brixplugin) Error improperly formatted header.\n");
-    return NULL;
+    return nullptr;
   }
 
   // "Origin: the origin of the map in grid units, along X, Y, Z."
   fscanf(fd, " %s %d %d %d", keyWord, &org_x, &org_y, &org_z);
   if (strcasecmp(keyWord, "origin") != 0) {
     fprintf(stderr, "brixplugin) Error reading origin.\n");
-    return NULL;
+    return nullptr;
   }
 
   // "Extent: the extent (size) of the map, along X, Y, Z, in grid units"
   fscanf(fd, " %s %d %d %d", keyWord, &ext_x, &ext_y, &ext_z);
   if (strcasecmp(keyWord, "extent") != 0) {
     fprintf(stderr, "brixplugin) Error reading extent.\n");
-    return NULL;
+    return nullptr;
   }
 
   // "Grid: number of grid points along the whole unit cell, along X, Y, Z."
   fscanf(fd, " %s %f %f %f", keyWord, &grid_x, &grid_y, &grid_z);
   if (strcasecmp(keyWord, "grid") != 0) {
     fprintf(stderr, "brixplugin) Error reading grid.\n");
-    return NULL;
+    return nullptr;
   }
 
   // "Cell: Unit cell parameters"
@@ -110,7 +110,7 @@ static void *open_brix_read(const char *filepath, const char *filetype,
          &cell_x, &cell_y, &cell_z, &cell_alpha, &cell_beta, &cell_gamma);
   if (strcasecmp(keyWord, "cell") != 0) {
     fprintf(stderr, "brixplugin) Error reading cell.\n");
-    return NULL;
+    return nullptr;
   }
 
   // Convert angles to radians
@@ -123,25 +123,25 @@ static void *open_brix_read(const char *filepath, const char *filetype,
   fscanf(fd, " %s %f", keyWord, &prod);
   if (strcasecmp(keyWord, "prod") != 0) {
     fprintf(stderr, "brixplugin) Error reading prod.\n");
-    return NULL;
+    return nullptr;
   }
   fscanf(fd, " %s %f", keyWord, &plus);
   if (strcasecmp(keyWord, "plus") != 0) {
     fprintf(stderr, "brixplugin) Error reading plus.\n");
-    return NULL;
+    return nullptr;
   }
 
   // "Sigma: Rms deviation of electron density map."
   fscanf(fd, " %s %f", keyWord, &sigma);
   if (strcasecmp(keyWord, "sigma") != 0) {
     fprintf(stderr, "brixplugin) Error reading sigma.\n");
-    return NULL;
+    return nullptr;
   }
 
   // Allocate and initialize the brix structure
   brix = new brix_t;
   brix->fd = fd;
-  brix->vol = NULL;
+  brix->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   brix->nsets = 1; // this file contains only one data set
 
@@ -281,7 +281,7 @@ static void close_brix_read(void *v) {
   brix_t *brix = (brix_t *)v;
 
   fclose(brix->fd);
-  if (brix->vol != NULL)
+  if (brix->vol != nullptr)
     delete [] brix->vol; 
   delete brix;
 }

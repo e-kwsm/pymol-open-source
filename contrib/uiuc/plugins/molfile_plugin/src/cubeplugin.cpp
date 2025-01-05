@@ -149,14 +149,14 @@ static void *open_cube_read(const char *filepath, const char *filetype,
  
   fd = fopen(filepath, "rb");
   if (!fd) 
-    return NULL;
+    return nullptr;
 
   cube = new cube_t;
   cube->fd = fd;
-  cube->vol = NULL;
+  cube->vol = nullptr;
   cube->coord = false;
   cube->file_name = strdup(filepath);
-  cube->datacache = NULL;
+  cube->datacache = nullptr;
 
   // initialize origin and rotmat to sensible defaults.
   for (i=0; i<3; ++i) {
@@ -184,14 +184,14 @@ static void *open_cube_read(const char *filepath, const char *filetype,
   // XXX: As of Gaussian09 revD01 this line contains an
   // additional, yet undocumented (integer) number
   // we read the entire and parse only the known numbers
-  if ((fgets(readbuf, 255, cube->fd) == NULL) ||
+  if ((fgets(readbuf, 255, cube->fd) == nullptr) ||
       (sscanf(readbuf, "%d%f%f%f",
               &cube->numatoms,
               &voltmpl.origin[0],
               &voltmpl.origin[1],
               &voltmpl.origin[2]) != 4 )) {
     close_cube_read(cube);
-    return NULL;
+    return nullptr;
   }
 
   if (cube->numatoms > 0) {   // density cube file
@@ -205,20 +205,20 @@ static void *open_cube_read(const char *filepath, const char *filetype,
 
 
   // read in cube axes and sizes
-  if ((fgets(readbuf, 255, cube->fd) == NULL) ||
+  if ((fgets(readbuf, 255, cube->fd) == nullptr) ||
       (sscanf(readbuf, "%d%f%f%f",&xsize, &a[0], &a[1], &a[2]) != 4)) {
     close_cube_read(cube);
-    return NULL;
+    return nullptr;
   }
-  if ((fgets(readbuf, 255, cube->fd) == NULL) ||
+  if ((fgets(readbuf, 255, cube->fd) == nullptr) ||
       (sscanf(readbuf, "%d%f%f%f",&ysize, &b[0], &b[1], &b[2]) != 4)) {
     close_cube_read(cube);
-    return NULL;
+    return nullptr;
   }
-  if ((fgets(readbuf, 255, cube->fd) == NULL) ||
+  if ((fgets(readbuf, 255, cube->fd) == nullptr) ||
       (sscanf(readbuf, "%d%f%f%f",&zsize, &c[0], &c[1], &c[2]) != 4)) {
     close_cube_read(cube);
-    return NULL;
+    return nullptr;
   }
 
   // calculate number of samples in each dimension
@@ -380,7 +380,7 @@ static int read_cube_structure(void *v, int *optflags, molfile_atom_t *atoms) {
 
     k = fgets(fbuffer, 1024, cube->fd);
     j=sscanf(fbuffer, "%d %f %*f %*f %*f", &idx, &chrg);
-    if (k == NULL) {
+    if (k == nullptr) {
       vmdcon_printf(VMDCON_ERROR, "cube structure) missing atom(s) in "
                                   "file '%s'\n",cube->file_name);
       vmdcon_printf(VMDCON_ERROR, "cube structure) expecting '%d' atoms,"
@@ -432,14 +432,14 @@ static int read_cube_timestep(void *v, int natoms, molfile_timestep_t *ts) {
     k = fgets(fbuffer, 1024, cube->fd);
     j = sscanf(fbuffer, "%*d %*f %f %f %f", &x, &y, &z);
     
-    if (k == NULL) {
+    if (k == nullptr) {
       return MOLFILE_ERROR;
     } else if (j < 3) {
       vmdcon_printf(VMDCON_ERROR, "cube timestep) missing type or coordinate(s)"
                     " in file '%s' for atom '%d'\n",cube->file_name,i+1);
       return MOLFILE_ERROR;
     } else if (j>=3) {
-      if (ts != NULL) { 
+      if (ts != nullptr) { 
         // Only save coords if we're given a timestep pointer, 
         // otherwise assume that VMD wants us to skip past it.
         
@@ -463,7 +463,7 @@ static int read_cube_timestep(void *v, int natoms, molfile_timestep_t *ts) {
     }
   }
   // set unitcell dimensions from cached data.
-  if (ts != NULL) { 
+  if (ts != nullptr) { 
       ts->A = cube->box.A;
       ts->B = cube->box.B;
       ts->C = cube->box.C;
@@ -524,7 +524,7 @@ static int read_cube_data(void *v, int set, float *datablock, float *colorblock)
     // we have to cache the whole data set of have any kind of reasonable performance.
     // otherwise we would have to read (and parse!) the whole file over and over again.
     // this way we have to do it only once at the temporary expense of some memory.
-    if (cube->datacache == NULL) {
+    if (cube->datacache == nullptr) {
       int points = xsize*ysize*zsize * nsize; // number of grid cells * nsets
       int i;
 

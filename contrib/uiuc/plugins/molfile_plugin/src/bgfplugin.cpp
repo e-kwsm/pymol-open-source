@@ -52,14 +52,14 @@ static void *open_bgf_read(const char *path, const char *filetype,
   nbonds=0;
   int nbline; //Number of bonds in current line
 
-  if ((fd = fopen(path, "r")) == NULL)
-    return NULL;
+  if ((fd = fopen(path, "r")) == nullptr)
+    return nullptr;
 
   do {
     fgets(line, LINESIZE, fd);
     if ( ferror(fd) || feof(fd) ) {
       printf("bgfplugin) Improperly terminated bgf file\n");
-      return NULL;
+      return nullptr;
     }
 
     if ((strncmp(line, "ATOM", 4) == 0) || (strncmp(line, "HETATM", 6)==0)) 
@@ -87,9 +87,9 @@ static void *open_bgf_read(const char *path, const char *filetype,
 
   bgf->optflags = optflags;
   bgf->coords_read = 0;
-  bgf->from = NULL;
-  bgf->to = NULL;
-  bgf->bondorder = NULL;
+  bgf->from = nullptr;
+  bgf->to = nullptr;
+  bgf->bondorder = nullptr;
 
   return bgf;
 }
@@ -116,17 +116,17 @@ static void get_bgf_coordinates(const char *record,
                                 float *x, float *y, float *z) {
   char numstr[50]; /* store all fields in one array to save memset calls */
   memset(numstr, 0, sizeof(numstr));
-  if (x != NULL) {
+  if (x != nullptr) {
     strncpy(numstr, record + 31, 10);
     *x = (float) atof(numstr);
   }
 
-  if (y != NULL) {
+  if (y != nullptr) {
     strncpy(numstr+10, record + 41, 10);
     *y = (float) atof(numstr+10);
   }
 
-  if (z != NULL) {
+  if (z != nullptr) {
     strncpy(numstr+20, record + 51, 10);
     *z = (float) atof(numstr+20);
   }
@@ -212,9 +212,8 @@ static int read_bgf_structure(void *v, int *optflags, molfile_atom_t *atoms) {
     atom=atoms+natoms;
     natoms++;
 
-    get_bgf_fields(line, atom->name, atom->resname, atom->chain, 
-                   atom->segid, &atom->resid, atom->type, &atom->charge, 
-                   NULL, NULL, NULL);
+    get_bgf_fields(line, atom->name, atom->resname, atom->chain, atom->segid,
+        &atom->resid, atom->type, &atom->charge, nullptr, nullptr, nullptr);
   } while (strncmp(line, "END", 3));
 
   bgf->natoms = natoms;
@@ -277,9 +276,9 @@ static void *open_bgf_write(const char *filename, const char *filetype,
   FILE *fd;
   bgfdata *data;
 
-  if ((fd = fopen(filename, "w")) == NULL) {
+  if ((fd = fopen(filename, "w")) == nullptr) {
     printf("bgfplugin) Error: unable to open bgf file %s for writing\n", filename);
-    return NULL;
+    return nullptr;
   }
   
   data = (bgfdata *) malloc(sizeof(bgfdata));
@@ -313,8 +312,8 @@ static int read_bgf_bonds_aux(void *v, int *nbonds, int **fromptr, int **toptr, 
   char nextline[LINESIZE]; 
   if (bgf->nbonds == 0) {
     *nbonds = 0;
-    *fromptr = NULL;
-    *toptr = NULL;
+    *fromptr = nullptr;
+    *toptr = nullptr;
     return MOLFILE_SUCCESS;
   }
 
@@ -447,7 +446,7 @@ static int read_bgf_bonds(void *v, int *nbonds, int **fromptr, int **toptr,
 
     if ((read_bgf_bonds_aux(bgf, nbonds, &(bgf->from), &(bgf->to), &(bgf->bondorder))) != MOLFILE_SUCCESS) {
       fclose(bgf->file);
-      bgf->file = NULL;
+      bgf->file = nullptr;
       return MOLFILE_ERROR;
     }
 
@@ -456,12 +455,12 @@ static int read_bgf_bonds(void *v, int *nbonds, int **fromptr, int **toptr,
     *bondorderptr = bgf->bondorder; 
   } else {
     printf("bgfplugin) WARNING: no bonds defined in bgf file.\n");
-    *fromptr = NULL;
-    *toptr = NULL;
-    *bondorderptr = NULL;
-    *bondtype = NULL;
+    *fromptr = nullptr;
+    *toptr = nullptr;
+    *bondorderptr = nullptr;
+    *bondtype = nullptr;
     *nbondtypes = 0;
-    *bondtypename = NULL;
+    *bondtypename = nullptr;
   }
 
   return MOLFILE_SUCCESS;
@@ -512,7 +511,7 @@ static int write_bgf_timestep(void *mydata, const molfile_timestep_t *ts) {
     j=data->from[i];
     k=data->to[i];
 
-    if (data->bondorder != NULL)
+    if (data->bondorder != nullptr)
       o=data->bondorder[i];
     else
       o=1.0f;
@@ -559,17 +558,17 @@ static int write_bgf_timestep(void *mydata, const molfile_timestep_t *ts) {
     }
   }
 
-  if (bonds != NULL) {
+  if (bonds != nullptr) {
     free(bonds);
-    bonds = NULL;
+    bonds = nullptr;
   }
-  if (orders != NULL) {
+  if (orders != nullptr) {
     free(orders);
-    orders = NULL;
+    orders = nullptr;
   }
-  if (numcons != NULL) {
+  if (numcons != nullptr) {
     free(numcons);
-    numcons = NULL;
+    numcons = nullptr;
   }
 
   fprintf(data->file,"END\n");
@@ -589,7 +588,7 @@ static int write_bgf_bonds(void *v, int nbonds, int *fromptr, int *toptr,
     data->to[i]=toptr[i];
   }
 
-  if (bondorderptr != NULL) {  
+  if (bondorderptr != nullptr) {
     data->bondorder = (float*) malloc(nbonds * sizeof(float));
     for (int i=0;i<nbonds;i++) {
       data->bondorder[i]=bondorderptr[i];
@@ -603,16 +602,16 @@ static int write_bgf_bonds(void *v, int nbonds, int *fromptr, int *toptr,
 static void close_bgf_write(void *mydata) {
   bgfdata *data = (bgfdata *)mydata;
   if (data) {
-    if (data->file != NULL) fclose(data->file);
-    data->file = NULL;
-    if (data->atomlist != NULL) free(data->atomlist);
-    data->atomlist = NULL;
-    if (data->from != NULL) free(data->from);
-    data->from = NULL;
-    if (data->to != NULL) free(data->to);
-    data->to = NULL;
-    if (data->bondorder != NULL) free(data->bondorder);
-    data->bondorder = NULL;
+    if (data->file != nullptr) fclose(data->file);
+    data->file = nullptr;
+    if (data->atomlist != nullptr) free(data->atomlist);
+    data->atomlist = nullptr;
+    if (data->from != nullptr) free(data->from);
+    data->from = nullptr;
+    if (data->to != nullptr) free(data->to);
+    data->to = nullptr;
+    if (data->bondorder != nullptr) free(data->bondorder);
+    data->bondorder = nullptr;
     free(data);
   }
 }
@@ -622,14 +621,14 @@ static void close_bgf_write(void *mydata) {
 static void close_bgf_read(void *v) {
   bgfdata *bgf = (bgfdata *)v;
   if (bgf) {
-    if (bgf->file != NULL) fclose(bgf->file);
-    bgf->file = NULL;
-    if (bgf->from != NULL) free(bgf->from);
-    bgf->from = NULL;
-    if (bgf->to != NULL)   free(bgf->to);
-    bgf->to = NULL;
-    if (bgf->bondorder != NULL)   free(bgf->bondorder);
-    bgf->bondorder = NULL;
+    if (bgf->file != nullptr) fclose(bgf->file);
+    bgf->file = nullptr;
+    if (bgf->from != nullptr) free(bgf->from);
+    bgf->from = nullptr;
+    if (bgf->to != nullptr)   free(bgf->to);
+    bgf->to = nullptr;
+    if (bgf->bondorder != nullptr)   free(bgf->bondorder);
+    bgf->bondorder = nullptr;
     free(bgf);
   }
 }
