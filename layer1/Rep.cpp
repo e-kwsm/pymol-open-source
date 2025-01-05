@@ -1,33 +1,33 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
+#include "os_python.h"
 
-#include"os_predef.h"
-#include"os_std.h"
-#include"os_gl.h"
+#include "os_gl.h"
+#include "os_predef.h"
+#include "os_std.h"
 
-#include"main.h"
-#include"Feedback.h"
-#include"Rep.h"
-#include"MemoryDebug.h"
-#include"CoordSet.h"
-#include"P.h"
-#include"Util.h"
-#include"Scene.h"
+#include "CoordSet.h"
+#include "Feedback.h"
+#include "MemoryDebug.h"
+#include "P.h"
+#include "Rep.h"
+#include "Scene.h"
+#include "Util.h"
+#include "main.h"
 
 /*========================================================================*/
 /**
@@ -59,8 +59,8 @@ Rep* Rep::rebuild()
 /*========================================================================*/
 /**
  * Rebuild if necessary (according to invalidation status). Returns either this
- * instance, or deletes this instance and returns a new one, or nullptr if the rep
- * became empty/inactive.
+ * instance, or deletes this instance and returns a new one, or nullptr if the
+ * rep became empty/inactive.
  */
 Rep* Rep::update()
 {
@@ -121,20 +121,24 @@ Rep* Rep::update()
 void Rep::invalidate(cRepInv_t level)
 {
   auto I = this;
-  SceneInvalidatePicking(I->G); // for now, if anything invalidated, then invalidate picking
-  if(level > I->MaxInvalid)
+  SceneInvalidatePicking(
+      I->G); // for now, if anything invalidated, then invalidate picking
+  if (level > I->MaxInvalid)
     I->MaxInvalid = level;
 }
 
 /**
  * Get the visRep mask according to auto_show_* settings
  */
-cRepBitmask_t RepGetAutoShowMask(PyMOLGlobals * G)
+cRepBitmask_t RepGetAutoShowMask(PyMOLGlobals* G)
 {
   cRepBitmask_t mask = 0;
-  if (SettingGetGlobal_b(G, cSetting_auto_show_lines))     mask |= cRepLineBit;
-  if (SettingGetGlobal_b(G, cSetting_auto_show_spheres))   mask |= cRepSphereBit;
-  if (SettingGetGlobal_b(G, cSetting_auto_show_nonbonded)) mask |= cRepNonbondedBit;
+  if (SettingGetGlobal_b(G, cSetting_auto_show_lines))
+    mask |= cRepLineBit;
+  if (SettingGetGlobal_b(G, cSetting_auto_show_spheres))
+    mask |= cRepSphereBit;
+  if (SettingGetGlobal_b(G, cSetting_auto_show_nonbonded))
+    mask |= cRepNonbondedBit;
   return mask;
 }
 
@@ -146,7 +150,7 @@ cRepBitmask_t RepGetAutoShowMask(PyMOLGlobals * G)
  */
 void Rep::render(RenderInfo* info)
 {
-  if(G->HaveGUI && G->ValidContext) {
+  if (G->HaveGUI && G->ValidContext) {
 #ifdef PURE_OPENGL_ES_2
     /* TODO */
 #else
@@ -175,9 +179,7 @@ void Rep::render(RenderInfo* info)
     glEnd();
 #endif
   }
-
 }
-
 
 /*========================================================================*/
 Rep::Rep(pymol::CObject* obj_, int state)
@@ -199,8 +201,9 @@ Rep::~Rep()
   FreeP(P);
 }
 
-RepIterator::RepIterator(PyMOLGlobals * G, int rep_) {
-  if (rep_ < 0){
+RepIterator::RepIterator(PyMOLGlobals* G, int rep_)
+{
+  if (rep_ < 0) {
     end = cRepCnt;
     rep = -1;
   } else {

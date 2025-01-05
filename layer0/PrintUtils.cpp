@@ -1,27 +1,29 @@
-#include <iostream>
-#include <iomanip>
-#include <algorithm>
 #include "PrintUtils.h"
+#include <algorithm>
+#include <iomanip>
+#include <iostream>
 
-display_table_t & display_table_t::begin_row() {
+display_table_t& display_table_t::begin_row()
+{
   _table.push_back(std::vector<std::string>());
   _current_row++;
   return *this;
 }
 
-void display_table_t::display() {
+void display_table_t::display()
+{
   // Dimensions of tables
   const size_t num_rows = _table.size();
-  const size_t num_cols = ([&] () {
+  const size_t num_cols = ([&]() {
     size_t largest = 0;
-    for (auto & v : _table) {
+    for (auto& v : _table) {
       largest = std::max(largest, v.size());
     }
     return largest;
   })();
 
   // Pad
-  for (auto & row : _table) {
+  for (auto& row : _table) {
     while (row.size() < num_cols) {
       row.emplace_back(" ");
     }
@@ -37,29 +39,27 @@ void display_table_t::display() {
     col_sizes[j] = largest;
   }
 
-
   // construct the output
   std::stringstream ss;
   ss << std::left;
   auto insert_hr = [&]() {
     for (size_t j = 0; j < num_cols; ++j) {
-      ss << std::setw(col_sizes[j] + 3)
-      << std::setfill('-') << "+";
+      ss << std::setw(col_sizes[j] + 3) << std::setfill('-') << "+";
     }
     ss << "+" << std::setfill(' ') << std::endl;
   };
   {
     int i = 0, j = 0;
-    for (auto & row : _table) {
+    for (auto& row : _table) {
       insert_hr();
       ss << "| ";
-      for (auto & col : row) {
-        ss << std::setw(col_sizes[j])
-           << col << " | ";
+      for (auto& col : row) {
+        ss << std::setw(col_sizes[j]) << col << " | ";
         j++;
       }
       ss << std::endl;
-      i++; j = 0;
+      i++;
+      j = 0;
     }
     insert_hr();
   }

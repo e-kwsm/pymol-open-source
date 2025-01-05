@@ -38,21 +38,21 @@ SOFTWARE.
 #include "OpenVRUtils.h"
 
 OpenVRQuad::OpenVRQuad()
-  : m_width(1.0f)
-  , m_height(1.0f)
-  , m_spriteIndex(0)
-  , m_spriteCount(1)
-  , m_alpha(1.0f)
-  , m_mirror(false)
-  , m_vertexArrayID(0)
-  , m_vertexBufferID(0)
-  , m_vertexCount(0)
-  , m_textureID(0)
-  , m_programID(0)
-  , m_positionMulAddUniform(-1)
-  , m_texcoordMulAddUniform(-1)
-  , m_colorMulAddUniform(-1)
-  , m_textureUniform(-1)
+    : m_width(1.0f)
+    , m_height(1.0f)
+    , m_spriteIndex(0)
+    , m_spriteCount(1)
+    , m_alpha(1.0f)
+    , m_mirror(false)
+    , m_vertexArrayID(0)
+    , m_vertexBufferID(0)
+    , m_vertexCount(0)
+    , m_textureID(0)
+    , m_programID(0)
+    , m_positionMulAddUniform(-1)
+    , m_texcoordMulAddUniform(-1)
+    , m_colorMulAddUniform(-1)
+    , m_textureUniform(-1)
 {
   InitGeometry();
   InitShaders();
@@ -70,10 +70,10 @@ void OpenVRQuad::InitGeometry()
     float position[2];
     float texcoord[2];
   } vertices[] = {
-    {{-1.0f, +1.0f}, {0.0f, 1.0f}},
-    {{+1.0f, +1.0f}, {1.0f, 1.0f}},
-    {{-1.0f, -1.0f}, {0.0f, 0.0f}},
-    {{+1.0f, -1.0f}, {1.0f, 0.0f}},
+      {{-1.0f, +1.0f}, {0.0f, 1.0f}},
+      {{+1.0f, +1.0f}, {1.0f, 1.0f}},
+      {{-1.0f, -1.0f}, {0.0f, 0.0f}},
+      {{+1.0f, -1.0f}, {1.0f, 0.0f}},
   };
 
   m_vertexCount = sizeof(vertices) / sizeof(vertices[0]);
@@ -89,9 +89,11 @@ void OpenVRQuad::InitGeometry()
 
   // Identify the components in the vertex buffer
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_t), (void *)offsetof(Vertex_t, position));
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_t),
+      (void*) offsetof(Vertex_t, position));
   glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_t), (void *)offsetof(Vertex_t, texcoord));
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_t),
+      (void*) offsetof(Vertex_t, texcoord));
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
@@ -111,25 +113,25 @@ bool OpenVRQuad::InitShaders()
 {
   const char* attributes[] = {"positionRaw", "texcoordRaw", 0};
   const char* vs =
-    "uniform vec4 positionMulAdd;\n"
-    "uniform vec4 texcoordMulAdd;\n"
-    "attribute vec2 positionRaw;\n"
-    "attribute vec2 texcoordRaw;\n\n"
-    "varying vec2 texcoord;\n\n"
-    "void main() {\n"
+      "uniform vec4 positionMulAdd;\n"
+      "uniform vec4 texcoordMulAdd;\n"
+      "attribute vec2 positionRaw;\n"
+      "attribute vec2 texcoordRaw;\n\n"
+      "varying vec2 texcoord;\n\n"
+      "void main() {\n"
       "vec2 position;\n"
       "texcoord = texcoordMulAdd.xy * texcoordRaw + texcoordMulAdd.zw;\n"
       "position = positionMulAdd.xy * positionRaw + positionMulAdd.zw;\n"
       "gl_Position = gl_ModelViewProjectionMatrix * vec4(position, 0.0, 1.0);\n"
-    "}\n";
+      "}\n";
   const char* fs =
-    "uniform vec4 colorMulAdd;\n"
-    "uniform sampler2D texture;\n"
-    "varying vec2 texcoord;\n"
-    "void main() {\n"
+      "uniform vec4 colorMulAdd;\n"
+      "uniform sampler2D texture;\n"
+      "varying vec2 texcoord;\n"
+      "void main() {\n"
       "vec4 color = texture2D(texture, texcoord);\n"
       "gl_FragColor = colorMulAdd.xxxy * color + colorMulAdd.zzzw;\n"
-    "}\n";
+      "}\n";
 
   m_programID = OpenVRUtils::CompileProgram(vs, fs, attributes);
   m_positionMulAddUniform = glGetUniformLocation(m_programID, "positionMulAdd");
@@ -180,9 +182,11 @@ void OpenVRQuad::Draw()
   glBindTexture(GL_TEXTURE_2D, m_textureID);
 
   float positionMulAdd[4] = {0.5f * m_width, 0.5f * m_height, 0.0f, 0.0f};
-  float texcoordMulAdd[4] = {1.0f / m_spriteCount, m_mirror ? -1.0f : 1.0f, (float)m_spriteIndex / m_spriteCount, m_mirror ? 1.0f : 0.0f};
+  float texcoordMulAdd[4] = {1.0f / m_spriteCount, m_mirror ? -1.0f : 1.0f,
+      (float) m_spriteIndex / m_spriteCount, m_mirror ? 1.0f : 0.0f};
   float hasTexture = m_textureID ? 1.0f : 0.0f;
-  float colorMulAdd[4] = {hasTexture, hasTexture * m_alpha, 1.0f - hasTexture, (1.0f - hasTexture) * m_alpha};
+  float colorMulAdd[4] = {hasTexture, hasTexture * m_alpha, 1.0f - hasTexture,
+      (1.0f - hasTexture) * m_alpha};
 
   glUniform4fv(m_positionMulAddUniform, 1, positionMulAdd);
   glUniform4fv(m_texcoordMulAddUniform, 1, texcoordMulAdd);

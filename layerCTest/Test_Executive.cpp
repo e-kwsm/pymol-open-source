@@ -5,24 +5,23 @@
 
 using namespace pymol;
 
-#define TEST_SETUP       \
-    PyMOLInstance pymol; \
-    auto G = pymol.G();  \
-    [[maybe_unused]]     \
-    bool quiet = true;
+#define TEST_SETUP                                                             \
+  PyMOLInstance pymol;                                                         \
+  auto G = pymol.G();                                                          \
+  [[maybe_unused]]                                                             \
+  bool quiet = true;
 
-#define TEST_SETUP_OBJ_ATOMLESS                  \
-    TEST_SETUP                                   \
-    auto obj = new ObjectMolecule(G, false);     \
-    obj->setName("M1");                          \
-    ExecutiveManageObject(G, obj, false, quiet);
+#define TEST_SETUP_OBJ_ATOMLESS                                                \
+  TEST_SETUP                                                                   \
+  auto obj = new ObjectMolecule(G, false);                                     \
+  obj->setName("M1");                                                          \
+  ExecutiveManageObject(G, obj, false, quiet);
 
-
-#define TEST_SETUP_OBJ                                               \
-    TEST_SETUP                                                       \
-    ExecutivePseudoatom(G, "M1", "", "PS1", "PSD", "1", "P", "PSDO", \
-        "PS", -1.0f, 1, 0.0, 0.0, "", nullptr, -1, -3, 2, 1);        \
-    auto obj = ExecutiveFindObjectByName(G, "M1");
+#define TEST_SETUP_OBJ                                                         \
+  TEST_SETUP                                                                   \
+  ExecutivePseudoatom(G, "M1", "", "PS1", "PSD", "1", "P", "PSDO", "PS",       \
+      -1.0f, 1, 0.0, 0.0, "", nullptr, -1, -3, 2, 1);                          \
+  auto obj = ExecutiveFindObjectByName(G, "M1");
 
 // TEST_CASE("ExecutiveManageObject", "[Executive]")
 // {

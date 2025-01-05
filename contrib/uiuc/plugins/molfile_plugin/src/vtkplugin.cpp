@@ -20,7 +20,7 @@
  *
  ***************************************************************************
  * DESCRIPTION:
- *   Plugin for reading uniform grids and vector fields written 
+ *   Plugin for reading uniform grids and vector fields written
  *   in the VTK ASCII format
  ***************************************************************************/
 
@@ -50,10 +50,10 @@
 // val0 val1 ...
 //
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if defined(_AIX)
@@ -61,12 +61,12 @@
 #endif
 
 #if defined(WIN32) || defined(WIN64)
-#define strcasecmp  stricmp
+#define strcasecmp stricmp
 #define strncasecmp strnicmp
 #endif
 
-#include "molfile_plugin.h"
 #include "largefiles.h"
+#include "molfile_plugin.h"
 
 #define THISPLUGIN plugin
 #include "vmdconio.h"
@@ -74,17 +74,17 @@
 #define LINESIZE 2040
 
 typedef struct {
-  FILE *fd;
+  FILE* fd;
   char title[257]; /// spec says 256 chars max w/ newline termination
   int nsets;
-  molfile_volumetric_t *vol;
-  int isBinary; 
+  molfile_volumetric_t* vol;
+  int isBinary;
 } vtk_t;
 
-
 // Get a string from a stream, printing any errors that occur
-static char *vtkgets(char *s, int n, FILE *stream) {
-  char *returnVal;
+static char* vtkgets(char* s, int n, FILE* stream)
+{
+  char* returnVal;
 
   if (feof(stream)) {
     printf("vtkplugin) Unexpected end-of-file.\n");
@@ -102,30 +102,30 @@ static char *vtkgets(char *s, int n, FILE *stream) {
   return returnVal;
 }
 
-
-static int vtkgetstrcmp(char *s, int n, FILE *stream, const char *cmpstr) {
-  char *str = vtkgets(s, n, stream);
+static int vtkgetstrcmp(char* s, int n, FILE* stream, const char* cmpstr)
+{
+  char* str = vtkgets(s, n, stream);
   int rc = strncmp(cmpstr, str, strlen(cmpstr));
   if (rc) {
     printf("vtkplugin) found '%s', expected '%s'\n", str, cmpstr);
   }
   return rc;
 }
-   
 
-static void *open_vtk_read(const char *filepath, const char *filetype,
-    int *natoms) {
-  FILE *fd;
-  vtk_t *vtk;
+static void* open_vtk_read(
+    const char* filepath, const char* filetype, int* natoms)
+{
+  FILE* fd;
+  vtk_t* vtk;
   char inbuf[LINESIZE];
   int xsize, ysize, zsize;
   float orig[3], xdelta[3], ydelta[3], zdelta[3];
- 
+
   memset(orig, 0, sizeof(orig));
   memset(xdelta, 0, sizeof(xdelta));
   memset(ydelta, 0, sizeof(ydelta));
   memset(zdelta, 0, sizeof(zdelta));
- 
+
   fd = fopen(filepath, "rb");
   if (!fd) {
     printf("vtkplugin) Error opening file.\n");
@@ -143,17 +143,19 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
 
   /* skip comments */
   do {
-    if (vtkgets(inbuf, LINESIZE, fd) == NULL) 
+    if (vtkgets(inbuf, LINESIZE, fd) == NULL)
       return NULL;
   } while (inbuf[0] == '#');
 
-  // read VTK title line 
+  // read VTK title line
   printf("vtkplugin) Dataset title: '%s'\n", inbuf);
   strncpy(vtk->title, inbuf, sizeof(vtk->title) - 1);
-  vtk->title[256]='\0'; // force-terminate potentially truncated title string
+  vtk->title[256] = '\0'; // force-terminate potentially truncated title string
 
-  if (vtkgetstrcmp(inbuf, LINESIZE, fd, "ASCII")) return NULL;
-  if (vtkgetstrcmp(inbuf, LINESIZE, fd, "DATASET STRUCTURED_POINTS")) return NULL;
+  if (vtkgetstrcmp(inbuf, LINESIZE, fd, "ASCII"))
+    return NULL;
+  if (vtkgetstrcmp(inbuf, LINESIZE, fd, "DATASET STRUCTURED_POINTS"))
+    return NULL;
 
   // get the grid dimensions
   if (vtkgets(inbuf, LINESIZE, fd) == NULL) {
@@ -171,7 +173,7 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
     delete vtk;
     return NULL;
   }
-  if (sscanf(inbuf, "SPACING %e %e %e", xdelta, ydelta+1, zdelta+2) != 3) {
+  if (sscanf(inbuf, "SPACING %e %e %e", xdelta, ydelta + 1, zdelta + 2) != 3) {
     printf("vtkplugin) Error reading cell dimensions!\n");
     delete vtk;
     return NULL;
@@ -182,7 +184,7 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
     delete vtk;
     return NULL;
   }
-  if (sscanf(inbuf, "ORIGIN %e %e %e", orig, orig+1, orig+2) != 3) {
+  if (sscanf(inbuf, "ORIGIN %e %e %e", orig, orig + 1, orig + 2) != 3) {
     printf("vtkplugin) Error reading grid origin!\n");
     delete vtk;
     return NULL;
@@ -210,7 +212,7 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
   sscanf(inbuf, "%s", tmp);
   if (!strcmp(tmp, "FIELD")) {
     char fieldname[256];
-    int numarrays=0;
+    int numarrays = 0;
     sscanf(inbuf, "FIELD %s %d", fieldname, &numarrays);
     printf("vtkplugin) FIELD: name '%s', %d arrays\n", fieldname, numarrays);
 
@@ -222,7 +224,7 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
   } else if (!strcmp(tmp, "VECTORS")) {
     // prepare to eat vectors
     char fieldname[256];
-    int numvecs=0;
+    int numvecs = 0;
     sscanf(inbuf, "VECTORS %s %d", fieldname, &numvecs);
     printf("vtkplugin) VECTORS: name '%s', %d arrays\n", fieldname, numvecs);
   } else {
@@ -230,18 +232,18 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
     printf("vtkplugin) line contents: '%s'\n", inbuf);
     delete vtk;
     return NULL;
-  } 
+  }
 
   vtk->vol = new molfile_volumetric_t[1];
   memset(vtk->vol, 0, sizeof(molfile_volumetric_t));
   strcpy(vtk->vol[0].dataname, "VTK volumetric map");
 
   /* Set the unit cell origin and basis vectors */
-  for (int i=0; i<3; i++) {
+  for (int i = 0; i < 3; i++) {
     vtk->vol[0].origin[i] = orig[i];
-    vtk->vol[0].xaxis[i] = xdelta[i] * ((xsize-1 > 0) ? (xsize-1) : 1);
-    vtk->vol[0].yaxis[i] = ydelta[i] * ((ysize-1 > 0) ? (ysize-1) : 1);
-    vtk->vol[0].zaxis[i] = zdelta[i] * ((zsize-1 > 0) ? (zsize-1) : 1);
+    vtk->vol[0].xaxis[i] = xdelta[i] * ((xsize - 1 > 0) ? (xsize - 1) : 1);
+    vtk->vol[0].yaxis[i] = ydelta[i] * ((ysize - 1 > 0) ? (ysize - 1) : 1);
+    vtk->vol[0].zaxis[i] = zdelta[i] * ((zsize - 1 > 0) ? (zsize - 1) : 1);
   }
 
   vtk->vol[0].xsize = xsize;
@@ -258,21 +260,20 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
   return vtk;
 }
 
-
-static int read_vtk_metadata(void *v, int *nsets, 
-  molfile_volumetric_t **metadata) {
-  vtk_t *vtk = (vtk_t *)v;
-  *nsets = vtk->nsets; 
-  *metadata = vtk->vol;  
+static int read_vtk_metadata(
+    void* v, int* nsets, molfile_volumetric_t** metadata)
+{
+  vtk_t* vtk = (vtk_t*) v;
+  *nsets = vtk->nsets;
+  *metadata = vtk->vol;
 
   return MOLFILE_SUCCESS;
 }
 
-
-static int read_vtk_data(void *v, int set, float *datablock,
-                         float *colorblock) {
-  vtk_t *vtk = (vtk_t *)v;
-  FILE *fd = vtk->fd;
+static int read_vtk_data(void* v, int set, float* datablock, float* colorblock)
+{
+  vtk_t* vtk = (vtk_t*) v;
+  FILE* fd = vtk->fd;
   int x, y, z, xsize, ysize, zsize, xysize, total;
 
   if (vtk->isBinary)
@@ -285,13 +286,16 @@ static int read_vtk_data(void *v, int set, float *datablock,
   total = xysize * zsize;
 
   double scalemag = 1.0;
-  const char *userscalefactor=getenv("VMDVTKPLUGINSCALEVOXELMAG");
+  const char* userscalefactor = getenv("VMDVTKPLUGINSCALEVOXELMAG");
   if (userscalefactor) {
     scalemag = atof(userscalefactor);
     if (scalemag != 0.0) {
-      printf("vtkplugin) Applying user scaling factor to voxel scalar/gradient values: %g\n", scalemag); 
+      printf("vtkplugin) Applying user scaling factor to voxel scalar/gradient "
+             "values: %g\n",
+          scalemag);
     } else {
-      printf("vtkplugin) Warning: ignoring user scaling factor due to parse error or zero-value\n"); 
+      printf("vtkplugin) Warning: ignoring user scaling factor due to parse "
+             "error or zero-value\n");
     }
   } else {
     printf("vtkplugin) No user scaling factor set, using scale factor 1.0.\n");
@@ -299,9 +303,9 @@ static int read_vtk_data(void *v, int set, float *datablock,
 
   float maxmag = 0.0f;
   strcpy(vtk->vol[0].dataname, "volgradient");
-  for (z=0; z<zsize; z++) {
-    for (y=0; y<ysize; y++) {
-      for (x=0; x<xsize; x++) {
+  for (z = 0; z < zsize; z++) {
+    for (y = 0; y < ysize; y++) {
+      for (x = 0; x < xsize; x++) {
         double vx, vy, vz;
         fscanf(fd, "%lf %lf %lf", &vx, &vy, &vz);
 
@@ -314,9 +318,9 @@ static int read_vtk_data(void *v, int set, float *datablock,
 #endif
 
         // compute scalar magnitude from vector field
-        double mag = sqrt(vx*vx + vy*vy + vz*vz);
+        double mag = sqrt(vx * vx + vy * vy + vz * vz);
 
-        int addr = z*xsize*ysize + y*xsize + x;
+        int addr = z * xsize * ysize + y * xsize + x;
         datablock[addr] = mag;
 
         if (mag > maxmag)
@@ -329,18 +333,18 @@ static int read_vtk_data(void *v, int set, float *datablock,
   return MOLFILE_SUCCESS;
 }
 
-
 #if vmdplugin_ABIVERSION > 16
 
-static int read_vtk_data_ex(void *v, molfile_volumetric_readwrite_t *p) {
-  vtk_t *vtk = (vtk_t *)v;
-  FILE *fd = vtk->fd;
+static int read_vtk_data_ex(void* v, molfile_volumetric_readwrite_t* p)
+{
+  vtk_t* vtk = (vtk_t*) v;
+  FILE* fd = vtk->fd;
   int x, y, z, xsize, ysize, zsize, xysize, total;
 
   if (vtk->isBinary)
     return MOLFILE_ERROR;
 
-  if (!p->scalar || !p->gradient) 
+  if (!p->scalar || !p->gradient)
     return MOLFILE_ERROR;
 
   xsize = vtk->vol[0].xsize;
@@ -350,13 +354,16 @@ static int read_vtk_data_ex(void *v, molfile_volumetric_readwrite_t *p) {
   total = xysize * zsize;
 
   double scalemag = 1.0;
-  const char *userscalefactor=getenv("VMDVTKPLUGINSCALEVOXELMAG");
+  const char* userscalefactor = getenv("VMDVTKPLUGINSCALEVOXELMAG");
   if (userscalefactor) {
     scalemag = atof(userscalefactor);
     if (scalemag != 0.0) {
-      printf("vtkplugin) Applying user scaling factor to voxel scalar/gradient values: %g\n", scalemag); 
+      printf("vtkplugin) Applying user scaling factor to voxel scalar/gradient "
+             "values: %g\n",
+          scalemag);
     } else {
-      printf("vtkplugin) Warning: ignoring user scaling factor due to parse error or zero-value\n"); 
+      printf("vtkplugin) Warning: ignoring user scaling factor due to parse "
+             "error or zero-value\n");
     }
   } else {
     printf("vtkplugin) No user scaling factor set, using scale factor 1.0.\n");
@@ -364,9 +371,9 @@ static int read_vtk_data_ex(void *v, molfile_volumetric_readwrite_t *p) {
 
   float maxmag = 0.0f;
   strcpy(vtk->vol[0].dataname, "volgradient");
-  for (z=0; z<zsize; z++) {
-    for (y=0; y<ysize; y++) {
-      for (x=0; x<xsize; x++) {
+  for (z = 0; z < zsize; z++) {
+    for (y = 0; y < ysize; y++) {
+      for (x = 0; x < xsize; x++) {
         double vx, vy, vz;
         fscanf(fd, "%lf %lf %lf", &vx, &vy, &vz);
 
@@ -379,9 +386,9 @@ static int read_vtk_data_ex(void *v, molfile_volumetric_readwrite_t *p) {
 #endif
 
         // compute scalar magnitude from vector field
-        double mag = sqrt(vx*vx + vy*vy + vz*vz);
+        double mag = sqrt(vx * vx + vy * vy + vz * vz);
 
-        int addr = z*xsize*ysize + y*xsize + x;
+        int addr = z * xsize * ysize + y * xsize + x;
         p->scalar[addr] = mag;
 
         if (mag > maxmag)
@@ -390,7 +397,7 @@ static int read_vtk_data_ex(void *v, molfile_volumetric_readwrite_t *p) {
         // assign vector field to gradient map
         // index into vector field of 3-component vectors
         int addr3 = addr *= 3;
-        p->gradient[addr3    ] = vx;
+        p->gradient[addr3] = vx;
         p->gradient[addr3 + 1] = vy;
         p->gradient[addr3 + 2] = vz;
       }
@@ -403,23 +410,23 @@ static int read_vtk_data_ex(void *v, molfile_volumetric_readwrite_t *p) {
 
 #endif
 
+static void close_vtk_read(void* v)
+{
+  vtk_t* vtk = (vtk_t*) v;
 
-static void close_vtk_read(void *v) {
-  vtk_t *vtk = (vtk_t *)v;
-  
   fclose(vtk->fd);
   if (vtk->vol != NULL)
-    delete [] vtk->vol; 
+    delete[] vtk->vol;
   delete vtk;
 }
-
 
 //
 // Initialization stuff here
 //
 static molfile_plugin_t vtkplugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) {
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&vtkplugin, 0, sizeof(molfile_plugin_t));
   vtkplugin.abiversion = vmdplugin_ABIVERSION;
   vtkplugin.type = MOLFILE_PLUGIN_TYPE;
@@ -440,11 +447,13 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&vtkplugin);
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &vtkplugin);
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
-
-
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}

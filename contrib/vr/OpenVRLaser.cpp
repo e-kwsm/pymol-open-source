@@ -44,16 +44,16 @@ double OpenVRLaser::MAX_LENGTH = 100.0f;
 double OpenVRLaser::MIN_WIDTH = 1.0f;
 
 OpenVRLaser::OpenVRLaser()
-  : m_valid(false)
-  , m_visible(false)
-  , m_length(OpenVRLaser::MAX_LENGTH)
-  , m_width(OpenVRLaser::MIN_WIDTH)
-  , m_vertexArrayID(0)
-  , m_vertexBufferID(0)
-  , m_vertexCount(0)
-  , m_programID(0)
-  , m_scaleUniform(-1)
-  , m_colorUniform(-1)
+    : m_valid(false)
+    , m_visible(false)
+    , m_length(OpenVRLaser::MAX_LENGTH)
+    , m_width(OpenVRLaser::MIN_WIDTH)
+    , m_vertexArrayID(0)
+    , m_vertexBufferID(0)
+    , m_vertexCount(0)
+    , m_programID(0)
+    , m_scaleUniform(-1)
+    , m_colorUniform(-1)
 {
   SetColor(0.0f, 1.0f, 1.0f, 0.25f);
 }
@@ -75,8 +75,8 @@ void OpenVRLaser::InitGeometry()
   static struct Vertex_t {
     float position[3];
   } vertices[] = {
-    {{0.0f, 0.0f, 0.0f}},
-    {{0.0f, 0.0f, -1.0f}},
+      {{0.0f, 0.0f, 0.0f}},
+      {{0.0f, 0.0f, -1.0f}},
   };
 
   m_vertexCount = sizeof(vertices) / sizeof(vertices[0]);
@@ -92,7 +92,8 @@ void OpenVRLaser::InitGeometry()
 
   // Identify the components in the vertex buffer
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_t), (void *)offsetof(Vertex_t, position));
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex_t),
+      (void*) offsetof(Vertex_t, position));
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
@@ -110,18 +111,17 @@ void OpenVRLaser::FreeGeometry()
 
 bool OpenVRLaser::InitShaders()
 {
-  const char* vs =
-    "attribute vec3 position;\n"
-    "uniform vec4 scale;\n"
-    "varying vec2 texcoords;\n\n"
-    "void main() {\n"
-      "gl_Position = gl_ModelViewProjectionMatrix * vec4(position * scale.xyz, 1.0);\n"
-    "}\n";
-  const char* fs =
-    "uniform vec4 color;\n"
-    "void main() {\n"
-      "gl_FragColor = color;\n"
-    "}\n";
+  const char* vs = "attribute vec3 position;\n"
+                   "uniform vec4 scale;\n"
+                   "varying vec2 texcoords;\n\n"
+                   "void main() {\n"
+                   "gl_Position = gl_ModelViewProjectionMatrix * vec4(position "
+                   "* scale.xyz, 1.0);\n"
+                   "}\n";
+  const char* fs = "uniform vec4 color;\n"
+                   "void main() {\n"
+                   "gl_FragColor = color;\n"
+                   "}\n";
 
   m_programID = OpenVRUtils::CompileProgram(vs, fs);
   m_scaleUniform = glGetUniformLocation(m_programID, "scale");
@@ -173,7 +173,8 @@ void OpenVRLaser::Draw()
   glUniform4fv(m_scaleUniform, 1, scale);
   glUniform4fv(m_colorUniform, 1, m_color);
 
-  glLineWidth(m_width); // set here to avoid the influence of previous rendering steps
+  glLineWidth(
+      m_width); // set here to avoid the influence of previous rendering steps
   glDrawArrays(GL_LINES, 0, m_vertexCount);
 
   glBindVertexArray(0);

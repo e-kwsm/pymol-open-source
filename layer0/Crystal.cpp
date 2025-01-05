@@ -1,38 +1,38 @@
 
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* Copyright (c) Schrodinger, LLC. 
+C* Copyright (c) Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
-#include"os_predef.h"
-#include"os_std.h"
-#include"Matrix.h"
-#include"CGO.h"
-#include"Err.h"
-#include"Crystal.h"
-#include"Feedback.h"
-#include"PConv.h"
-#include"Vector.h"
+#include "Crystal.h"
+#include "CGO.h"
+#include "Err.h"
+#include "Feedback.h"
+#include "Matrix.h"
+#include "PConv.h"
+#include "Vector.h"
+#include "os_predef.h"
+#include "os_python.h"
+#include "os_std.h"
 
 #include <algorithm>
 
-PyObject *CrystalAsPyList(const CCrystal * I)
+PyObject* CrystalAsPyList(const CCrystal* I)
 {
-  PyObject *result = nullptr;
+  PyObject* result = nullptr;
 
-  if(I) {
+  if (I) {
     result = PyList_New(2);
     PyList_SetItem(result, 0, PConvFloatArrayToPyList(I->Dim, 3));
     PyList_SetItem(result, 1, PConvFloatArrayToPyList(I->Angle, 3));
@@ -40,20 +40,20 @@ PyObject *CrystalAsPyList(const CCrystal * I)
   return (PConvAutoNone(result));
 }
 
-int CrystalFromPyList(CCrystal * I, PyObject * list)
+int CrystalFromPyList(CCrystal* I, PyObject* list)
 {
   int ok = true, rok = true;
   int ll = 0;
-  if(ok)
+  if (ok)
     ok = (I != nullptr);
-  if(ok)
+  if (ok)
     ok = PyList_Check(list);
-  if(ok)
+  if (ok)
     ll = PyList_Size(list);
   rok = ok;
-  if(ok && (ll > 0))
+  if (ok && (ll > 0))
     ok = PConvPyListToFloatArrayInPlace(PyList_GetItem(list, 0), I->Dim, 3);
-  if(ok && (ll > 1))
+  if (ok && (ll > 1))
     ok = PConvPyListToFloatArrayInPlace(PyList_GetItem(list, 1), I->Angle, 3);
 
   /* TO SUPPORT BACKWARDS COMPATIBILITY...
@@ -62,41 +62,39 @@ int CrystalFromPyList(CCrystal * I, PyObject * list)
   return (rok);
 }
 
-CCrystal::CCrystal(PyMOLGlobals* GParam) : G(GParam)
+CCrystal::CCrystal(PyMOLGlobals* GParam)
+    : G(GParam)
 {
 }
 
-void CrystalDump(const CCrystal * I)
+void CrystalDump(const CCrystal* I)
 {
-  PyMOLGlobals *G = I->G;
+  PyMOLGlobals* G = I->G;
   int i;
 
   PRINTF
-    " Crystal: Unit Cell         %8.3f %8.3f %8.3f\n", I->Dim[0], I->Dim[1], I->Dim[2]
-    ENDF(G);
+  " Crystal: Unit Cell         %8.3f %8.3f %8.3f\n", I->Dim[0], I->Dim[1],
+      I->Dim[2] ENDF(G);
   PRINTF
-    " Crystal: Alpha Beta Gamma  %8.3f %8.3f %8.3f\n",
-    I->Angle[0], I->Angle[1], I->Angle[2]
-    ENDF(G);
+  " Crystal: Alpha Beta Gamma  %8.3f %8.3f %8.3f\n", I->Angle[0], I->Angle[1],
+      I->Angle[2] ENDF(G);
   PRINTF " Crystal: RealToFrac Matrix\n" ENDF(G);
-  for(i = 0; i < 3; i++) {
-    PRINTF " Crystal: %9.4f %9.4f %9.4f\n",
-      I->realToFrac()[i * 3], I->realToFrac()[i * 3 + 1], I->realToFrac()[i * 3 + 2]
-      ENDF(G);
+  for (i = 0; i < 3; i++) {
+    PRINTF " Crystal: %9.4f %9.4f %9.4f\n", I->realToFrac()[i * 3],
+        I->realToFrac()[i * 3 + 1], I->realToFrac()[i * 3 + 2] ENDF(G);
   }
   PRINTF " Crystal: FracToReal Matrix\n" ENDF(G);
-  for(i = 0; i < 3; i++) {
+  for (i = 0; i < 3; i++) {
     PRINTF
-      " Crystal: %9.4f %9.4f %9.4f\n",
-      I->fracToReal()[i * 3], I->fracToReal()[i * 3 + 1], I->fracToReal()[i * 3 + 2]
-      ENDF(G);
+    " Crystal: %9.4f %9.4f %9.4f\n", I->fracToReal()[i * 3],
+        I->fracToReal()[i * 3 + 1], I->fracToReal()[i * 3 + 2] ENDF(G);
   }
   PRINTF " Crystal: Unit Cell Volume %8.0f.\n", I->unitCellVolume() ENDF(G);
-
 }
 
-static float unitCellVertices[][3] = { {0,0,0}, {1,0,0}, {1,1,0}, {0,1,0}, // bottom 4 vertices
-				       {0,0,1}, {1,0,1}, {1,1,1}, {0,1,1} }; // top 4 vertices
+static float unitCellVertices[][3] = {{0, 0, 0}, {1, 0, 0}, {1, 1, 0},
+    {0, 1, 0},                                   // bottom 4 vertices
+    {0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {0, 1, 1}}; // top 4 vertices
 static float const unitCellVerticesCentered[][3] = {
     {-0.5, -0.5, -0.5},
     {0.5, -0.5, -0.5},
@@ -108,28 +106,28 @@ static float const unitCellVerticesCentered[][3] = {
     {-0.5, 0.5, 0.5},
 };
 
-static int unitCellLineIndices[] = { 0, 1, 1, 2, 2, 3, 3, 0,   // bottom 4 lines
-				     4, 5, 5, 6, 6, 7, 7, 4,   // top 4 lines
-				     0, 4, 1, 5, 2, 6, 3, 7 }; // 4 connector lines
+static int unitCellLineIndices[] = {0, 1, 1, 2, 2, 3, 3, 0, // bottom 4 lines
+    4, 5, 5, 6, 6, 7, 7, 4,                                 // top 4 lines
+    0, 4, 1, 5, 2, 6, 3, 7};                                // 4 connector lines
 
-CGO *CrystalGetUnitCellCGO(const CCrystal * I)
+CGO* CrystalGetUnitCellCGO(const CCrystal* I)
 {
-  PyMOLGlobals *G = I->G;
+  PyMOLGlobals* G = I->G;
   float v[3];
-  CGO *cgo = nullptr;
+  CGO* cgo = nullptr;
 
   auto const ucv = SettingGet<bool>(G, cSetting_cell_centered)
                        ? unitCellVerticesCentered
                        : unitCellVertices;
 
-  if(I) {
+  if (I) {
     cgo = CGONew(G);
     CGODisable(cgo, GL_LIGHTING);
 
-    float *vertexVals = CGODrawArrays(cgo, GL_LINES, CGO_VERTEX_ARRAY, 24);
-    for (int pl = 0; pl < 24 ; pl++){
+    float* vertexVals = CGODrawArrays(cgo, GL_LINES, CGO_VERTEX_ARRAY, 24);
+    for (int pl = 0; pl < 24; pl++) {
       transform33f3f(I->fracToReal(), ucv[unitCellLineIndices[pl]], v);
-      copy3f(v, &vertexVals[pl*3]);
+      copy3f(v, &vertexVals[pl * 3]);
     }
 
     CGOEnable(cgo, GL_LIGHTING);

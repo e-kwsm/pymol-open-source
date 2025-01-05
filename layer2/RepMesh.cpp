@@ -1,40 +1,40 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
+#include "os_python.h"
 
-#include"os_predef.h"
-#include"os_std.h"
-#include"os_gl.h"
+#include "os_gl.h"
+#include "os_predef.h"
+#include "os_std.h"
 
-#include"Base.h"
-#include"MemoryDebug.h"
-#include"Err.h"
-#include"RepMesh.h"
-#include"Map.h"
-#include"Isosurf.h"
-#include"Scene.h"
-#include"Sphere.h"
-#include"Setting.h"
-#include"Color.h"
-#include"main.h"
-#include"PyMOLGlobals.h"
-#include"Selector.h"
-#include "ShaderMgr.h"
+#include "Base.h"
+#include "Color.h"
+#include "Err.h"
 #include "Feedback.h"
+#include "Isosurf.h"
+#include "Map.h"
+#include "MemoryDebug.h"
+#include "PyMOLGlobals.h"
+#include "RepMesh.h"
+#include "Scene.h"
+#include "Selector.h"
+#include "Setting.h"
+#include "ShaderMgr.h"
+#include "Sphere.h"
+#include "main.h"
 
 struct RepMesh : Rep {
   using Rep::Rep;
@@ -51,18 +51,18 @@ struct RepMesh : Rep {
   pymol::vla<float> V;
   float* VC;
   int NDot;
-  float *Dot;
+  float* Dot;
   float Radius, Width;
   int oneColorFlag;
   int oneColor;
-  int *LastVisib;
-  int *LastColor;
+  int* LastVisib;
+  int* LastColor;
   float max_vdw;
   cIsomeshMode mesh_type;
-  CGO *shaderCGO;
+  CGO* shaderCGO;
 };
 
-#include"ObjectMolecule.h"
+#include "ObjectMolecule.h"
 
 RepMesh::~RepMesh()
 {
@@ -73,23 +73,22 @@ RepMesh::~RepMesh()
   FreeP(I->LastVisib);
 }
 
-static
-int RepMeshGetSolventDots(RepMesh * I, CoordSet * cs, float *min, float *max,
-                          float probe_radius);
+static int RepMeshGetSolventDots(
+    RepMesh* I, CoordSet* cs, float* min, float* max, float probe_radius);
 
-static int RepMeshCGOGenerate(RepMesh * I, RenderInfo * info)
+static int RepMeshCGOGenerate(RepMesh* I, RenderInfo* info)
 {
-  PyMOLGlobals *G = I->G;
-  float *v = I->V.data();
-  float *vc = I->VC;
-  int *n = I->N.data();
+  PyMOLGlobals* G = I->G;
+  float* v = I->V.data();
+  float* vc = I->VC;
+  int* n = I->N.data();
   int ok = true;
   short use_shader;
   int c;
   bool const dot_as_spheres = I->mesh_type == cIsomeshMode::isodot &&
                               SettingGet<bool>(*I->cs, cSetting_dot_as_spheres);
-  use_shader = SettingGetGlobal_b(G, cSetting_mesh_use_shader) & 
-    SettingGetGlobal_b(G, cSetting_use_shaders);
+  use_shader = SettingGetGlobal_b(G, cSetting_mesh_use_shader) &
+               SettingGetGlobal_b(G, cSetting_use_shaders);
   bool const mesh_as_cylinders =
       SettingGet<bool>(G, cSetting_render_as_cylinders) &&
       SettingGet<bool>(G, cSetting_mesh_as_cylinders) &&
@@ -98,15 +97,15 @@ static int RepMeshCGOGenerate(RepMesh * I, RenderInfo * info)
   ok &= CGOResetNormal(I->shaderCGO, true);
 
 #ifndef PURE_OPENGL_ES_2
-  int lighting =
-    SettingGet_i(G, I->cs->Setting.get(), I->obj->Setting.get(), cSetting_mesh_lighting);
-  if(!lighting) {
-    if(!use_shader && !info->line_lighting){
+  int lighting = SettingGet_i(
+      G, I->cs->Setting.get(), I->obj->Setting.get(), cSetting_mesh_lighting);
+  if (!lighting) {
+    if (!use_shader && !info->line_lighting) {
       CGODisable(I->shaderCGO, GL_LIGHTING);
     }
   }
 #endif
-  if (ok){
+  if (ok) {
     switch (I->mesh_type) {
     case cIsomeshMode::isomesh:
       ok &= CGOSpecial(I->shaderCGO, LINEWIDTH_DYNAMIC_MESH);
@@ -118,81 +117,87 @@ static int RepMeshCGOGenerate(RepMesh * I, RenderInfo * info)
   }
 
   ok &= CGOResetNormal(I->shaderCGO, false);
-  
+
   switch (I->mesh_type) {
   case cIsomeshMode::isomesh:
-    if(n) {
-      if (ok){
-	if(I->oneColorFlag) {
-	  while(ok && *n) {
-	    ok &= CGOColorv(I->shaderCGO, ColorGet(G, I->oneColor));
-	    if (ok){
-	      c = *(n++);
-	      if (mesh_as_cylinders){
-		float *origin, axis[3];
-		for (; ok && c > 1; --c) {
-		  origin = v;
-		  v += 3;
-		  axis[0] = v[0] - origin[0];
-		  axis[1] = v[1] - origin[1];
-		  axis[2] = v[2] - origin[2];
-		  ok &= (bool)I->shaderCGO->add<cgo::draw::shadercylinder>(origin, axis, 1.f, 15);
-		}
-		if (c == 1) {
-		  v += 3;
-		}
-	      } else {
-		ok &= CGOBegin(I->shaderCGO, GL_LINE_STRIP);
-		ok &= CGONormal(I->shaderCGO, 0.f,0.f,1.f);
-		while(ok && c--) {
-		  ok &= CGOVertexv(I->shaderCGO, v);
-		  v += 3;
-		}
-		if (ok)
-		  ok &= CGOEnd(I->shaderCGO);
-	      }
-	    }
-	  }
-	} else {
-	  while(ok && *n) {
-	    c = *(n++);
-	    if (mesh_as_cylinders){
-	      float *origin, axis[3], *color;
-	      for (; ok && c > 1; --c) {
-		ok &= CGOColorv(I->shaderCGO, vc);
-		color = vc;
-		origin = v;
-		vc += 3;
-		v += 3;
-		axis[0] = v[0] - origin[0];
-		axis[1] = v[1] - origin[1];
-		axis[2] = v[2] - origin[2];
-		if (*(color) != *(vc) || *(color+1) != *(vc+1) || *(color+2) != *(vc+2)){
-                  ok &= (bool)I->shaderCGO->add<cgo::draw::shadercylinder2ndcolor>(I->shaderCGO, origin, axis, 1.f, 15, vc);
-		} else {
-                  ok &= (bool)I->shaderCGO->add<cgo::draw::shadercylinder>(origin, axis, 1.f, 15);
-		}
-	      }
-	      if (c == 1) {
-		v += 3;
-		vc += 3;
-	      }
-	    } else {
-	      ok &= CGOBegin(I->shaderCGO, GL_LINE_STRIP);
-	      ok &= CGONormal(I->shaderCGO, 0.f,0.f,1.f);
-	      while(ok && c--) {
-		ok &= CGOColorv(I->shaderCGO, vc);
-		vc += 3;
-		if (ok){
-		  ok &= CGOVertexv(I->shaderCGO, v);
-		  v += 3;
-		}
-	      }
-	      if (ok)
-		ok &= CGOEnd(I->shaderCGO);
-	    }
-	  }
-	}
+    if (n) {
+      if (ok) {
+        if (I->oneColorFlag) {
+          while (ok && *n) {
+            ok &= CGOColorv(I->shaderCGO, ColorGet(G, I->oneColor));
+            if (ok) {
+              c = *(n++);
+              if (mesh_as_cylinders) {
+                float *origin, axis[3];
+                for (; ok && c > 1; --c) {
+                  origin = v;
+                  v += 3;
+                  axis[0] = v[0] - origin[0];
+                  axis[1] = v[1] - origin[1];
+                  axis[2] = v[2] - origin[2];
+                  ok &= (bool) I->shaderCGO->add<cgo::draw::shadercylinder>(
+                      origin, axis, 1.f, 15);
+                }
+                if (c == 1) {
+                  v += 3;
+                }
+              } else {
+                ok &= CGOBegin(I->shaderCGO, GL_LINE_STRIP);
+                ok &= CGONormal(I->shaderCGO, 0.f, 0.f, 1.f);
+                while (ok && c--) {
+                  ok &= CGOVertexv(I->shaderCGO, v);
+                  v += 3;
+                }
+                if (ok)
+                  ok &= CGOEnd(I->shaderCGO);
+              }
+            }
+          }
+        } else {
+          while (ok && *n) {
+            c = *(n++);
+            if (mesh_as_cylinders) {
+              float *origin, axis[3], *color;
+              for (; ok && c > 1; --c) {
+                ok &= CGOColorv(I->shaderCGO, vc);
+                color = vc;
+                origin = v;
+                vc += 3;
+                v += 3;
+                axis[0] = v[0] - origin[0];
+                axis[1] = v[1] - origin[1];
+                axis[2] = v[2] - origin[2];
+                if (*(color) != *(vc) || *(color + 1) != *(vc + 1) ||
+                    *(color + 2) != *(vc + 2)) {
+                  ok &=
+                      (bool)
+                          I->shaderCGO->add<cgo::draw::shadercylinder2ndcolor>(
+                              I->shaderCGO, origin, axis, 1.f, 15, vc);
+                } else {
+                  ok &= (bool) I->shaderCGO->add<cgo::draw::shadercylinder>(
+                      origin, axis, 1.f, 15);
+                }
+              }
+              if (c == 1) {
+                v += 3;
+                vc += 3;
+              }
+            } else {
+              ok &= CGOBegin(I->shaderCGO, GL_LINE_STRIP);
+              ok &= CGONormal(I->shaderCGO, 0.f, 0.f, 1.f);
+              while (ok && c--) {
+                ok &= CGOColorv(I->shaderCGO, vc);
+                vc += 3;
+                if (ok) {
+                  ok &= CGOVertexv(I->shaderCGO, v);
+                  v += 3;
+                }
+              }
+              if (ok)
+                ok &= CGOEnd(I->shaderCGO);
+            }
+          }
+        }
       }
     }
     break;
@@ -200,103 +205,118 @@ static int RepMeshCGOGenerate(RepMesh * I, RenderInfo * info)
 #ifdef PURE_OPENGL_ES_2
     /* TODO */
 #else
-    glPointSize(SettingGet_f
-		(G, I->cs->Setting.get(), I->obj->Setting.get(), cSetting_dot_width));
+    glPointSize(SettingGet_f(
+        G, I->cs->Setting.get(), I->obj->Setting.get(), cSetting_dot_width));
 #endif
-    if(ok && n) {
-      if(I->oneColorFlag) {
-	while(ok && *n) {
-	  ok &= CGOColorv(I->shaderCGO, ColorGet(G, I->oneColor));
-	  c = *(n++);
-	  if (ok && !dot_as_spheres)
-	    ok &= CGOBegin(I->shaderCGO, GL_POINTS);
-	  while(ok && c--) {
-	    if (dot_as_spheres)
-	      ok &= CGOSphere(I->shaderCGO, v, 1.f);
-	    else
-	      ok &= CGOVertexv(I->shaderCGO, v);
-	    v += 3;
-	  }
-	  if (ok && !dot_as_spheres)
-	    ok &= CGOEnd(I->shaderCGO);
-	}
+    if (ok && n) {
+      if (I->oneColorFlag) {
+        while (ok && *n) {
+          ok &= CGOColorv(I->shaderCGO, ColorGet(G, I->oneColor));
+          c = *(n++);
+          if (ok && !dot_as_spheres)
+            ok &= CGOBegin(I->shaderCGO, GL_POINTS);
+          while (ok && c--) {
+            if (dot_as_spheres)
+              ok &= CGOSphere(I->shaderCGO, v, 1.f);
+            else
+              ok &= CGOVertexv(I->shaderCGO, v);
+            v += 3;
+          }
+          if (ok && !dot_as_spheres)
+            ok &= CGOEnd(I->shaderCGO);
+        }
       } else {
-	while(ok && *n) {
-	  c = *(n++);
-	  if (!dot_as_spheres)
-	    ok &= CGOBegin(I->shaderCGO, GL_POINTS);
-	  while(ok && c--) {
-	    ok &= CGOColorv(I->shaderCGO, vc);
-	    vc += 3;
-	    if (ok){
-	      if (dot_as_spheres)
-		ok &= CGOSphere(I->shaderCGO, v, 1.f);
-	      else
-		ok &= CGOVertexv(I->shaderCGO, v);
-	    }
-	    v += 3;
-	  }
-	  if (!dot_as_spheres)
-	    ok &= CGOEnd(I->shaderCGO);
-	}
+        while (ok && *n) {
+          c = *(n++);
+          if (!dot_as_spheres)
+            ok &= CGOBegin(I->shaderCGO, GL_POINTS);
+          while (ok && c--) {
+            ok &= CGOColorv(I->shaderCGO, vc);
+            vc += 3;
+            if (ok) {
+              if (dot_as_spheres)
+                ok &= CGOSphere(I->shaderCGO, v, 1.f);
+              else
+                ok &= CGOVertexv(I->shaderCGO, v);
+            }
+            v += 3;
+          }
+          if (!dot_as_spheres)
+            ok &= CGOEnd(I->shaderCGO);
+        }
       }
     }
     break;
   }
 
   if (use_shader) {
-    if (ok){
-      CGO *convertcgo = nullptr;
+    if (ok) {
+      CGO* convertcgo = nullptr;
       ok &= CGOStop(I->shaderCGO);
       if (ok)
-	convertcgo = CGOCombineBeginEnd(I->shaderCGO, 0);    
+        convertcgo = CGOCombineBeginEnd(I->shaderCGO, 0);
       CHECKOK(ok, convertcgo);
-      CGOFree(I->shaderCGO);    
+      CGOFree(I->shaderCGO);
       I->shaderCGO = convertcgo;
       convertcgo = nullptr;
-      if (ok){
-	if (dot_as_spheres){
-	  CGO *tmpCGO = CGONew(G);
-	  if (ok) ok &= CGOEnable(tmpCGO, GL_SPHERE_SHADER);
-	  if (ok) ok &= CGOSpecial(tmpCGO, DOTSIZE_WITH_SPHERESCALE);
-	  convertcgo = CGOOptimizeSpheresToVBONonIndexedNoShader(I->shaderCGO,
+      if (ok) {
+        if (dot_as_spheres) {
+          CGO* tmpCGO = CGONew(G);
+          if (ok)
+            ok &= CGOEnable(tmpCGO, GL_SPHERE_SHADER);
+          if (ok)
+            ok &= CGOSpecial(tmpCGO, DOTSIZE_WITH_SPHERESCALE);
+          convertcgo = CGOOptimizeSpheresToVBONonIndexedNoShader(I->shaderCGO,
               CGO_BOUNDING_BOX_SZ + fsizeof<cgo::draw::sphere_buffers>() + 2);
-	  if (ok) ok &= CGOAppendNoStop(tmpCGO, convertcgo);
-	  if (ok) ok &= CGODisable(tmpCGO, GL_SPHERE_SHADER);
-	  if (ok) ok &= CGOStop(tmpCGO);
-	  CGOFreeWithoutVBOs(convertcgo);
-	  convertcgo = tmpCGO;
-	  convertcgo->use_shader = true;
-	} else {
-	  if (mesh_as_cylinders){
-	    CGO *tmpCGO = CGONew(G);
+          if (ok)
+            ok &= CGOAppendNoStop(tmpCGO, convertcgo);
+          if (ok)
+            ok &= CGODisable(tmpCGO, GL_SPHERE_SHADER);
+          if (ok)
+            ok &= CGOStop(tmpCGO);
+          CGOFreeWithoutVBOs(convertcgo);
+          convertcgo = tmpCGO;
+          convertcgo->use_shader = true;
+        } else {
+          if (mesh_as_cylinders) {
+            CGO* tmpCGO = CGONew(G);
             ok &= CGOEnable(tmpCGO, GL_CYLINDER_SHADER);
-	    if (ok) ok &= CGOSpecial(tmpCGO, MESH_WIDTH_FOR_SURFACES);
-            convertcgo = CGOConvertShaderCylindersToCylinderShader(I->shaderCGO,  tmpCGO);
-	    if (ok) ok &= CGOAppendNoStop(tmpCGO, convertcgo);
-	    if (ok) ok &= CGODisable(tmpCGO, GL_CYLINDER_SHADER);
-	    if (ok) ok &= CGOStop(tmpCGO);
-	    CGOFreeWithoutVBOs(convertcgo);
-	    convertcgo = tmpCGO;
-	    convertcgo->use_shader = convertcgo->has_draw_cylinder_buffers = true;
-	  } else {
-	    CGO *tmpCGO = CGONew(G);
-	    if (ok) ok &= CGOEnable(tmpCGO, GL_DEFAULT_SHADER);
+            if (ok)
+              ok &= CGOSpecial(tmpCGO, MESH_WIDTH_FOR_SURFACES);
+            convertcgo =
+                CGOConvertShaderCylindersToCylinderShader(I->shaderCGO, tmpCGO);
+            if (ok)
+              ok &= CGOAppendNoStop(tmpCGO, convertcgo);
+            if (ok)
+              ok &= CGODisable(tmpCGO, GL_CYLINDER_SHADER);
+            if (ok)
+              ok &= CGOStop(tmpCGO);
+            CGOFreeWithoutVBOs(convertcgo);
+            convertcgo = tmpCGO;
+            convertcgo->use_shader = convertcgo->has_draw_cylinder_buffers =
+                true;
+          } else {
+            CGO* tmpCGO = CGONew(G);
+            if (ok)
+              ok &= CGOEnable(tmpCGO, GL_DEFAULT_SHADER);
             convertcgo = CGOOptimizeToVBONotIndexedNoShader(I->shaderCGO);
-            if (ok) ok &= CGOAppendNoStop(tmpCGO, convertcgo);
-	    if (ok) ok &= CGODisable(tmpCGO, GL_DEFAULT_SHADER);
-	    if (ok) ok &= CGOStop(tmpCGO);
-	    CGOFreeWithoutVBOs(convertcgo);
-	    convertcgo = tmpCGO;
-	  }
-	}
-	CHECKOK(ok, convertcgo);
+            if (ok)
+              ok &= CGOAppendNoStop(tmpCGO, convertcgo);
+            if (ok)
+              ok &= CGODisable(tmpCGO, GL_DEFAULT_SHADER);
+            if (ok)
+              ok &= CGOStop(tmpCGO);
+            CGOFreeWithoutVBOs(convertcgo);
+            convertcgo = tmpCGO;
+          }
+        }
+        CHECKOK(ok, convertcgo);
       }
-      if (convertcgo){
-	convertcgo->use_shader = true;
-	CGOFree(I->shaderCGO);
-	I->shaderCGO = convertcgo;
-	convertcgo = nullptr;
+      if (convertcgo) {
+        convertcgo->use_shader = true;
+        CGOFree(I->shaderCGO);
+        I->shaderCGO = convertcgo;
+        convertcgo = nullptr;
       }
     }
   }
@@ -558,10 +578,10 @@ bool RepMesh::sameVis() const
 {
   for (int idx = 0; idx < cs->NIndex; idx++) {
     const auto* ai = cs->getAtomInfo(idx);
-    if(LastVisib[idx] != GET_BIT(ai->visRep, cRepMesh)) {
+    if (LastVisib[idx] != GET_BIT(ai->visRep, cRepMesh)) {
       return false;
     }
-    if(LastColor[idx] != ai->color) {
+    if (LastColor[idx] != ai->color) {
       return false;
     }
   }
@@ -571,68 +591,75 @@ bool RepMesh::sameVis() const
 Rep* RepMesh::recolor()
 {
   auto const I = this;
-  MapType *map;
+  MapType* map;
   int a, i0, i, j, h, k, l, c1;
   float *v0, *vc;
-  const float *c0;
+  const float* c0;
   int *lv, *lc;
   int first_color;
-  ObjectMolecule *obj;
+  ObjectMolecule* obj;
   float probe_radius;
   float dist, minDist;
   int inclH;
   int cullByFlag = false;
   int mesh_mode;
   int mesh_color;
-  AtomInfoType *ai2;
+  AtomInfoType* ai2;
 
   int state = getState();
 
   obj = cs->Obj;
 
-  probe_radius = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_solvent_radius);
-  mesh_color = SettingGet_color(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_color);
-  mesh_mode = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_mode);
+  probe_radius = SettingGet_f(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_solvent_radius);
+  mesh_color = SettingGet_color(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_color);
+  mesh_mode = SettingGet_i(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_mode);
   cullByFlag = (mesh_mode == cRepMesh_by_flags);
   inclH = !(mesh_mode == cRepMesh_heavy_atoms);
 
-  if(!I->LastVisib)
+  if (!I->LastVisib)
     I->LastVisib = pymol::malloc<int>(cs->NIndex);
-  if(!I->LastColor)
+  if (!I->LastColor)
     I->LastColor = pymol::malloc<int>(cs->NIndex);
   lv = I->LastVisib;
   lc = I->LastColor;
-  for(a = 0; a < cs->NIndex; a++) {
+  for (a = 0; a < cs->NIndex; a++) {
     ai2 = cs->getAtomInfo(a);
     *(lv++) = GET_BIT(ai2->visRep, cRepMesh);
     *(lc++) = ai2->color;
   }
 
-  if(I->mesh_type != cIsomeshMode::isodot) {
-    I->Width = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_width);
-    I->Radius = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_radius);
+  if (I->mesh_type != cIsomeshMode::isodot) {
+    I->Width = SettingGet_f(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_width);
+    I->Radius = SettingGet_f(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_radius);
   } else {
-    I->Width = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_width);
-    I->Radius = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_radius);
+    I->Width = SettingGet_f(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_width);
+    I->Radius = SettingGet_f(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_radius);
   }
 
-  if(I->NTot) {
+  if (I->NTot) {
     obj = cs->Obj;
-    if(ColorCheckRamped(G, mesh_color)) {
+    if (ColorCheckRamped(G, mesh_color)) {
       I->oneColorFlag = false;
     } else {
       I->oneColorFlag = true;
     }
     first_color = -1;
-    if(!I->VC)
+    if (!I->VC)
       I->VC = pymol::malloc<float>(3 * I->NTot);
     vc = I->VC;
     /* now, assign colors to each point */
     map = MapNew(G, I->max_vdw + probe_radius, cs->Coord, cs->NIndex, nullptr);
-    if(map) {
+    if (map) {
       MapSetupExpress(map);
-      for(a = 0; a < I->NTot; a++) {
-        AtomInfoType *ai0 = nullptr;
+      for (a = 0; a < I->NTot; a++) {
+        AtomInfoType* ai0 = nullptr;
         c1 = 1;
         minDist = FLT_MAX;
         i0 = -1;
@@ -640,14 +667,14 @@ Rep* RepMesh::recolor()
         MapLocus(map, v0, &h, &k, &l);
 
         i = *(MapEStart(map, h, k, l));
-        if(i) {
+        if (i) {
           j = map->EList[i++];
-          while(j >= 0) {
+          while (j >= 0) {
             ai2 = obj->AtomInfo + cs->IdxToAtm[j];
-            if((inclH || (!ai2->isHydrogen())) &&
-               ((!cullByFlag) || (!(ai2->flags & cAtomFlag_ignore)))) {
+            if ((inclH || (!ai2->isHydrogen())) &&
+                ((!cullByFlag) || (!(ai2->flags & cAtomFlag_ignore)))) {
               dist = (float) diff3f(v0, cs->coordPtr(j)) - ai2->vdw;
-              if(dist < minDist) {
+              if (dist < minDist) {
                 i0 = j;
                 ai0 = ai2;
                 minDist = dist;
@@ -657,17 +684,18 @@ Rep* RepMesh::recolor()
           }
         }
 
-        if(i0 >= 0) {
-          int at_mesh_color = AtomSettingGetWD(G, ai0, cSetting_mesh_color, mesh_color);
+        if (i0 >= 0) {
+          int at_mesh_color =
+              AtomSettingGetWD(G, ai0, cSetting_mesh_color, mesh_color);
 
-          if(at_mesh_color != -1) {
+          if (at_mesh_color != -1) {
             c1 = at_mesh_color;
           } else {
             c1 = ai0->color;
           }
-          if(I->oneColorFlag) {
-            if(first_color >= 0) {
-              if(first_color != c1)
+          if (I->oneColorFlag) {
+            if (first_color >= 0) {
+              if (first_color != c1)
                 I->oneColorFlag = false;
             } else
               first_color = c1;
@@ -679,7 +707,7 @@ Rep* RepMesh::recolor()
            }
          */
 
-        if(ColorCheckRamped(G, c1)) {
+        if (ColorCheckRamped(G, c1)) {
           I->oneColorFlag = false;
           ColorGetRamped(G, c1, v0, vc, state);
           vc += 3;
@@ -692,10 +720,10 @@ Rep* RepMesh::recolor()
       }
       MapFree(map);
     }
-    if(I->oneColorFlag) {
+    if (I->oneColorFlag) {
       I->oneColor = first_color;
     }
-    if (I->shaderCGO){
+    if (I->shaderCGO) {
       CGOFree(I->shaderCGO);
       I->shaderCGO = 0;
     }
@@ -710,11 +738,11 @@ Rep* RepMesh::recolor()
   return this;
 }
 
-Rep *RepMeshNew(CoordSet * cs, int state)
+Rep* RepMeshNew(CoordSet* cs, int state)
 {
-  PyMOLGlobals *G = cs->G;
-  ObjectMolecule *obj;
-  CoordSet *ccs;
+  PyMOLGlobals* G = cs->G;
+  ObjectMolecule* obj;
+  CoordSet* ccs;
   int a, b, c, d, h, k, l, *n;
   MapType *map = nullptr, *smap = nullptr;
   /* grid */
@@ -722,7 +750,7 @@ Rep *RepMeshNew(CoordSet * cs, int state)
   float size;
   int dims[3];
   float gridSize;
-  Isofield *field;
+  Isofield* field;
   Vector3f point;
   float vLen, pVal, vdw;
   int aNear;
@@ -741,45 +769,49 @@ Rep *RepMeshNew(CoordSet * cs, int state)
   int mesh_skip;
   int ok = true;
 
-  AtomInfoType *ai1;
+  AtomInfoType* ai1;
 
   PRINTFD(G, FB_RepMesh)
-  " RepMeshNew-DEBUG: entered with coord-set %p\n", (void *) cs ENDFD;
-  if (ok){
+  " RepMeshNew-DEBUG: entered with coord-set %p\n", (void*) cs ENDFD;
+  if (ok) {
     obj = cs->Obj;
   }
-  if (ok){
-    probe_radius = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_solvent_radius);
+  if (ok) {
+    probe_radius = SettingGet_f(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_solvent_radius);
     probe_radius2 = probe_radius * probe_radius;
-    solv_acc = (SettingGet_i(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_solvent));
+    solv_acc = (SettingGet_i(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_solvent));
     mesh_type = SettingGet<cIsomeshMode>(*cs, cSetting_mesh_type);
-    mesh_skip = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_skip);
-    
-    mesh_mode = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_mode);
+    mesh_skip = SettingGet_i(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_skip);
+
+    mesh_mode = SettingGet_i(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_mode);
     cullByFlag = (mesh_mode == cRepMesh_by_flags);
     inclH = !(mesh_mode == cRepMesh_heavy_atoms);
   }
   visFlag = false;
-  if(ok && (obj->RepVisCache & cRepMeshBit)){
-    for(a = 0; a < cs->NIndex; a++) {
+  if (ok && (obj->RepVisCache & cRepMeshBit)) {
+    for (a = 0; a < cs->NIndex; a++) {
       ai1 = obj->AtomInfo + cs->IdxToAtm[a];
-      if((ai1->visRep & cRepMeshBit) &&
-         (inclH || (!ai1->isHydrogen())) &&
-         ((!cullByFlag) || (!(ai1->flags & (cAtomFlag_exfoliate | cAtomFlag_ignore))))) {
+      if ((ai1->visRep & cRepMeshBit) && (inclH || (!ai1->isHydrogen())) &&
+          ((!cullByFlag) ||
+              (!(ai1->flags & (cAtomFlag_exfoliate | cAtomFlag_ignore))))) {
         visFlag = true;
         break;
       }
     }
   }
-  if(!ok || !visFlag) {
-    return (nullptr);              /* skip if no dots are visible */
+  if (!ok || !visFlag) {
+    return (nullptr); /* skip if no dots are visible */
   }
 
   auto I = new RepMesh(cs, state);
   I->max_vdw = ObjectMoleculeGetMaxVDW(obj) + solv_acc * probe_radius;
 
-
-  min_spacing = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_min_mesh_spacing);
+  min_spacing = SettingGet_f(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_min_mesh_spacing);
 
   I->N = nullptr;
   I->NTot = 0;
@@ -790,57 +822,58 @@ Rep *RepMeshNew(CoordSet * cs, int state)
   I->LastVisib = nullptr;
   I->LastColor = nullptr;
   I->mesh_type = mesh_type;
-  I->Radius = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_radius);
+  I->Radius = SettingGet_f(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_radius);
   I->shaderCGO = 0;
 
   meshFlag = true;
 
-  if(meshFlag) {
-    float trim_cutoff =
-      SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_cutoff);
+  if (meshFlag) {
+    float trim_cutoff = SettingGet_f(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_cutoff);
     int trim_flag = false;
-    float *trim_vla = nullptr;
-    MapType *trim_map = nullptr;
+    float* trim_vla = nullptr;
+    MapType* trim_map = nullptr;
 
     int carve_state = 0;
     int carve_flag = false;
-    float carve_cutoff =
-      SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_carve_cutoff);
-    const char *carve_selection = nullptr;
-    float *carve_vla = nullptr;
-    MapType *carve_map = nullptr;
+    float carve_cutoff = SettingGet_f(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_carve_cutoff);
+    const char* carve_selection = nullptr;
+    float* carve_vla = nullptr;
+    MapType* carve_map = nullptr;
 
     int clear_state = 0;
     int clear_flag = false;
-    float clear_cutoff =
-      SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_clear_cutoff);
-    const char *clear_selection = nullptr;
-    float *clear_vla = nullptr;
-    MapType *clear_map = nullptr;
+    float clear_cutoff = SettingGet_f(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_clear_cutoff);
+    const char* clear_selection = nullptr;
+    float* clear_vla = nullptr;
+    MapType* clear_map = nullptr;
 
-    int mesh_max = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_grid_max);
-    if(mesh_max < 1)
+    int mesh_max = SettingGet_i(
+        G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_grid_max);
+    if (mesh_max < 1)
       mesh_max = 1;
 
-    if(trim_cutoff < 0.0F) {
+    if (trim_cutoff < 0.0F) {
       trim_cutoff = I->max_vdw + probe_radius;
     }
 
-    if(trim_cutoff > 0.0F) {
+    if (trim_cutoff > 0.0F) {
       int nc = 0;
       trim_vla = VLAlloc(float, cs->NIndex * 3);
       CHECKOK(ok, trim_vla);
-      for(c = 0; ok && c < cs->NIndex; c++) {
+      for (c = 0; ok && c < cs->NIndex; c++) {
         ai1 = obj->AtomInfo + cs->IdxToAtm[c];
-        if((ai1->visRep & cRepMeshBit) &&
-           (inclH || (!ai1->isHydrogen())) &&
-           ((!cullByFlag) ||
-            (!(ai1->flags & (cAtomFlag_ignore | cAtomFlag_exfoliate))))) {
+        if ((ai1->visRep & cRepMeshBit) && (inclH || (!ai1->isHydrogen())) &&
+            ((!cullByFlag) ||
+                (!(ai1->flags & (cAtomFlag_ignore | cAtomFlag_exfoliate))))) {
           VLACheck(trim_vla, float, nc * 3 + 2);
-	  CHECKOK(ok, trim_vla);
+          CHECKOK(ok, trim_vla);
           if (ok) {
             const float* src = cs->coordPtr(c);
-            float *dst = trim_vla + 3 * nc;
+            float* dst = trim_vla + 3 * nc;
             *(dst++) = *(src++);
             *(dst++) = *(src++);
             *(dst++) = *(src++);
@@ -848,131 +881,133 @@ Rep *RepMeshNew(CoordSet * cs, int state)
           }
         }
       }
-      if(ok && nc) {
+      if (ok && nc) {
         trim_map = MapNew(G, trim_cutoff, trim_vla, nc, nullptr);
-	CHECKOK(ok, trim_map);
-        if(ok) {
+        CHECKOK(ok, trim_map);
+        if (ok) {
           ok &= MapSetupExpress(trim_map);
           trim_flag = true;
         }
       }
     }
 
-    if(ok && carve_cutoff > 0.0F) {
-      carve_state =
-        SettingGet_i(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_carve_state) - 1;
-      carve_selection =
-        SettingGet_s(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_carve_selection);
-      if(carve_selection)
+    if (ok && carve_cutoff > 0.0F) {
+      carve_state = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(),
+                        cSetting_mesh_carve_state) -
+                    1;
+      carve_selection = SettingGet_s(G, cs->Setting.get(), obj->Setting.get(),
+          cSetting_mesh_carve_selection);
+      if (carve_selection)
         carve_map = SelectorGetSpacialMapFromSeleCoord(G,
-                                                       SelectorIndexByName(G,
-                                                                           carve_selection),
-                                                       carve_state, carve_cutoff,
-                                                       &carve_vla);
-      if(carve_map) {
+            SelectorIndexByName(G, carve_selection), carve_state, carve_cutoff,
+            &carve_vla);
+      if (carve_map) {
         ok &= MapSetupExpress(carve_map);
         carve_flag = true;
       }
     }
-    if(ok && clear_cutoff > 0.0F) {
-      clear_state =
-        SettingGet_i(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_clear_state) - 1;
-      clear_selection =
-        SettingGet_s(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_clear_selection);
-      if(clear_selection)
+    if (ok && clear_cutoff > 0.0F) {
+      clear_state = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(),
+                        cSetting_mesh_clear_state) -
+                    1;
+      clear_selection = SettingGet_s(G, cs->Setting.get(), obj->Setting.get(),
+          cSetting_mesh_clear_selection);
+      if (clear_selection)
         clear_map = SelectorGetSpacialMapFromSeleCoord(G,
-                                                       SelectorIndexByName(G,
-                                                                           clear_selection),
-                                                       clear_state, clear_cutoff,
-                                                       &clear_vla);
-      if(clear_map) {
+            SelectorIndexByName(G, clear_selection), clear_state, clear_cutoff,
+            &clear_vla);
+      if (clear_map) {
         ok &= MapSetupExpress(clear_map);
         clear_flag = true;
       }
     }
 
     if (ok)
-      I->V = pymol::vla_take_ownership((float*)VLAMalloc(1000, sizeof(float), 9, false));
+      I->V = pymol::vla_take_ownership(
+          (float*) VLAMalloc(1000, sizeof(float), 9, false));
     CHECKOK(ok, I->V);
     if (ok)
-      I->N = pymol::vla_take_ownership((int*)VLAMalloc(100, sizeof(int), 9, false));
+      I->N = pymol::vla_take_ownership(
+          (int*) VLAMalloc(100, sizeof(int), 9, false));
     CHECKOK(ok, I->N);
     if (ok)
       I->N[0] = 0;
 
-    if (ok){
-      for(c = 0; c < 3; c++) {
-	minE[c] = FLT_MAX;
-	maxE[c] = -FLT_MAX;
+    if (ok) {
+      for (c = 0; c < 3; c++) {
+        minE[c] = FLT_MAX;
+        maxE[c] = -FLT_MAX;
       }
-      for(b = 0; b < obj->NCSet; b++) {
-	ccs = obj->CSet[b];
-	if(ccs) {
-	  for(c = 0; c < ccs->NIndex; c++) {
-	    ai1 = obj->AtomInfo + ccs->IdxToAtm[c];       /* WLD fixed 011218 */
-	    if((ai1->visRep & cRepMeshBit) &&
-	       (inclH || (!ai1->isHydrogen())) &&
-	       ((!cullByFlag) ||
-		(!(ai1->flags & (cAtomFlag_ignore | cAtomFlag_exfoliate))))) {
-	      for(d = 0; d < 3; d++) {
-		if(minE[d] > ccs->Coord[(3 * c) + d])
-		  minE[d] = ccs->Coord[(3 * c) + d];
-		if(maxE[d] < ccs->Coord[(3 * c) + d])
-		  maxE[d] = ccs->Coord[(3 * c) + d];
-	      }
-	    }
-	  }
-	}
+      for (b = 0; b < obj->NCSet; b++) {
+        ccs = obj->CSet[b];
+        if (ccs) {
+          for (c = 0; c < ccs->NIndex; c++) {
+            ai1 = obj->AtomInfo + ccs->IdxToAtm[c]; /* WLD fixed 011218 */
+            if ((ai1->visRep & cRepMeshBit) &&
+                (inclH || (!ai1->isHydrogen())) &&
+                ((!cullByFlag) || (!(ai1->flags & (cAtomFlag_ignore |
+                                                      cAtomFlag_exfoliate))))) {
+              for (d = 0; d < 3; d++) {
+                if (minE[d] > ccs->Coord[(3 * c) + d])
+                  minE[d] = ccs->Coord[(3 * c) + d];
+                if (maxE[d] < ccs->Coord[(3 * c) + d])
+                  maxE[d] = ccs->Coord[(3 * c) + d];
+              }
+            }
+          }
+        }
       }
-      for(c = 0; c < 3; c++) {
-	minE[c] -= (float) (I->max_vdw + 0.25F);
-	maxE[c] += (float) (I->max_vdw + 0.25F);
+      for (c = 0; c < 3; c++) {
+        minE[c] -= (float) (I->max_vdw + 0.25F);
+        maxE[c] += (float) (I->max_vdw + 0.25F);
       }
     }
 
-    if (ok){
+    if (ok) {
       subtract3f(maxE, minE, sizeE);
-      
+
       size = sizeE[0];
-      if(sizeE[1] > size)
-	size = sizeE[1];
-      if(sizeE[2] > size)
-	size = sizeE[2];
-      
-      gridSize = size / mesh_max; /* grid size is the largest axis divided by 25 */
-      
-      if(gridSize < min_spacing)
-	gridSize = min_spacing;
-      
-      for(c = 0; c < 3; c++)
-	dims[c] = (int) ((sizeE[c] / gridSize) + 1.5F);
+      if (sizeE[1] > size)
+        size = sizeE[1];
+      if (sizeE[2] > size)
+        size = sizeE[2];
+
+      gridSize =
+          size / mesh_max; /* grid size is the largest axis divided by 25 */
+
+      if (gridSize < min_spacing)
+        gridSize = min_spacing;
+
+      for (c = 0; c < 3; c++)
+        dims[c] = (int) ((sizeE[c] / gridSize) + 1.5F);
       field = new Isofield(G, dims);
       CHECKOK(ok, field);
     }
 
-    if (ok){
-      for(a = 0; a < dims[0]; a++)
-	for(b = 0; b < dims[1]; b++)
-	  for(c = 0; c < dims[2]; c++)
-	    F3(field->data, a, b, c) = 2.0;
+    if (ok) {
+      for (a = 0; a < dims[0]; a++)
+        for (b = 0; b < dims[1]; b++)
+          for (c = 0; c < dims[2]; c++)
+            F3(field->data, a, b, c) = 2.0;
     }
     OrthoBusyFast(G, 0, 1);
-    if(ok && !solv_acc)
+    if (ok && !solv_acc)
       ok &= RepMeshGetSolventDots(I, cs, minE, maxE, probe_radius);
-    if(ok) {
+    if (ok) {
       smap = MapNew(G, probe_radius, I->Dot, I->NDot, nullptr);
-      map = MapNew(G, I->max_vdw + probe_radius, cs->Coord, cs->NIndex, nullptr);
+      map =
+          MapNew(G, I->max_vdw + probe_radius, cs->Coord, cs->NIndex, nullptr);
     }
-    if(ok && map && smap) {
+    if (ok && map && smap) {
       ok &= MapSetupExpress(smap);
       if (ok)
-	ok &= MapSetupExpress(map);
-      for(a = 0; ok && a < dims[0]; a++) {
+        ok &= MapSetupExpress(map);
+      for (a = 0; ok && a < dims[0]; a++) {
         OrthoBusyFast(G, dims[0] + a, dims[0] * 3);
         point[0] = minE[0] + a * gridSize;
-        for(b = 0; ok && b < dims[1]; b++) {
+        for (b = 0; ok && b < dims[1]; b++) {
           point[1] = minE[1] + b * gridSize;
-          for(c = 0; ok && c < dims[2]; c++) {
+          for (c = 0; ok && c < dims[2]; c++) {
             float bestDist;
             float dist2vdw;
             float vdw_add = solv_acc * probe_radius;
@@ -983,28 +1018,30 @@ Rep *RepMeshNew(CoordSet * cs, int state)
             aLen = FLT_MAX;
             MapLocus(map, point, &h, &k, &l);
             d = *(MapEStart(map, h, k, l));
-            if(d) {
+            if (d) {
               cur = map->EList[d++];
-              while(ok && cur >= 0) {
+              while (ok && cur >= 0) {
                 ai1 = obj->AtomInfo + cs->IdxToAtm[cur];
-                if((inclH || (!ai1->isHydrogen())) &&
-                   ((!cullByFlag) || (!(ai1->flags & cAtomFlag_ignore)))) {
+                if ((inclH || (!ai1->isHydrogen())) &&
+                    ((!cullByFlag) || (!(ai1->flags & cAtomFlag_ignore)))) {
                   vLen = (float) diff3f(point, cs->coordPtr(cur));
                   dist2vdw = vLen - (ai1->vdw + vdw_add);
-                  if(dist2vdw < bestDist) {
+                  if (dist2vdw < bestDist) {
                     bestDist = dist2vdw;
                     aLen = vLen;
                     aNear = cur;
                   }
                 }
                 cur = map->EList[d++];
-		ok &= !G->Interrupt;
+                ok &= !G->Interrupt;
               }
             }
-            if(ok && aNear >= 0) {    /* near an atom... */
-              pVal = aLen;      /* pVal is the distance from atom center */
-              vdw = cs->Obj->AtomInfo[cs->IdxToAtm[aNear]].vdw + solv_acc * probe_radius;
-              if((!solv_acc) && (pVal > vdw) && (pVal < (vdw + probe_radius))) {        /* point outside an atom */
+            if (ok && aNear >= 0) { /* near an atom... */
+              pVal = aLen;          /* pVal is the distance from atom center */
+              vdw = cs->Obj->AtomInfo[cs->IdxToAtm[aNear]].vdw +
+                    solv_acc * probe_radius;
+              if ((!solv_acc) && (pVal > vdw) &&
+                  (pVal < (vdw + probe_radius))) { /* point outside an atom */
                 inSolvFlag = false;
                 /* this point lies within a water radius of the atom, so
                    lets see if it is actually near a water */
@@ -1012,76 +1049,80 @@ Rep *RepMeshNew(CoordSet * cs, int state)
 
                 MapLocus(smap, point, &h, &k, &l);
                 d = *(MapEStart(smap, h, k, l));
-                if(d) {
+                if (d) {
                   cur = smap->EList[d++];
-                  while(cur >= 0) {
+                  while (cur >= 0) {
                     vLen = diffsq3f(point, I->Dot + (cur * 3));
-                    if(vLen < probe_radius2) {  /* within a water radius */
+                    if (vLen < probe_radius2) { /* within a water radius */
                       inSolvFlag = true;
                       break;
-                    } else if(vLen < aLen) {    /* not within water radius */
-                      aLen = vLen;      /* but nearest distance anyway */
+                    } else if (vLen < aLen) { /* not within water radius */
+                      aLen = vLen;            /* but nearest distance anyway */
                     }
                     cur = smap->EList[d++];
                   }
                 }
                 aLen = (float) sqrt1f(aLen);
-                if(inSolvFlag) {        /* point is inside a water, so a linear crossing point works fine */
+                if (inSolvFlag) { /* point is inside a water, so a linear
+                                     crossing point works fine */
                   pVal = pVal / vdw;
-                } else {        /* point is not inside a water, so we need to guestimate a value depending
-                                 * on where the point is */
-                  if(aLen < (2 * probe_radius)) {
+                } else { /* point is not inside a water, so we need to
+                          * guestimate a value depending on where the point is
+                          */
+                  if (aLen < (2 * probe_radius)) {
                     pVal = 1.05F * (2 * probe_radius - aLen) / probe_radius;
-                    /* within a radius, so assign based on water surface, but error on the side of exclusion */
+                    /* within a radius, so assign based on water surface, but
+                     * error on the side of exclusion */
 
                   } else {
                     pVal = 0.0; /* further than one water away... */
                   }
                 }
-              } else {          /* either within atom or outside solvent shell */
+              } else { /* either within atom or outside solvent shell */
                 pVal = pVal / vdw;
               }
-              if(pVal < F3(field->data, a, b, c))
+              if (pVal < F3(field->data, a, b, c))
                 F3(field->data, a, b, c) = pVal;
             }
-	    ok &= !G->Interrupt;
+            ok &= !G->Interrupt;
           }
         }
-	ok &= !G->Interrupt;
-	if (!ok)
-	  break;
+        ok &= !G->Interrupt;
+        if (!ok)
+          break;
       }
     }
     MapFree(smap);
     MapFree(map);
     FreeP(I->Dot);
     OrthoBusyFast(G, 2, 3);
-    if(ok) {
-      ok &= IsosurfVolume(G, nullptr, nullptr, field, 1.0, I->N, I->V, nullptr, mesh_type, mesh_skip,
-                    1.0F);
+    if (ok) {
+      ok &= IsosurfVolume(G, nullptr, nullptr, field, 1.0, I->N, I->V, nullptr,
+          mesh_type, mesh_skip, 1.0F);
     }
     DeleteP(field);
-    if(ok && (I->N.data() && I->V.data() && (carve_flag || clear_flag || trim_flag))) {
+    if (ok && (I->N.data() && I->V.data() &&
+                  (carve_flag || clear_flag || trim_flag))) {
       int cur_size = VLAGetSize(I->N);
       if (mesh_type == cIsomeshMode::isomesh && cur_size) {
-        int *n = I->N.data();
-        int *new_n = VLACalloc(int, cur_size);
+        int* n = I->N.data();
+        int* new_n = VLACalloc(int, cur_size);
         int new_size = 0;
-        float *new_v = I->V.data();
-        float *v = I->V.data();
-	CHECKOK(ok, new_n);
-        while(ok && (c = *(n++))) {
+        float* new_v = I->V.data();
+        float* v = I->V.data();
+        CHECKOK(ok, new_n);
+        while (ok && (c = *(n++))) {
           int new_c = 0;
-          float *last_v = nullptr;
-          while(c--) {
+          float* last_v = nullptr;
+          while (c--) {
             int a_keeper = false;
-            if(trim_map) {
+            if (trim_map) {
               int i = *(MapLocusEStart(trim_map, v));
-              if(i) {
+              if (i) {
                 int j = trim_map->EList[i++];
-                while(j >= 0) {
-                  float *v_targ = trim_vla + 3 * j;
-                  if(within3f(v_targ, v, trim_cutoff)) {
+                while (j >= 0) {
+                  float* v_targ = trim_vla + 3 * j;
+                  if (within3f(v_targ, v, trim_cutoff)) {
                     a_keeper = true;
                     break;
                   }
@@ -1092,14 +1133,14 @@ Rep *RepMeshNew(CoordSet * cs, int state)
               a_keeper = true;
             }
 
-            if(a_keeper && carve_map) {
+            if (a_keeper && carve_map) {
               int i = *(MapLocusEStart(carve_map, v));
               a_keeper = false;
-              if(i) {
+              if (i) {
                 int j = carve_map->EList[i++];
-                while(j >= 0) {
-                  float *v_targ = carve_vla + 3 * j;
-                  if(within3f(v_targ, v, carve_cutoff)) {
+                while (j >= 0) {
+                  float* v_targ = carve_vla + 3 * j;
+                  if (within3f(v_targ, v, carve_cutoff)) {
                     a_keeper = true;
                     break;
                   }
@@ -1108,12 +1149,12 @@ Rep *RepMeshNew(CoordSet * cs, int state)
               }
             }
 
-            if(clear_map) {
+            if (clear_map) {
               int i = *(MapLocusEStart(clear_map, v));
-              if(i) {
+              if (i) {
                 int j = clear_map->EList[i++];
-                while(j >= 0) {
-                  if(within3f(clear_vla + 3 * j, v, clear_cutoff)) {
+                while (j >= 0) {
+                  if (within3f(clear_vla + 3 * j, v, clear_cutoff)) {
                     a_keeper = false;
                     break;
                   }
@@ -1121,14 +1162,14 @@ Rep *RepMeshNew(CoordSet * cs, int state)
                 }
               }
             }
-            if(a_keeper) {
-              if(new_c) {
+            if (a_keeper) {
+              if (new_c) {
                 new_c++;
                 *(new_v++) = *(v++);
                 *(new_v++) = *(v++);
                 *(new_v++) = *(v++);
               } else {
-                if(last_v) {
+                if (last_v) {
                   new_c += 2;
                   *(new_v++) = *(last_v++);
                   *(new_v++) = *(last_v++);
@@ -1145,20 +1186,22 @@ Rep *RepMeshNew(CoordSet * cs, int state)
             } else {
               last_v = nullptr;
               v += 3;
-              if(new_c) {
-                VLACheck(new_n, int, new_size + 1);     /* extends the zero count sentinel */
-		CHECKOK(ok, new_n);
-		if (ok){
-		  new_n[new_size] = new_c;
-		  new_size++;
-		  new_c = 0;
-		}
+              if (new_c) {
+                VLACheck(new_n, int,
+                    new_size + 1); /* extends the zero count sentinel */
+                CHECKOK(ok, new_n);
+                if (ok) {
+                  new_n[new_size] = new_c;
+                  new_size++;
+                  new_c = 0;
+                }
               }
             }
           }
-          if(ok && new_c) {
-            VLACheck(new_n, int, new_size + 1); /* extends the zero count sentinel */
-	    CHECKOK(ok, new_n);
+          if (ok && new_c) {
+            VLACheck(
+                new_n, int, new_size + 1); /* extends the zero count sentinel */
+            CHECKOK(ok, new_n);
             new_n[new_size] = new_c;
             new_size++;
             new_c = 0;
@@ -1175,49 +1218,52 @@ Rep *RepMeshNew(CoordSet * cs, int state)
     VLAFreeP(clear_vla);
     n = I->N.data();
     I->NTot = 0;
-    if (ok){
-      while(*n)
-	I->NTot += *(n++);
+    if (ok) {
+      while (*n)
+        I->NTot += *(n++);
       I->recolor();
     }
     OrthoBusyFast(G, 3, 4);
   }
   OrthoBusyFast(G, 4, 4);
-  if(!ok) {
+  if (!ok) {
     delete I;
     I = nullptr;
   }
-  return (Rep *) I;
+  return (Rep*) I;
 }
 
-int RepMeshGetSolventDots(RepMesh * I, CoordSet * cs, float *min, float *max,
-                          float probe_radius)
+int RepMeshGetSolventDots(
+    RepMesh* I, CoordSet* cs, float* min, float* max, float probe_radius)
 {
-  PyMOLGlobals *G = cs->G;
-  ObjectMolecule *obj = cs->Obj;
+  PyMOLGlobals* G = cs->G;
+  ObjectMolecule* obj = cs->Obj;
   int a, b, c, a1, a2, flag, i, h, k, l, j;
   int ok = true;
   float *v, *v0, vdw;
-  MapType *map;
+  MapType* map;
   int inFlag, *p, *dot_flag;
-  SphereRec *sp = G->Sphere->Sphere[0];
+  SphereRec* sp = G->Sphere->Sphere[0];
   int cavity_cull;
   float probe_radius_plus;
   int dotCnt, maxCnt, maxDot = 0;
   int cnt;
   int inclH, mesh_mode, cullByFlag;
   AtomInfoType *ai1, *ai2;
-  int ds = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_quality);
+  int ds = SettingGet_i(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_quality);
 
-  if(ds < 0)
+  if (ds < 0)
     ds = 0;
-  if(ds > 4)
+  if (ds > 4)
     ds = 4;
   sp = G->Sphere->Sphere[ds];
 
-  cavity_cull = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(), cSetting_cavity_cull);
+  cavity_cull = SettingGet_i(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_cavity_cull);
 
-  mesh_mode = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_mode);
+  mesh_mode = SettingGet_i(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_mesh_mode);
   cullByFlag = (mesh_mode == cRepMesh_by_flags);
   inclH = !(mesh_mode == cRepMesh_heavy_atoms);
 
@@ -1228,50 +1274,50 @@ int RepMeshGetSolventDots(RepMesh * I, CoordSet * cs, float *min, float *max,
 
   I->NDot = 0;
   map = MapNew(G, I->max_vdw + probe_radius, cs->Coord, cs->NIndex, nullptr);
-  if(map) {
+  if (map) {
     MapSetupExpress(map);
     maxCnt = 0;
     v = I->Dot;
-    for(a = 0; a < cs->NIndex; a++) {
+    for (a = 0; a < cs->NIndex; a++) {
 
       ai1 = obj->AtomInfo + cs->IdxToAtm[a];
-      if((inclH || (!ai1->isHydrogen())) &&
-         ((!cullByFlag) || (!(ai1->flags & (cAtomFlag_ignore))))) {
+      if ((inclH || (!ai1->isHydrogen())) &&
+          ((!cullByFlag) || (!(ai1->flags & (cAtomFlag_ignore))))) {
         OrthoBusyFast(G, a, cs->NIndex * 3);
         dotCnt = 0;
         a1 = cs->IdxToAtm[a];
         v0 = cs->coordPtr(a);
         vdw = cs->Obj->AtomInfo[a1].vdw + probe_radius;
         inFlag = true;
-        for(c = 0; c < 3; c++) {
-          if((min[c] - v0[c]) > vdw) {
+        for (c = 0; c < 3; c++) {
+          if ((min[c] - v0[c]) > vdw) {
             inFlag = false;
             break;
           };
-          if((v0[c] - max[c]) > vdw) {
+          if ((v0[c] - max[c]) > vdw) {
             inFlag = false;
             break;
           };
         }
-        if(inFlag)
-          for(b = 0; b < sp->nDot; b++) {
+        if (inFlag)
+          for (b = 0; b < sp->nDot; b++) {
             v[0] = v0[0] + vdw * sp->dot[b][0];
             v[1] = v0[1] + vdw * sp->dot[b][1];
             v[2] = v0[2] + vdw * sp->dot[b][2];
             MapLocus(map, v, &h, &k, &l);
             flag = true;
             i = *(MapEStart(map, h, k, l));
-            if(i) {
+            if (i) {
               j = map->EList[i++];
-              while(j >= 0) {
+              while (j >= 0) {
 
                 ai2 = obj->AtomInfo + cs->IdxToAtm[j];
-                if((inclH || (!ai2->isHydrogen())) &&
-                   ((!cullByFlag) || (!(ai2->flags & cAtomFlag_ignore))))
-                  if(j != a) {
+                if ((inclH || (!ai2->isHydrogen())) &&
+                    ((!cullByFlag) || (!(ai2->flags & cAtomFlag_ignore))))
+                  if (j != a) {
                     a2 = cs->IdxToAtm[j];
-                    if(within3f
-                       (cs->coordPtr(j), v, cs->Obj->AtomInfo[a2].vdw + probe_radius)) {
+                    if (within3f(cs->coordPtr(j), v,
+                            cs->Obj->AtomInfo[a2].vdw + probe_radius)) {
                       flag = false;
                       break;
                     }
@@ -1279,60 +1325,60 @@ int RepMeshGetSolventDots(RepMesh * I, CoordSet * cs, float *min, float *max,
                 j = map->EList[i++];
               }
             }
-            if(flag) {
+            if (flag) {
               dotCnt++;
               v += 3;
               I->NDot++;
             }
           }
-        if(dotCnt > maxCnt) {
+        if (dotCnt > maxCnt) {
           maxCnt = dotCnt;
           maxDot = I->NDot - 1;
         }
       }
       ok &= !G->Interrupt;
-      if(!ok) {
+      if (!ok) {
         break;
       }
     }
     MapFree(map);
   }
 
-  if(ok && (cavity_cull > 0)) {
+  if (ok && (cavity_cull > 0)) {
     dot_flag = pymol::malloc<int>(I->NDot);
     ErrChkPtr(G, dot_flag);
-    for(a = 0; a < I->NDot; a++) {
+    for (a = 0; a < I->NDot; a++) {
       dot_flag[a] = 0;
     }
-    dot_flag[maxDot] = 1;       /* this guarantees that we have a valid dot */
+    dot_flag[maxDot] = 1; /* this guarantees that we have a valid dot */
 
     map = MapNew(G, probe_radius_plus, I->Dot, I->NDot, nullptr);
-    if(map) {
+    if (map) {
       MapSetupExpress(map);
 
       flag = true;
-      while(flag) {
+      while (flag) {
         p = dot_flag;
         v = I->Dot;
 
         flag = false;
-        for(a = 0; a < I->NDot; a++) {
-          if(!dot_flag[a]) {
+        for (a = 0; a < I->NDot; a++) {
+          if (!dot_flag[a]) {
             cnt = 0;
             MapLocus(map, v, &h, &k, &l);
             i = *(MapEStart(map, h, k, l));
-            if(i) {
+            if (i) {
               j = map->EList[i++];
-              while(j >= 0) {
-                if(j != a) {
-                  if(within3f(I->Dot + (3 * j), v, probe_radius_plus)) {
-                    if(dot_flag[j]) {
+              while (j >= 0) {
+                if (j != a) {
+                  if (within3f(I->Dot + (3 * j), v, probe_radius_plus)) {
+                    if (dot_flag[j]) {
                       *p = true;
                       flag = true;
                       break;
                     }
                     cnt++;
-                    if(cnt > cavity_cull) {
+                    if (cnt > cavity_cull) {
                       *p = true;
                       flag = true;
                       break;
@@ -1346,10 +1392,10 @@ int RepMeshGetSolventDots(RepMesh * I, CoordSet * cs, float *min, float *max,
           v += 3;
           p++;
         }
-	ok &= !G->Interrupt;
-	if(!ok) {
-	  break;
-	}
+        ok &= !G->Interrupt;
+        if (!ok) {
+          break;
+        }
       }
       MapFree(map);
     }
@@ -1358,8 +1404,8 @@ int RepMeshGetSolventDots(RepMesh * I, CoordSet * cs, float *min, float *max,
     p = dot_flag;
     c = I->NDot;
     I->NDot = 0;
-    for(a = 0; a < c; a++) {
-      if(*(p++)) {
+    for (a = 0; a < c; a++) {
+      if (*(p++)) {
         *(v0++) = *(v++);
         *(v0++) = *(v++);
         *(v0++) = *(v++);
@@ -1370,7 +1416,7 @@ int RepMeshGetSolventDots(RepMesh * I, CoordSet * cs, float *min, float *max,
     }
     FreeP(dot_flag);
   }
-  if(!ok) {
+  if (!ok) {
     FreeP(I->Dot);
     I->NDot = 0;
   }

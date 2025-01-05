@@ -38,7 +38,6 @@ TEST_CASE("Legacy List", "[List]")
   ListFree(myList, next, Foo);
 }
 
-
 TEST_CASE("pymol::ListAdapter type checks", "[List]")
 {
   Foo* myList;

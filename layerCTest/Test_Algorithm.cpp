@@ -8,7 +8,7 @@ TEST_CASE("Range Equal", "[Algorithm]")
 {
   std::array<int, 4> a{1, 2, 3, 4};
   int b[4] = {1, 2, 3, 4};
-  static_assert(a.size() == (sizeof(b)/sizeof(*b)), "Arrays not equal size!");
+  static_assert(a.size() == (sizeof(b) / sizeof(*b)), "Arrays not equal size!");
   REQUIRE(pymol::ranges::equal(a, b));
   a[0] = 2;
   REQUIRE(!pymol::ranges::equal(a, b));
@@ -38,7 +38,15 @@ TEST_CASE("Left Fold", "[Algorithm]")
   REQUIRE(pymol::ranges::left_fold(a, 10) == 25u);
   REQUIRE(pymol::ranges::left_fold(a, 1, std::multiplies<int>()) == 120u);
 
-  struct S { std::size_t value; S(std::size_t v) : value{v}{} };
-  std::array<S, 5> b{ S{ 1 }, S{ 2 }, S{ 3 }, S{ 4 }, S{ 5 }};
-  REQUIRE(pymol::ranges::left_fold(b, 1u, [](std::size_t acc, const S& s){ return acc + s.value; }) == 16u);
+  struct S {
+    std::size_t value;
+    S(std::size_t v)
+        : value{v}
+    {
+    }
+  };
+  std::array<S, 5> b{S{1}, S{2}, S{3}, S{4}, S{5}};
+  REQUIRE(pymol::ranges::left_fold(b, 1u, [](std::size_t acc, const S& s) {
+    return acc + s.value;
+  }) == 16u);
 }

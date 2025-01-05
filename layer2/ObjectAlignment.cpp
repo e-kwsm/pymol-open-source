@@ -1,89 +1,86 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2006 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2006 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
 
 #include <unordered_set>
 
-#include"os_python.h"
+#include "os_python.h"
 
-#include"os_predef.h"
-#include"os_std.h"
-#include"os_gl.h"
+#include "os_gl.h"
+#include "os_predef.h"
+#include "os_std.h"
 
-#include"ObjectAlignment.h"
-#include"Base.h"
-#include"MemoryDebug.h"
-#include"CGO.h"
-#include"Scene.h"
-#include"Setting.h"
-#include"PConv.h"
-#include"main.h"
-#include"Color.h"
-#include"Executive.h"
-#include"Util.h"
-#include"Selector.h"
-#include"Seq.h"
-#include"Seeker.h"
-#include"ShaderMgr.h"
+#include "Base.h"
+#include "CGO.h"
+#include "Color.h"
+#include "Executive.h"
 #include "Lex.h"
+#include "MemoryDebug.h"
+#include "ObjectAlignment.h"
+#include "PConv.h"
+#include "Scene.h"
+#include "Seeker.h"
+#include "Selector.h"
+#include "Seq.h"
+#include "Setting.h"
+#include "ShaderMgr.h"
+#include "Util.h"
+#include "main.h"
 
-/* 
+/*
    just so you don't forget...
 
-   alignment vlas are zero-separated lists of groups of unique atom identifiers 
+   alignment vlas are zero-separated lists of groups of unique atom identifiers
 
 */
 
-static int GroupOrderKnown(PyMOLGlobals * G,
-                           int *curVLA,
-                           const int *newVLA,
-                           int cur_start,
-                           int new_start, ObjectMolecule * guide, int *action)
+static int GroupOrderKnown(PyMOLGlobals* G, int* curVLA, const int* newVLA,
+    int cur_start, int new_start, ObjectMolecule* guide, int* action)
 {
   int order_known = false;
-  if(guide) {
+  if (guide) {
     int c, id;
     int cur_offset = -1;
     int new_offset = -1;
 
     /* find lowest offset within the cur group */
     c = cur_start;
-    while((id = curVLA[c++])) {
+    while ((id = curVLA[c++])) {
       auto eoo = ExecutiveUniqueIDAtomDictGet(G, id);
       if (eoo && eoo->obj == guide) {
-        if((cur_offset < 0) || (eoo->atm < cur_offset))
+        if ((cur_offset < 0) || (eoo->atm < cur_offset))
           cur_offset = eoo->atm;
       }
     }
 
     /* find lowest offset within the new group */
     c = new_start;
-    while((id = newVLA[c++])) {
+    while ((id = newVLA[c++])) {
       auto eoo = ExecutiveUniqueIDAtomDictGet(G, id);
       if (eoo && eoo->obj == guide) {
-        if((new_offset < 0) || (eoo->atm < new_offset))
+        if ((new_offset < 0) || (eoo->atm < new_offset))
           new_offset = eoo->atm;
       }
     }
 
-    if((new_offset >= 0) && (cur_offset >= 0)) {
-      if(new_offset < cur_offset) {
+    if ((new_offset >= 0) && (cur_offset >= 0)) {
+      if (new_offset < cur_offset) {
         order_known = true;
         *action = -1;
-      } else if(new_offset > cur_offset) {
+      } else if (new_offset > cur_offset) {
         order_known = true;
         *action = 1;
       }
@@ -92,25 +89,26 @@ static int GroupOrderKnown(PyMOLGlobals * G,
   return order_known;
 }
 
-static int AlignmentFindTag(PyMOLGlobals * G, AtomInfoType * ai, int sele,
-                            int n_more_plus_one)
+static int AlignmentFindTag(
+    PyMOLGlobals* G, AtomInfoType* ai, int sele, int n_more_plus_one)
 {
-  int result = 0;      /* default -- no tag */
-  AtomInfoType *ai0 = ai;
-  while(1) {
+  int result = 0; /* default -- no tag */
+  AtomInfoType* ai0 = ai;
+  while (1) {
     int tag = SelectorIsMember(G, ai0->selEntry, sele);
-    if(tag && (ai0->flags & cAtomFlag_guide))   /* use guide atom if present */
+    if (tag && (ai0->flags & cAtomFlag_guide)) /* use guide atom if present */
       return tag;
-    if(result < tag) {
-      if(!result)
+    if (result < tag) {
+      if (!result)
         result = tag;
-      else if(ai0->flags & cAtomFlag_guide)     /* residue based and on guide atom */
+      else if (ai0->flags &
+               cAtomFlag_guide) /* residue based and on guide atom */
         result = tag;
     }
     n_more_plus_one--;
-    if(n_more_plus_one > 0) {
+    if (n_more_plus_one > 0) {
       ai0++;
-      if(!AtomInfoSameResidueP(G, ai, ai0))
+      if (!AtomInfoSameResidueP(G, ai, ai0))
         break;
     } else
       break;
@@ -127,8 +125,9 @@ static int AlignmentFindTag(PyMOLGlobals * G, AtomInfoType * ai, int sele,
  * AtomInfoKnownProteinResName()
  * SeekerGetAbbr()
  */
-static char get_abbr(PyMOLGlobals * G, const AtomInfoType * ai) {
-  const char * resn = LexStr(G, ai->resn);
+static char get_abbr(PyMOLGlobals* G, const AtomInfoType* ai)
+{
+  const char* resn = LexStr(G, ai->resn);
   const char unknown = ((ai->flags & cAtomFlag_polymer)) ? '?' : 0;
 
   if ((ai->flags & cAtomFlag_nucleic)) {
@@ -146,45 +145,46 @@ static char get_abbr(PyMOLGlobals * G, const AtomInfoType * ai) {
   return SeekerGetAbbr(G, resn, 0, unknown);
 }
 
-int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, int format,
-                            char **str_vla)
+int ObjectAlignmentAsStrVLA(
+    PyMOLGlobals* G, ObjectAlignment* I, int state, int format, char** str_vla)
 {
   int ok = true;
   ov_size len = 0;
-  char *vla = VLAlloc(char, 1000);
+  char* vla = VLAlloc(char, 1000);
   int force_update = false;
   int active_only = false;
-  int max_name_len = 12;        /* default indentation */
+  int max_name_len = 12; /* default indentation */
 
-  if(state < 0)
+  if (state < 0)
     state = I->getCurrentState();
-  if(state < 0)
+  if (state < 0)
     state = SceneGetState(G);
-  if(state >= 0 && state < I->getNFrame()) {
-    ObjectAlignmentState *oas = I->State.data() + state;
-    if(oas->alignVLA) {
-      if(state != I->SelectionState) {  /* get us a selection for the current state */
+  if (state >= 0 && state < I->getNFrame()) {
+    ObjectAlignmentState* oas = I->State.data() + state;
+    if (oas->alignVLA) {
+      if (state !=
+          I->SelectionState) { /* get us a selection for the current state */
         I->ForceState = state;
         force_update = true;
         I->update();
       }
 
       switch (format) {
-      case 0:                  /* aln */
+      case 0: /* aln */
         UtilConcatVLA(&vla, &len, "CLUSTAL\n\n");
         break;
       }
 
       {
         int align_sele = SelectorIndexByName(G, I->Name);
-        if(align_sele >= 0) {
+        if (align_sele >= 0) {
           int nRow = 0;
           ov_size nCol = 0;
           CSeqRow *row_vla = nullptr, *row;
-          char *cons_str = nullptr;
-          void *hidden = nullptr;
+          char* cons_str = nullptr;
+          void* hidden = nullptr;
 
-          ObjectMolecule *obj;
+          ObjectMolecule* obj;
 
           {
             row_vla = VLACalloc(CSeqRow, 10);
@@ -192,14 +192,14 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
             /* first, find out which objects are included in the
                alignment and count the name length */
 
-            while(ExecutiveIterateObjectMolecule(G, &obj, &hidden)) {
-              if((obj->Enabled || !active_only) && (obj->Name[0] != '_')) {
+            while (ExecutiveIterateObjectMolecule(G, &obj, &hidden)) {
+              if ((obj->Enabled || !active_only) && (obj->Name[0] != '_')) {
                 int a;
-                const AtomInfoType *ai = obj->AtomInfo.data();
-                for(a = 0; a < obj->NAtom; a++) {
-                  if(SelectorIsMember(G, ai->selEntry, align_sele)) {
+                const AtomInfoType* ai = obj->AtomInfo.data();
+                for (a = 0; a < obj->NAtom; a++) {
+                  if (SelectorIsMember(G, ai->selEntry, align_sele)) {
                     int name_len = strlen(obj->Name);
-                    if(max_name_len < name_len)
+                    if (max_name_len < name_len)
                       max_name_len = name_len;
                     VLACheck(row_vla, CSeqRow, nRow);
                     row = row_vla + nRow;
@@ -217,27 +217,28 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
 
             {
               int done = false;
-              while(!done) {
+              while (!done) {
                 int a;
                 int min_tag = -1;
                 int untagged_col = false;
                 done = true;
-                for(a = 0; a < nRow; a++) {
+                for (a = 0; a < nRow; a++) {
                   row = row_vla + a;
-                  while(row->cCol < row->nCol) {        /* advance to next tag in each row & find lowest */
-                    AtomInfoType *ai = row->obj->AtomInfo + row->cCol;
+                  while (row->cCol < row->nCol) { /* advance to next tag in each
+                                                     row & find lowest */
+                    AtomInfoType* ai = row->obj->AtomInfo + row->cCol;
                     done = false;
-                    if(AtomInfoSameResidueP(G, row->last_ai, ai)) {
+                    if (AtomInfoSameResidueP(G, row->last_ai, ai)) {
                       row->cCol++;
-                    } else if(!get_abbr(G, ai)) {      /* not a polymer residue */
+                    } else if (!get_abbr(G, ai)) { /* not a polymer residue */
                       row->cCol++;
                     } else {
-                      int tag =
-                        AlignmentFindTag(G, ai, align_sele, row->nCol - row->cCol);
-                      if(tag) { /* we're at a tagged atom... */
-                        if(min_tag > tag)
+                      int tag = AlignmentFindTag(
+                          G, ai, align_sele, row->nCol - row->cCol);
+                      if (tag) { /* we're at a tagged atom... */
+                        if (min_tag > tag)
                           min_tag = tag;
-                        else if(min_tag < 0)
+                        else if (min_tag < 0)
                           min_tag = tag;
                         break;
                       } else {
@@ -246,34 +247,34 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
                       }
                     }
                   }
-                  if(untagged_col)
+                  if (untagged_col)
                     break;
                 }
-                if(untagged_col) {
+                if (untagged_col) {
                   nCol++;
                   /* increment all untagged atoms */
-                  for(a = 0; a < nRow; a++) {
+                  for (a = 0; a < nRow; a++) {
                     row = row_vla + a;
-                    if(row->cCol < row->nCol) {
-                      AtomInfoType *ai = row->obj->AtomInfo + row->cCol;
-                      int tag =
-                        AlignmentFindTag(G, ai, align_sele, row->nCol - row->cCol);
-                      if(!tag) {
+                    if (row->cCol < row->nCol) {
+                      AtomInfoType* ai = row->obj->AtomInfo + row->cCol;
+                      int tag = AlignmentFindTag(
+                          G, ai, align_sele, row->nCol - row->cCol);
+                      if (!tag) {
                         row->last_ai = ai;
                         row->cCol++;
                       }
                     }
                   }
-                } else if(min_tag >= 0) {
+                } else if (min_tag >= 0) {
                   /* increment all matching tagged atoms */
                   nCol++;
-                  for(a = 0; a < nRow; a++) {
+                  for (a = 0; a < nRow; a++) {
                     row = row_vla + a;
-                    if(row->cCol < row->nCol) {
-                      AtomInfoType *ai = row->obj->AtomInfo + row->cCol;
-                      int tag =
-                        AlignmentFindTag(G, ai, align_sele, row->nCol - row->cCol);
-                      if(tag == min_tag) {      /* advance past this tag */
+                    if (row->cCol < row->nCol) {
+                      AtomInfoType* ai = row->obj->AtomInfo + row->cCol;
+                      int tag = AlignmentFindTag(
+                          G, ai, align_sele, row->nCol - row->cCol);
+                      if (tag == min_tag) { /* advance past this tag */
                         row->cCol++;
                         row->last_ai = ai;
                       }
@@ -284,11 +285,11 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
             }
             /* allocate storage for the sequence alignment */
 
-            cons_str = pymol::calloc<char>(nCol + 1);  /* conservation string */
+            cons_str = pymol::calloc<char>(nCol + 1); /* conservation string */
 
             {
               int a;
-              for(a = 0; a < nRow; a++) {
+              for (a = 0; a < nRow; a++) {
                 row = row_vla + a;
                 row->txt = pymol::vla<char>(nCol + 1);
                 row->len = 0;
@@ -301,27 +302,28 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
 
             {
               int done = false;
-              while(!done) {
+              while (!done) {
                 int a;
                 int min_tag = -1;
                 int untagged_col = false;
                 done = true;
-                for(a = 0; a < nRow; a++) {
+                for (a = 0; a < nRow; a++) {
                   row = row_vla + a;
-                  while(row->cCol < row->nCol) {        /* advance to next tag in each row & find lowest */
-                    AtomInfoType *ai = row->obj->AtomInfo + row->cCol;
+                  while (row->cCol < row->nCol) { /* advance to next tag in each
+                                                     row & find lowest */
+                    AtomInfoType* ai = row->obj->AtomInfo + row->cCol;
                     done = false;
-                    if(AtomInfoSameResidueP(G, row->last_ai, ai)) {
+                    if (AtomInfoSameResidueP(G, row->last_ai, ai)) {
                       row->cCol++;
-                    } else if(!get_abbr(G, ai)) {      /* not a polymer residue */
+                    } else if (!get_abbr(G, ai)) { /* not a polymer residue */
                       row->cCol++;
                     } else {
-                      int tag =
-                        AlignmentFindTag(G, ai, align_sele, row->nCol - row->cCol);
-                      if(tag) { /* we're at a tagged atom... */
-                        if(min_tag > tag)
+                      int tag = AlignmentFindTag(
+                          G, ai, align_sele, row->nCol - row->cCol);
+                      if (tag) { /* we're at a tagged atom... */
+                        if (min_tag > tag)
                           min_tag = tag;
-                        else if(min_tag < 0)
+                        else if (min_tag < 0)
                           min_tag = tag;
                         break;
                       } else {
@@ -331,16 +333,16 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
                     }
                   }
                 }
-                if(untagged_col) {
+                if (untagged_col) {
                   /* increment all untagged atoms */
-                  for(a = 0; a < nRow; a++) {
+                  for (a = 0; a < nRow; a++) {
                     row = row_vla + a;
-                    if(row->cCol < row->nCol) {
-                      AtomInfoType *ai = row->obj->AtomInfo + row->cCol;
-                      int tag =
-                        AlignmentFindTag(G, ai, align_sele, row->nCol - row->cCol);
-                      if(!tag) {
-                        if(!AtomInfoSameResidueP(G, row->last_ai, ai)) {
+                    if (row->cCol < row->nCol) {
+                      AtomInfoType* ai = row->obj->AtomInfo + row->cCol;
+                      int tag = AlignmentFindTag(
+                          G, ai, align_sele, row->nCol - row->cCol);
+                      if (!tag) {
+                        if (!AtomInfoSameResidueP(G, row->last_ai, ai)) {
                           row->last_ai = ai;
                           row->txt[row->len] = get_abbr(G, ai);
                         } else {
@@ -359,24 +361,24 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
                   }
                   cons_str[nCol] = ' ';
                   nCol++;
-                } else if(min_tag >= 0) {
+                } else if (min_tag >= 0) {
                   char cons_abbr = ' ';
                   int abbr_cnt = 0;
                   /* increment all matching tagged atoms */
-                  for(a = 0; a < nRow; a++) {
+                  for (a = 0; a < nRow; a++) {
                     row = row_vla + a;
-                    if(row->cCol < row->nCol) {
-                      AtomInfoType *ai = row->obj->AtomInfo + row->cCol;
-                      int tag =
-                        AlignmentFindTag(G, ai, align_sele, row->nCol - row->cCol);
-                      if(tag == min_tag) {      /* advance past this tag */
+                    if (row->cCol < row->nCol) {
+                      AtomInfoType* ai = row->obj->AtomInfo + row->cCol;
+                      int tag = AlignmentFindTag(
+                          G, ai, align_sele, row->nCol - row->cCol);
+                      if (tag == min_tag) { /* advance past this tag */
                         char abbr;
-                        if(!AtomInfoSameResidueP(G, row->last_ai, ai)) {
+                        if (!AtomInfoSameResidueP(G, row->last_ai, ai)) {
                           row->last_ai = ai;
                           abbr = get_abbr(G, ai);
-                          if(cons_abbr == ' ')
+                          if (cons_abbr == ' ')
                             cons_abbr = abbr;
-                          else if(cons_abbr != abbr)
+                          else if (cons_abbr != abbr)
                             cons_abbr = 0;
                           abbr_cnt++;
                         } else {
@@ -397,11 +399,11 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
                       row->len++;
                     }
                   }
-                  if(abbr_cnt > 1) {
-                    if(cons_abbr)
-                      cons_str[nCol] = '*';     /* aligned and identical */
+                  if (abbr_cnt > 1) {
+                    if (cons_abbr)
+                      cons_str[nCol] = '*'; /* aligned and identical */
                     else
-                      cons_str[nCol] = '.';     /* aligned but not identical */
+                      cons_str[nCol] = '.'; /* aligned but not identical */
                   } else
                     cons_str[nCol] = ' ';
                   nCol++;
@@ -414,25 +416,25 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
               int done = false;
               ov_size seq_len = 0;
               int a;
-              while(!done) {
+              while (!done) {
                 done = true;
-                for(a = 0; a < nRow; a++) {
+                for (a = 0; a < nRow; a++) {
                   row = row_vla + a;
                   UtilNPadVLA(&vla, &len, row->obj->Name, max_name_len + 1);
-                  if(seq_len < row->len) {
+                  if (seq_len < row->len) {
                     UtilNPadVLA(&vla, &len, row->txt + seq_len, block_width);
                   }
                   UtilConcatVLA(&vla, &len, "\n");
                 }
-                if(seq_len < nCol) {
+                if (seq_len < nCol) {
                   UtilNPadVLA(&vla, &len, "", max_name_len + 1);
                   UtilNPadVLA(&vla, &len, cons_str + seq_len, block_width);
                   UtilConcatVLA(&vla, &len, "\n");
                 }
                 seq_len += block_width;
-                for(a = 0; a < nRow; a++) {
+                for (a = 0; a < nRow; a++) {
                   row = row_vla + a;
-                  if(seq_len < row->len) {
+                  if (seq_len < row->len) {
                     done = false;
                     break;
                   }
@@ -443,9 +445,9 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
           }
 
           /* free up resources */
-          if(row_vla) {
+          if (row_vla) {
             int a;
-            for(a = 0; a < nRow; a++) {
+            for (a = 0; a < nRow; a++) {
               row = row_vla + a;
               row->txt.freeP();
             }
@@ -457,7 +459,7 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
     }
   }
 
-  if(force_update) {
+  if (force_update) {
     I->update();
   }
 
@@ -467,11 +469,11 @@ int ObjectAlignmentAsStrVLA(PyMOLGlobals * G, ObjectAlignment * I, int state, in
   return ok;
 }
 
-static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
-                           ObjectMolecule * guide, ObjectMolecule * flush)
+static int* AlignmentMerge(PyMOLGlobals* G, int* curVLA, const int* newVLA,
+    ObjectMolecule* guide, ObjectMolecule* flush)
 {
   /* curVLA and newVLA must be properly sized and zero terminated... */
-  int *result = nullptr;
+  int* result = nullptr;
   int n_result = 0;
 
   {
@@ -496,28 +498,29 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
         }
       }
 
-      /* first, go through and eliminate old matching atoms between guide and flush (if any) */
+      /* first, go through and eliminate old matching atoms between guide and
+       * flush (if any) */
       {
         int cur_start = 0;
-        while(cur_start < n_cur) {
+        while (cur_start < n_cur) {
 
-          while((cur_start < n_cur) && !curVLA[cur_start]) {
+          while ((cur_start < n_cur) && !curVLA[cur_start]) {
             cur_start++;
           }
 
           {
             int other_seen = 0;
             int flush_seen = false;
-            ObjectMolecule *obj;
+            ObjectMolecule* obj;
 
             {
               int cur = cur_start;
               int id;
-              while((id = curVLA[cur])) {
+              while ((id = curVLA[cur])) {
                 auto eoo = ExecutiveUniqueIDAtomDictGet(G, id);
                 if (eoo) {
                   obj = eoo->obj;
-                  if(flushobjects.count(obj)) {
+                  if (flushobjects.count(obj)) {
                     flush_seen = true;
                   } else {
                     other_seen++;
@@ -527,16 +530,16 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
               }
             }
 
-            if(flush_seen) {    /* eliminate flush atoms */
+            if (flush_seen) { /* eliminate flush atoms */
               int cur = cur_start;
               int id;
-              while((id = curVLA[cur])) {
+              while ((id = curVLA[cur])) {
                 auto eoo = ExecutiveUniqueIDAtomDictGet(G, id);
                 if (eoo) {
                   obj = eoo->obj;
-                  if(flushobjects.count(obj)) {
+                  if (flushobjects.count(obj)) {
                     int tmp = cur;
-                    while(curVLA[tmp]) {
+                    while (curVLA[tmp]) {
                       curVLA[tmp] = curVLA[tmp + 1];
                       tmp++;
                     }
@@ -546,15 +549,15 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
               }
             }
 
-            if(other_seen < 2) {     /* eliminate orphaned atoms */
+            if (other_seen < 2) { /* eliminate orphaned atoms */
               int cur = cur_start;
-              while(curVLA[cur])
+              while (curVLA[cur])
                 curVLA[cur++] = 0;
             }
 
-            while(curVLA[cur_start])
+            while (curVLA[cur_start])
               cur_start++;
-            while((cur_start < n_cur) && !curVLA[cur_start]) {
+            while ((cur_start < n_cur) && !curVLA[cur_start]) {
               cur_start++;
             }
           }
@@ -571,25 +574,25 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
 
         result = VLAlloc(int, ((n_cur < n_new) ? n_new : n_cur));
 
-        while((cur_start < n_cur) || (new_start < n_new)) {
+        while ((cur_start < n_cur) || (new_start < n_new)) {
 
-          int action;           /* -1 = insert new, 0 = merge, 1 = insert cur */
+          int action; /* -1 = insert new, 0 = merge, 1 = insert cur */
 
           /* make sure both lists are queued up on the next identifier */
 
-          while((cur_start < n_cur) && !curVLA[cur_start])
+          while ((cur_start < n_cur) && !curVLA[cur_start])
             cur_start++;
-          while((new_start < n_new) && !newVLA[new_start])
+          while ((new_start < n_new) && !newVLA[new_start])
             new_start++;
 
-          if(newVLA[new_start]) {       /* default is to insert new first... */
+          if (newVLA[new_start]) { /* default is to insert new first... */
             action = -1;
           } else {
             action = 1;
           }
 
-          if((cur_start < n_cur) && (new_start < n_new) &&
-             curVLA[cur_start] && newVLA[new_start]) {
+          if ((cur_start < n_cur) && (new_start < n_new) && curVLA[cur_start] &&
+              newVLA[new_start]) {
             /* both lists active */
 
             int c, id;
@@ -597,36 +600,37 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
 
             active.clear();
             c = cur_start;
-            while((id = curVLA[c++])) { /* record active atoms */
+            while ((id = curVLA[c++])) { /* record active atoms */
               active.insert(id);
             }
 
             c = new_start;
-            while((id = newVLA[c++])) { /* see if there are any matches */
+            while ((id = newVLA[c++])) { /* see if there are any matches */
               if (active.find(id) != active.end()) {
                 overlapping = true;
                 break;
               }
             }
 
-            if(overlapping) {
+            if (overlapping) {
               /* overlapping, so merge */
               action = 0;
 
             } else {
-              /* non-overlapping, so we need to figure out which goes first... */
-              if(!GroupOrderKnown(G, curVLA, newVLA,
-                                  cur_start, new_start, guide, &action)) {
+              /* non-overlapping, so we need to figure out which goes first...
+               */
+              if (!GroupOrderKnown(G, curVLA, newVLA, cur_start, new_start,
+                      guide, &action)) {
                 int c, id;
                 ObjectMolecule *obj, *last_obj = nullptr;
                 c = cur_start;
-                while((id = curVLA[c++])) {
+                while ((id = curVLA[c++])) {
                   auto eoo = ExecutiveUniqueIDAtomDictGet(G, id);
                   if (eoo) {
                     obj = eoo->obj;
-                    if(obj != last_obj) {
-                      if(GroupOrderKnown(G, curVLA, newVLA,
-                                         cur_start, new_start, obj, &action))
+                    if (obj != last_obj) {
+                      if (GroupOrderKnown(G, curVLA, newVLA, cur_start,
+                              new_start, obj, &action))
                         break;
                       else
                         last_obj = obj;
@@ -642,9 +646,9 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
 
           /* check assumptions */
 
-          if((action < 1) && !(new_start < n_new))
+          if ((action < 1) && !(new_start < n_new))
             action = 1;
-          else if((action > (-1)) && !(cur_start < n_cur))
+          else if ((action > (-1)) && !(cur_start < n_cur))
             action = -1;
 
           /* take action */
@@ -653,9 +657,9 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
             int id;
 
             switch (action) {
-            case -1:           /* insert new */
-              if(new_start < n_new) {
-                while((id = newVLA[new_start])) {
+            case -1: /* insert new */
+              if (new_start < n_new) {
+                while ((id = newVLA[new_start])) {
                   if (used.find(id) == used.end()) {
                     used.insert(id);
                     VLACheck(result, int, n_result);
@@ -664,16 +668,16 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
                   }
                   new_start++;
                 }
-                while((new_start < n_new) && (!newVLA[new_start]))
+                while ((new_start < n_new) && (!newVLA[new_start]))
                   new_start++;
               }
               VLACheck(result, int, n_result);
               result[n_result] = 0;
               n_result++;
               break;
-            case 0:            /* merge, with cur going first */
-              if(new_start < n_new) {
-                while((id = newVLA[new_start])) {
+            case 0: /* merge, with cur going first */
+              if (new_start < n_new) {
+                while ((id = newVLA[new_start])) {
                   if (used.find(id) == used.end()) {
                     used.insert(id);
                     VLACheck(result, int, n_result);
@@ -682,11 +686,11 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
                   }
                   new_start++;
                 }
-                while((new_start < n_new) && (!newVLA[new_start]))
+                while ((new_start < n_new) && (!newVLA[new_start]))
                   new_start++;
               }
-              if(cur_start < n_cur) {
-                while((id = curVLA[cur_start])) {
+              if (cur_start < n_cur) {
+                while ((id = curVLA[cur_start])) {
                   if (used.find(id) == used.end()) {
                     used.insert(id);
                     VLACheck(result, int, n_result);
@@ -695,16 +699,16 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
                   }
                   cur_start++;
                 }
-                while((cur_start < n_cur) && (!curVLA[cur_start]))
+                while ((cur_start < n_cur) && (!curVLA[cur_start]))
                   cur_start++;
               }
               VLACheck(result, int, n_result);
               result[n_result] = 0;
               n_result++;
               break;
-            case 1:            /* insert cur */
-              if(cur_start < n_cur) {
-                while((id = curVLA[cur_start])) {
+            case 1: /* insert cur */
+              if (cur_start < n_cur) {
+                while ((id = curVLA[cur_start])) {
                   if (used.find(id) == used.end()) {
                     used.insert(id);
                     VLACheck(result, int, n_result);
@@ -713,7 +717,7 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
                   }
                   cur_start++;
                 }
-                while((cur_start < n_cur) && (!curVLA[cur_start]))
+                while ((cur_start < n_cur) && (!curVLA[cur_start]))
                   cur_start++;
                 VLACheck(result, int, n_result);
                 result[n_result] = 0;
@@ -726,7 +730,7 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
       }
     }
   }
-  if(result && n_result && (!result[n_result - 1])) {
+  if (result && n_result && (!result[n_result - 1])) {
     VLACheck(result, int, n_result);
     result[n_result] = 0;
     n_result++;
@@ -735,12 +739,12 @@ static int *AlignmentMerge(PyMOLGlobals * G, int *curVLA, const int *newVLA,
   return result;
 }
 
-static PyObject *ObjectAlignmentStateAsPyList(ObjectAlignmentState * I)
+static PyObject* ObjectAlignmentStateAsPyList(ObjectAlignmentState* I)
 {
-  PyObject *result = nullptr;
+  PyObject* result = nullptr;
 
   result = PyList_New(2);
-  if(I->alignVLA) {
+  if (I->alignVLA) {
     PyList_SetItem(result, 0, PConvIntVLAToPyList(I->alignVLA));
   } else {
     PyList_SetItem(result, 0, PConvAutoNone(nullptr));
@@ -749,33 +753,33 @@ static PyObject *ObjectAlignmentStateAsPyList(ObjectAlignmentState * I)
   return (PConvAutoNone(result));
 }
 
-static PyObject *ObjectAlignmentAllStatesAsPyList(ObjectAlignment * I)
+static PyObject* ObjectAlignmentAllStatesAsPyList(ObjectAlignment* I)
 {
 
-  PyObject *result = nullptr;
+  PyObject* result = nullptr;
   int a;
   result = PyList_New(I->getNFrame());
-  for(a = 0; a < I->getNFrame(); a++) {
-    PyList_SetItem(result, a, ObjectAlignmentStateAsPyList(I->State.data() + a));
+  for (a = 0; a < I->getNFrame(); a++) {
+    PyList_SetItem(
+        result, a, ObjectAlignmentStateAsPyList(I->State.data() + a));
   }
   return (PConvAutoNone(result));
-
 }
 
-static int ObjectAlignmentStateFromPyList(PyMOLGlobals * G, ObjectAlignmentState * I,
-                                          PyObject * list, int version)
+static int ObjectAlignmentStateFromPyList(
+    PyMOLGlobals* G, ObjectAlignmentState* I, PyObject* list, int version)
 {
   int ok = true;
   int ll = 0;
-  if(ok)
+  if (ok)
     ok = (list != nullptr);
-  if(ok)
+  if (ok)
     ok = PyList_Check(list);
-  if(ok)
+  if (ok)
     ll = PyList_Size(list);
   /* TO SUPPORT BACKWARDS COMPATIBILITY...
      Always check ll when adding new PyList_GetItem's */
-  if(ok && (ll > 1)) {
+  if (ok && (ll > 1)) {
     PConvPyListToIntVLA(PyList_GetItem(list, 0), &I->alignVLA);
     strcpy(I->guide, PyString_AsString(PyList_GetItem(list, 1)));
 
@@ -788,50 +792,50 @@ static int ObjectAlignmentStateFromPyList(PyMOLGlobals * G, ObjectAlignmentState
   return (ok);
 }
 
-static int ObjectAlignmentAllStatesFromPyList(ObjectAlignment * I, PyObject * list,
-                                              int version)
+static int ObjectAlignmentAllStatesFromPyList(
+    ObjectAlignment* I, PyObject* list, int version)
 {
   int ok = true;
   int a;
-  if(ok)
+  if (ok)
     ok = PyList_Check(list);
-  if(ok) {
+  if (ok) {
     int nstates = PyList_Size(list);
     I->State.resize(nstates);
-    for(a = 0; a < nstates; a++) {
-      auto *val = PyList_GetItem(list, a);
-      ok =
-        ObjectAlignmentStateFromPyList(I->G, I->State.data() + a, val,
-                                       version);
-      if(!ok)
+    for (a = 0; a < nstates; a++) {
+      auto* val = PyList_GetItem(list, a);
+      ok = ObjectAlignmentStateFromPyList(
+          I->G, I->State.data() + a, val, version);
+      if (!ok)
         break;
     }
   }
   return (ok);
 }
 
-int ObjectAlignmentNewFromPyList(PyMOLGlobals * G, PyObject * list,
-                                 ObjectAlignment ** result, int version)
+int ObjectAlignmentNewFromPyList(
+    PyMOLGlobals* G, PyObject* list, ObjectAlignment** result, int version)
 {
   int ok = true;
-  ObjectAlignment *I = nullptr;
+  ObjectAlignment* I = nullptr;
   (*result) = nullptr;
-  if(ok)
+  if (ok)
     ok = (list != nullptr);
-  if(ok)
+  if (ok)
     ok = PyList_Check(list);
 
   I = new ObjectAlignment(G);
-  if(ok)
+  if (ok)
     ok = (I != nullptr);
 
-  if(ok){
-    auto *val = PyList_GetItem(list, 0);
+  if (ok) {
+    auto* val = PyList_GetItem(list, 0);
     ok = ObjectFromPyList(G, val, I);
   }
-  if(ok)
-    ok = ObjectAlignmentAllStatesFromPyList(I, PyList_GetItem(list, 2), version);
-  if(ok) {
+  if (ok)
+    ok =
+        ObjectAlignmentAllStatesFromPyList(I, PyList_GetItem(list, 2), version);
+  if (ok) {
     (*result) = I;
     ObjectAlignmentRecomputeExtent(I);
   } else {
@@ -840,9 +844,9 @@ int ObjectAlignmentNewFromPyList(PyMOLGlobals * G, PyObject * list,
   return (ok);
 }
 
-PyObject *ObjectAlignmentAsPyList(ObjectAlignment * I)
+PyObject* ObjectAlignmentAsPyList(ObjectAlignment* I)
 {
-  PyObject *result = nullptr;
+  PyObject* result = nullptr;
 
   result = PyList_New(3);
   PyList_SetItem(result, 0, ObjectAsPyList(I));
@@ -852,18 +856,17 @@ PyObject *ObjectAlignmentAsPyList(ObjectAlignment * I)
   return (PConvAutoNone(result));
 }
 
-
 /*========================================================================*/
 
-void ObjectAlignmentRecomputeExtent(ObjectAlignment * I)
+void ObjectAlignmentRecomputeExtent(ObjectAlignment* I)
 {
   float mx[3], mn[3];
   int extent_flag = false;
   int a;
-  for(a = 0; a < I->getNFrame(); a++)
-    if(I->State[a].primitiveCGO) {
-      if(CGOGetExtent(I->State[a].primitiveCGO.get(), mn, mx)) {
-        if(!extent_flag) {
+  for (a = 0; a < I->getNFrame(); a++)
+    if (I->State[a].primitiveCGO) {
+      if (CGOGetExtent(I->State[a].primitiveCGO.get(), mn, mx)) {
+        if (!extent_flag) {
           extent_flag = true;
           copy3f(mx, I->ExtentMax);
           copy3f(mn, I->ExtentMin);
@@ -876,7 +879,6 @@ void ObjectAlignmentRecomputeExtent(ObjectAlignment * I)
   I->ExtentFlag = extent_flag;
 }
 
-
 /*========================================================================*/
 void ObjectAlignment::update()
 {
@@ -884,24 +886,24 @@ void ObjectAlignment::update()
   int update_needed = false;
   {
     int a;
-    for(a = 0; a < getNFrame(); a++) {
-      ObjectAlignmentState *oas = I->State.data() + a;
-      if(!oas->valid){
+    for (a = 0; a < getNFrame(); a++) {
+      ObjectAlignmentState* oas = I->State.data() + a;
+      if (!oas->valid) {
         update_needed = true;
       }
     }
   }
-  if(update_needed) {
+  if (update_needed) {
     {
       int a;
-      for(a = 0; a < getNFrame(); a++) {
-        ObjectAlignmentState *oas = I->State.data() + a;
-	if(!oas->valid){
-          ObjectMolecule *guide_obj = nullptr;
-          if(oas->guide[0]) {
+      for (a = 0; a < getNFrame(); a++) {
+        ObjectAlignmentState* oas = I->State.data() + a;
+        if (!oas->valid) {
+          ObjectMolecule* guide_obj = nullptr;
+          if (oas->guide[0]) {
             guide_obj = ExecutiveFindObjectMoleculeByName(G, oas->guide);
           }
-          if(I->SelectionState == a)
+          if (I->SelectionState == a)
             I->SelectionState = -1;
 
           oas->primitiveCGO.reset();
@@ -909,9 +911,9 @@ void ObjectAlignment::update()
           oas->id2tag.clear();
 
           {
-            CGO *cgo = CGONew(G);
+            CGO* cgo = CGONew(G);
 
-            if(oas->alignVLA) {
+            if (oas->alignVLA) {
               int id, b = 0, c;
               auto& vla = oas->alignVLA;
               int n_id = vla.size();
@@ -922,27 +924,27 @@ void ObjectAlignment::update()
 
               CGOBegin(cgo, GL_LINES);
 
-              while(b < n_id) {
+              while (b < n_id) {
 
                 int gvert_valid;
-                while((b < n_id) && (!vla[b]))
+                while ((b < n_id) && (!vla[b]))
                   b++;
 
-                if(!(b < n_id))
+                if (!(b < n_id))
                   break;
 
                 c = b;
                 n_coord = 0;
                 gvert_valid = false;
                 zero3f(mean);
-                while((id = vla[c++])) {
+                while ((id = vla[c++])) {
                   auto eoo = ExecutiveUniqueIDAtomDictGet(G, id);
                   if (eoo) {
-                    if(ObjectMoleculeGetAtomVertex(eoo->obj, a,
-                                                   eoo->atm, vert)) {
+                    if (ObjectMoleculeGetAtomVertex(
+                            eoo->obj, a, eoo->atm, vert)) {
                       n_coord++;
                       add3f(vert, mean, mean);
-                      if(eoo->obj == guide_obj) {
+                      if (eoo->obj == guide_obj) {
                         copy3f(vert, gvert);
                         gvert_valid = true;
                       }
@@ -950,19 +952,20 @@ void ObjectAlignment::update()
                   }
                 }
 
-                if(n_coord > 2) {       /* >2 points, then draw to mean or guide vertex */
+                if (n_coord >
+                    2) { /* >2 points, then draw to mean or guide vertex */
                   float scale = 1.0F / n_coord;
 
                   scale3f(mean, scale, mean);
 
                   c = b;
-                  while((id = vla[c++])) {
+                  while ((id = vla[c++])) {
                     auto eoo = ExecutiveUniqueIDAtomDictGet(G, id);
                     if (eoo) {
-                      if(ObjectMoleculeGetAtomVertex(eoo->obj, a,
-                                                     eoo->atm, vert)) {
-                        if(gvert_valid) {
-                          if(eoo->obj != guide_obj) {
+                      if (ObjectMoleculeGetAtomVertex(
+                              eoo->obj, a, eoo->atm, vert)) {
+                        if (gvert_valid) {
+                          if (eoo->obj != guide_obj) {
                             cgo->add<cgo::draw::line>(gvert, vert);
                           }
                         } else {
@@ -971,16 +974,16 @@ void ObjectAlignment::update()
                       }
                     }
                   }
-                } else if(n_coord) {    /* if 2 points, then simply draw a line */
+                } else if (n_coord) { /* if 2 points, then simply draw a line */
                   float first[3];
                   int first_flag = true;
                   c = b;
-                  while((id = vla[c++])) {
+                  while ((id = vla[c++])) {
                     auto eoo = ExecutiveUniqueIDAtomDictGet(G, id);
                     if (eoo) {
-                      if(ObjectMoleculeGetAtomVertex(eoo->obj, a,
-                                                     eoo->atm, vert)) {
-                        if(first_flag) {
+                      if (ObjectMoleculeGetAtomVertex(
+                              eoo->obj, a, eoo->atm, vert)) {
+                        if (first_flag) {
                           copy3f(vert, first);
                           first_flag = false;
                         } else {
@@ -994,7 +997,7 @@ void ObjectAlignment::update()
 
                 tag++;
 
-                while((b < n_id) && vla[b]) {
+                while ((b < n_id) && vla[b]) {
                   id2tag[vla[b]] = tag;
                   b++;
                 }
@@ -1004,7 +1007,8 @@ void ObjectAlignment::update()
 
             CGOStop(cgo);
             oas->primitiveCGO.reset(cgo);
-            if (!CGOHasOperationsOfType(oas->primitiveCGO.get(), cgo::draw::line::op_code)){
+            if (!CGOHasOperationsOfType(
+                    oas->primitiveCGO.get(), cgo::draw::line::op_code)) {
               oas->primitiveCGO.reset();
             }
           }
@@ -1013,24 +1017,24 @@ void ObjectAlignment::update()
       }
     }
   }
-  if(I->SelectionState < 0) {
+  if (I->SelectionState < 0) {
     int state = -1;
-    if(I->ForceState >= 0) {
+    if (I->ForceState >= 0) {
       state = I->ForceState;
       I->ForceState = 0;
     } else {
       state = I->getCurrentState();
     }
     // TODO do these fallbacks make any sense?
-    if(state < 0)
+    if (state < 0)
       state = SceneGetState(G);
-    if(state >= I->getNFrame())
+    if (state >= I->getNFrame())
       state = I->getNFrame() - 1;
-    if(state < 0)
+    if (state < 0)
       state = 0;
-    if(state < I->getNFrame()) {
-      ObjectAlignmentState *oas = I->State.data() + state;
-      if(!oas->id2tag.empty()) {
+    if (state < I->getNFrame()) {
+      ObjectAlignmentState* oas = I->State.data() + state;
+      if (!oas->id2tag.empty()) {
         SelectorDelete(G, I->Name);
         SelectorCreateFromTagDict(G, I->Name, oas->id2tag, false);
         I->SelectionState = state;
@@ -1040,7 +1044,6 @@ void ObjectAlignment::update()
   SceneInvalidate(I->G);
 }
 
-
 /*========================================================================*/
 
 int ObjectAlignment::getNFrame() const
@@ -1048,18 +1051,17 @@ int ObjectAlignment::getNFrame() const
   return State.size();
 }
 
-
 /*========================================================================*/
 
-void ObjectAlignment::render(RenderInfo * info)
+void ObjectAlignment::render(RenderInfo* info)
 {
   auto I = this;
   int state = info->state;
-  CRay *ray = info->ray;
+  CRay* ray = info->ray;
   auto pick = info->pick;
   const RenderPass pass = info->pass;
-  ObjectAlignmentState *sobj = nullptr;
-  const float *color;
+  ObjectAlignmentState* sobj = nullptr;
+  const float* color;
 
   ObjectPrepareContext(I, info);
 
@@ -1068,55 +1070,61 @@ void ObjectAlignment::render(RenderInfo * info)
   if (pick)
     return;
 
-  if(pass == RenderPass::Opaque || ray) {
-    if((I->visRep & cRepCGOBit)) {
+  if (pass == RenderPass::Opaque || ray) {
+    if ((I->visRep & cRepCGOBit)) {
 
-      for(StateIterator iter(G, I->Setting.get(), state, I->getNFrame()); iter.next();) {
+      for (StateIterator iter(G, I->Setting.get(), state, I->getNFrame());
+           iter.next();) {
         sobj = I->State.data() + iter.state;
 
         if (!sobj->primitiveCGO)
           continue;
 
-	if(ray) {
-	    CGORenderRay(sobj->primitiveCGO.get(), ray, info, color, nullptr, I->Setting.get(), nullptr);
-	} else if(G->HaveGUI && G->ValidContext) {
+        if (ray) {
+          CGORenderRay(sobj->primitiveCGO.get(), ray, info, color, nullptr,
+              I->Setting.get(), nullptr);
+        } else if (G->HaveGUI && G->ValidContext) {
 #ifndef PURE_OPENGL_ES_2
-	  if(!info->line_lighting)
-	    glDisable(GL_LIGHTING);
+          if (!info->line_lighting)
+            glDisable(GL_LIGHTING);
 #endif
-	  SceneResetNormal(G, true);
+          SceneResetNormal(G, true);
           bool use_shader = SettingGetGlobal_b(G, cSetting_use_shaders);
 
-          CGO * cgo = nullptr;
+          CGO* cgo = nullptr;
 
           if (use_shader) {
             bool as_cylinders =
-              SettingGetGlobal_b(G, cSetting_alignment_as_cylinders) &&
-              SettingGetGlobal_b(G, cSetting_render_as_cylinders);
+                SettingGetGlobal_b(G, cSetting_alignment_as_cylinders) &&
+                SettingGetGlobal_b(G, cSetting_render_as_cylinders);
 
-            bool trilines = !as_cylinders && SettingGetGlobal_b(G, cSetting_trilines);
+            bool trilines =
+                !as_cylinders && SettingGetGlobal_b(G, cSetting_trilines);
 
-            if (sobj->renderCGO && (
-                  (as_cylinders ^ sobj->renderCGO_has_cylinders) ||
-                  (trilines ^ sobj->renderCGO_has_trilines))){
+            if (sobj->renderCGO &&
+                ((as_cylinders ^ sobj->renderCGO_has_cylinders) ||
+                    (trilines ^ sobj->renderCGO_has_trilines))) {
               sobj->renderCGO.reset();
             }
 
             if (!sobj->renderCGO) {
-              int shader =
-                as_cylinders    ? GL_CYLINDER_SHADER :
-                trilines        ? GL_TRILINES_SHADER : GL_LINE_SHADER;
+              int shader = as_cylinders ? GL_CYLINDER_SHADER
+                           : trilines   ? GL_TRILINES_SHADER
+                                        : GL_LINE_SHADER;
 
               CGO *tmpCGO = CGONew(G), *tmp2CGO = nullptr;
               CGOEnable(tmpCGO, shader);
               CGOSpecial(tmpCGO, SET_ALIGNMENT_UNIFORMS_ATTRIBS);
 
               if (as_cylinders) {
-                tmp2CGO = CGOConvertLinesToCylinderShader(sobj->primitiveCGO.get(), tmpCGO, false);
+                tmp2CGO = CGOConvertLinesToCylinderShader(
+                    sobj->primitiveCGO.get(), tmpCGO, false);
               } else if (trilines) {
-                tmp2CGO = CGOConvertToTrilinesShader(sobj->primitiveCGO.get(), tmpCGO, false);
+                tmp2CGO = CGOConvertToTrilinesShader(
+                    sobj->primitiveCGO.get(), tmpCGO, false);
               } else {
-                tmp2CGO = CGOConvertToLinesShader(sobj->primitiveCGO.get(), tmpCGO, false);
+                tmp2CGO = CGOConvertToLinesShader(
+                    sobj->primitiveCGO.get(), tmpCGO, false);
               }
 
               tmpCGO->free_append(tmp2CGO);
@@ -1138,9 +1146,9 @@ void ObjectAlignment::render(RenderInfo * info)
           }
 
 #ifndef PURE_OPENGL_ES_2
-	  glEnable(GL_LIGHTING);
+          glEnable(GL_LIGHTING);
 #endif
-	}
+        }
       }
     }
   }
@@ -1148,8 +1156,9 @@ void ObjectAlignment::render(RenderInfo * info)
 
 void ObjectAlignment::invalidate(cRep_t rep, cRepInv_t level, int state)
 {
-  if((rep == cRepAll) || (rep == cRepCGO)) {
-    for(StateIterator iter(G, Setting.get(), state, getNFrame()); iter.next();) {
+  if ((rep == cRepAll) || (rep == cRepCGO)) {
+    for (StateIterator iter(G, Setting.get(), state, getNFrame());
+         iter.next();) {
       ObjectAlignmentState& sobj = State[iter.state];
       sobj.valid = false;
       sobj.renderCGO.reset();
@@ -1157,49 +1166,46 @@ void ObjectAlignment::invalidate(cRep_t rep, cRepInv_t level, int state)
   }
 }
 
-
 /*========================================================================*/
-ObjectAlignment::ObjectAlignment(PyMOLGlobals * G) : pymol::CObject(G)
+ObjectAlignment::ObjectAlignment(PyMOLGlobals* G)
+    : pymol::CObject(G)
 {
   type = cObjectAlignment;
 }
 
-
 /*========================================================================*/
-ObjectAlignment *ObjectAlignmentDefine(PyMOLGlobals * G,
-                                       ObjectAlignment * obj,
-                                       const pymol::vla<int>& align_vla,
-                                       int state,
-                                       int merge,
-                                       ObjectMolecule * guide, ObjectMolecule * flush)
+ObjectAlignment* ObjectAlignmentDefine(PyMOLGlobals* G, ObjectAlignment* obj,
+    const pymol::vla<int>& align_vla, int state, int merge,
+    ObjectMolecule* guide, ObjectMolecule* flush)
 {
-  ObjectAlignment *I = nullptr;
+  ObjectAlignment* I = nullptr;
 
-  if(obj) {
-    if(obj->type != cObjectAlignment)       /* TODO: handle this */
+  if (obj) {
+    if (obj->type != cObjectAlignment) /* TODO: handle this */
       obj = nullptr;
   }
-  if(!obj) {
+  if (!obj) {
     I = new ObjectAlignment(G);
   } else {
     I = obj;
     I->invalidate(cRepAll, cRepInvRep, state);
   }
-  if(state < 0)
+  if (state < 0)
     state = I->getNFrame();
 
   VecCheck(I->State, state);
 
   {
-    ObjectAlignmentState *oas = I->State.data() + state;
+    ObjectAlignmentState* oas = I->State.data() + state;
     oas->valid = false;
-    if(guide) {
+    if (guide) {
       strcpy(oas->guide, guide->Name);
     }
-    if(align_vla.data()) {
-      if(merge && oas->alignVLA) {
-        int *new_vla = AlignmentMerge(G, oas->alignVLA.data(), align_vla.data(), guide, flush);
-        if(new_vla) {
+    if (align_vla.data()) {
+      if (merge && oas->alignVLA) {
+        int* new_vla = AlignmentMerge(
+            G, oas->alignVLA.data(), align_vla.data(), guide, flush);
+        if (new_vla) {
           oas->alignVLA = pymol::vla_take_ownership(new_vla);
         }
       } else {
@@ -1209,7 +1215,7 @@ ObjectAlignment *ObjectAlignmentDefine(PyMOLGlobals * G,
       VLAFreeP(oas->alignVLA);
     }
   }
-  if(I) {
+  if (I) {
     ObjectAlignmentRecomputeExtent(I);
   }
   SceneChanged(G);

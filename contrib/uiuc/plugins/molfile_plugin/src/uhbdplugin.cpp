@@ -28,10 +28,10 @@
  *   http://mccammon.ucsd.edu/uhbd.html
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if defined(_AIX)
@@ -39,28 +39,28 @@
 #endif
 
 #if defined(WIN32) || defined(WIN64)
-#define strcasecmp  stricmp
+#define strcasecmp stricmp
 #define strncasecmp strnicmp
 #endif
 
-#include "molfile_plugin.h"
 #include "endianswap.h"
+#include "molfile_plugin.h"
 
 #define LINESIZE 85
 
 typedef struct {
-  FILE *fd;
+  FILE* fd;
   int nsets;
-  molfile_volumetric_t *vol;
-  float scale;  // 0 for ascii files, otherwise signals binary and provides
-                // scale factor for written data.
-  int doswap;   // true if byteswapping needed
+  molfile_volumetric_t* vol;
+  float scale; // 0 for ascii files, otherwise signals binary and provides
+               // scale factor for written data.
+  int doswap;  // true if byteswapping needed
 } uhbd_t;
 
-
 // Get a string from a stream, printing any errors that occur
-static char *uhbdgets(char *s, int n, FILE *stream, const char *msg) {
-  char *returnVal;
+static char* uhbdgets(char* s, int n, FILE* stream, const char* msg)
+{
+  char* returnVal;
 
   if (feof(stream)) {
     printf("%s", msg);
@@ -81,17 +81,18 @@ static char *uhbdgets(char *s, int n, FILE *stream, const char *msg) {
   return returnVal;
 }
 
-static void *open_uhbd_read(const char *filepath, const char *filetype,
-    int *natoms) {
-  FILE *fd;
-  uhbd_t *uhbd;
+static void* open_uhbd_read(
+    const char* filepath, const char* filetype, int* natoms)
+{
+  FILE* fd;
+  uhbd_t* uhbd;
   char inbuf[LINESIZE];
   int xsize, ysize, zsize;
-  float orig[3], ra, o[3], s[3]; //xdelta[3], ydelta[3], zdelta[3];
-  int headersize = 0; // for binary format
-  int doswap = 0; // true if byteswapping needed
-  float scale=0;    // scale parameter in binary uhbd files
-  
+  float orig[3], ra, o[3], s[3]; // xdelta[3], ydelta[3], zdelta[3];
+  int headersize = 0;            // for binary format
+  int doswap = 0;                // true if byteswapping needed
+  float scale = 0;               // scale parameter in binary uhbd files
+
   if ((fd = fopen(filepath, "rb")) == NULL) {
     printf("uhbdplugin) Error opening file.\n");
     return NULL;
@@ -126,7 +127,7 @@ static void *open_uhbd_read(const char *filepath, const char *filetype,
     // format of header is 72 character title, followed by:
     // scale dum2 grdflag, idum2 km one km im jm km h ox oy oz
     // The first two and last four parameters are floats, the rest ints.
-    memcpy(&scale,  buf + 72, sizeof(float));
+    memcpy(&scale, buf + 72, sizeof(float));
     memcpy(iparams, buf + 72 + 8, 32);
     memcpy(fparams, buf + 72 + 40, 16);
     if (doswap) {
@@ -145,27 +146,29 @@ static void *open_uhbd_read(const char *filepath, const char *filetype,
   } else {
     rewind(fd);
     // Read the header
-    if (uhbdgets(inbuf, LINESIZE, fd, 
-        "uhbdplugin) error while skipping header lines\n") == NULL) 
+    if (uhbdgets(inbuf, LINESIZE, fd,
+            "uhbdplugin) error while skipping header lines\n") == NULL)
       return NULL;
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while skipping header lines\n") == NULL) 
+            "uhbdplugin) error while skipping header lines\n") == NULL)
       return NULL;
-  
+
     /* get grid dimensions, spacing and origin */
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while getting grid dimensions\n") == NULL) {
+            "uhbdplugin) error while getting grid dimensions\n") == NULL) {
       return NULL;
     }
-    if (sscanf(inbuf, "%d %d %d %e %e %e %e", &xsize, &ysize, &zsize, &ra, orig, orig+1, orig+2)  != 7) {
-      printf("uhbdplugin) Error reading grid dimensions, spacing and origin.\n");
+    if (sscanf(inbuf, "%d %d %d %e %e %e %e", &xsize, &ysize, &zsize, &ra, orig,
+            orig + 1, orig + 2) != 7) {
+      printf(
+          "uhbdplugin) Error reading grid dimensions, spacing and origin.\n");
       return NULL;
     }
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while skipping header lines\n") == NULL) 
+            "uhbdplugin) error while skipping header lines\n") == NULL)
       return NULL;
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while skipping header lines\n") == NULL) 
+            "uhbdplugin) error while skipping header lines\n") == NULL)
       return NULL;
   }
 
@@ -174,32 +177,31 @@ static void *open_uhbd_read(const char *filepath, const char *filetype,
   uhbd->fd = fd;
   uhbd->vol = NULL;
   *natoms = MOLFILE_NUMATOMS_NONE;
-  uhbd->nsets = 1; /* this file contains only one data set */
+  uhbd->nsets = 1;     /* this file contains only one data set */
   uhbd->scale = scale; // set by binary files only
   uhbd->doswap = doswap;
 
   uhbd->vol = new molfile_volumetric_t[1];
-  strcpy(uhbd->vol[0].dataname, 
-      headersize ? "UHBD binary Electron Density Map"
-                 : "UHBD ascii Electron Density Map");
+  strcpy(uhbd->vol[0].dataname, headersize ? "UHBD binary Electron Density Map"
+                                           : "UHBD ascii Electron Density Map");
 
   /* Set the unit cell origin and basis vectors */
-  for (int i=0; i<3; i++) {
+  for (int i = 0; i < 3; i++) {
     uhbd->vol[0].origin[i] = orig[i] + ra;
     o[i] = uhbd->vol[0].origin[i];
   }
 
-  uhbd->vol[0].xaxis[0] = ra * (xsize-1);
+  uhbd->vol[0].xaxis[0] = ra * (xsize - 1);
   uhbd->vol[0].xaxis[1] = 0;
   uhbd->vol[0].xaxis[2] = 0;
 
   uhbd->vol[0].yaxis[0] = 0;
-  uhbd->vol[0].yaxis[1] = ra * (ysize-1);
+  uhbd->vol[0].yaxis[1] = ra * (ysize - 1);
   uhbd->vol[0].yaxis[2] = 0;
 
   uhbd->vol[0].zaxis[0] = 0;
   uhbd->vol[0].zaxis[1] = 0;
-  uhbd->vol[0].zaxis[2] = ra * (zsize-1);
+  uhbd->vol[0].zaxis[2] = ra * (zsize - 1);
 
   s[0] = uhbd->vol[0].xaxis[0];
   s[1] = uhbd->vol[0].yaxis[1];
@@ -215,19 +217,20 @@ static void *open_uhbd_read(const char *filepath, const char *filetype,
   return uhbd;
 }
 
-static int read_uhbd_metadata(void *v, int *nsets, 
-  molfile_volumetric_t **metadata) {
-  uhbd_t *uhbd = (uhbd_t *)v;
-  *nsets = uhbd->nsets; 
-  *metadata = uhbd->vol;  
+static int read_uhbd_metadata(
+    void* v, int* nsets, molfile_volumetric_t** metadata)
+{
+  uhbd_t* uhbd = (uhbd_t*) v;
+  *nsets = uhbd->nsets;
+  *metadata = uhbd->vol;
 
   return MOLFILE_SUCCESS;
 }
 
-static int read_uhbd_data(void *v, int set, float *datablock,
-                         float *colorblock) {
-  uhbd_t *uhbd = (uhbd_t *)v;
-  FILE *fd = uhbd->fd;
+static int read_uhbd_data(void* v, int set, float* datablock, float* colorblock)
+{
+  uhbd_t* uhbd = (uhbd_t*) v;
+  FILE* fd = uhbd->fd;
   char inbuf[LINESIZE];
   float grid[6];
   int z, xsize, ysize, zsize, xysize, count, count2, total, i;
@@ -240,19 +243,21 @@ static int read_uhbd_data(void *v, int set, float *datablock,
 
   if (uhbd->scale) {
     int headerblock[6];
-    // The binary data is written one z-slice at a time.  First, a 
+    // The binary data is written one z-slice at a time.  First, a
     // block of three ints indicating which slice is next, of the form
     // kk, im, jm, where kk is the on-based slice index, and im and jm
     // are the x and y dimensions.  We just read past them and also read the
     // start of the next block, which is the actual data.
-    for (z=0; z<zsize; z++) {
+    for (z = 0; z < zsize; z++) {
       if (fread(headerblock, sizeof(int), 6, fd) != 6) {
-        fprintf(stderr, "uhbdplugin) Error reading header block in binary uhbd file\n");
+        fprintf(stderr,
+            "uhbdplugin) Error reading header block in binary uhbd file\n");
         return MOLFILE_ERROR;
       }
       // TODO: some sanity checks on the header block.
-      if (fread(datablock + z*xysize, sizeof(float), xysize, fd) != xysize) {
-        fprintf(stderr, "uhbdplugin) Error reading data block in binary uhbd file\n");
+      if (fread(datablock + z * xysize, sizeof(float), xysize, fd) != xysize) {
+        fprintf(stderr,
+            "uhbdplugin) Error reading data block in binary uhbd file\n");
         return MOLFILE_ERROR;
       }
       // read the trailing block delimiter
@@ -267,39 +272,41 @@ static int read_uhbd_data(void *v, int set, float *datablock,
   /* Read the values from the file */
   for (z = 0; z < zsize; z++) {
     // read header
-    if (uhbdgets(inbuf, LINESIZE, fd, 
-        "uhbdplugin) error while getting density plane indices\n") == NULL)
+    if (uhbdgets(inbuf, LINESIZE, fd,
+            "uhbdplugin) error while getting density plane indices\n") == NULL)
       return MOLFILE_ERROR;
 
     // read data
-    for (count = 0; count < xysize/6; count++) {
+    for (count = 0; count < xysize / 6; count++) {
       if (uhbdgets(inbuf, LINESIZE, fd,
-          "uhbdplugin) error while getting density values\n") == NULL)
+              "uhbdplugin) error while getting density values\n") == NULL)
         return MOLFILE_ERROR;
 
-      if (sscanf(inbuf, "%e %e %e %e %e %e", &grid[0], &grid[1], &grid[2], &grid[3], &grid[4], &grid[5]) != 6) {
+      if (sscanf(inbuf, "%e %e %e %e %e %e", &grid[0], &grid[1], &grid[2],
+              &grid[3], &grid[4], &grid[5]) != 6) {
         printf("uhbdplugin) Error reading grid data.\n");
         return MOLFILE_ERROR;
       }
-    
-      for (i = 0; i < 6; i++) { 
-        datablock[i + count*6 + z*xysize] = grid[i];
+
+      for (i = 0; i < 6; i++) {
+        datablock[i + count * 6 + z * xysize] = grid[i];
       }
     }
 
-    if ((xysize%6) != 0) {
-      if (uhbdgets(inbuf, LINESIZE, fd, 
-          "uhbdplugin) error reading data elements modulo 6\n") == NULL)
+    if ((xysize % 6) != 0) {
+      if (uhbdgets(inbuf, LINESIZE, fd,
+              "uhbdplugin) error reading data elements modulo 6\n") == NULL)
         return MOLFILE_ERROR;
 
-      count2 = sscanf(inbuf, "%e %e %e %e %e %e", &grid[0], &grid[1], &grid[2], &grid[3], &grid[4], &grid[5]);
-      if (count2 != (xysize%6)) {
+      count2 = sscanf(inbuf, "%e %e %e %e %e %e", &grid[0], &grid[1], &grid[2],
+          &grid[3], &grid[4], &grid[5]);
+      if (count2 != (xysize % 6)) {
         printf("uhbdplugin) Error: incorrect number of data points.\n");
         return MOLFILE_ERROR;
       }
 
       for (i = 0; i < count2; i++) {
-        datablock[i + (count+1)*6 + z*xysize] = grid[i];
+        datablock[i + (count + 1) * 6 + z * xysize] = grid[i];
       }
     }
   }
@@ -307,23 +314,23 @@ static int read_uhbd_data(void *v, int set, float *datablock,
   return MOLFILE_SUCCESS;
 }
 
+static void close_uhbd_read(void* v)
+{
+  uhbd_t* uhbd = (uhbd_t*) v;
 
-static void close_uhbd_read(void *v) {
-  uhbd_t *uhbd = (uhbd_t *)v;
-  
   fclose(uhbd->fd);
   if (uhbd->vol != NULL)
-    delete [] uhbd->vol; 
+    delete[] uhbd->vol;
   delete uhbd;
 }
-
 
 /*
  * Initialization stuff here
  */
 static molfile_plugin_t plugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) {
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -341,11 +348,13 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   return VMDPLUGIN_SUCCESS;
 }
 
-
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
-
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}

@@ -13,7 +13,8 @@
  *
  * Return: True if atm has 3 neighbors which are all nitrogens with geom=3
  */
-static bool isGuanidiniumCarbon(ObjectMolecule * obj, int atm) {
+static bool isGuanidiniumCarbon(ObjectMolecule* obj, int atm)
+{
   int neighbor_count = 0;
   int charge = 0;
 
@@ -34,7 +35,8 @@ static bool isGuanidiniumCarbon(ObjectMolecule * obj, int atm) {
  *
  * Return: always false, since PyMOL doesn't know enough about aromaticity
  */
-static bool isAromaticAtom(ObjectMolecule * obj, int atm) {
+static bool isAromaticAtom(ObjectMolecule* obj, int atm)
+{
 #if 0
   for (auto const& neighbor : AtomNeighbors(obj, atm)) {
     if (obj->Bond[neighbor.bond].order == 4)
@@ -50,7 +52,8 @@ static bool isAromaticAtom(ObjectMolecule * obj, int atm) {
  *
  * Return: True if atom is part of a carboxylate or phosphate group
  */
-static bool isCarboxylateOrPhosphateOxygen(ObjectMolecule * obj, int atm) {
+static bool isCarboxylateOrPhosphateOxygen(ObjectMolecule* obj, int atm)
+{
   int o_count = 0, other_count = 0;
 
   auto const neighbors = AtomNeighbors(obj, atm);
@@ -63,7 +66,7 @@ static bool isCarboxylateOrPhosphateOxygen(ObjectMolecule * obj, int atm) {
   atm = neighbors[0].atm;
 
   // check center atom
-  AtomInfoType * ai = obj->AtomInfo + atm;
+  AtomInfoType* ai = obj->AtomInfo + atm;
   if (!(ai->protons == cAN_C && ai->geom == 3) &&
       !(ai->protons == cAN_P && ai->geom == 4))
     return false;
@@ -88,9 +91,11 @@ static bool isCarboxylateOrPhosphateOxygen(ObjectMolecule * obj, int atm) {
 /**
  * atm: Atom index of a sulfur atom
  *
- * Return: Number of bound Oxygens if bound to two non-Oxygen atoms. Otherwise 0.
+ * Return: Number of bound Oxygens if bound to two non-Oxygen atoms. Otherwise
+ * 0.
  */
-static int sulfurCountOxygenNeighbors(ObjectMolecule * obj, int atm) {
+static int sulfurCountOxygenNeighbors(ObjectMolecule* obj, int atm)
+{
   int o_count = 0, other_count = 0;
 
   for (auto const& item : AtomNeighbors(obj, atm)) {
@@ -109,76 +114,82 @@ static int sulfurCountOxygenNeighbors(ObjectMolecule * obj, int atm) {
  *
  * Pre-condition: ObjectMoleculeVerifyChemistry
  */
-const char * getMOL2Type(ObjectMolecule * obj, int atm) {
+const char* getMOL2Type(ObjectMolecule* obj, int atm)
+{
   auto G = obj->G;
   auto ai = obj->AtomInfo + atm;
 
   switch (ai->protons) {
-    case cAN_C:
-      switch (ai->geom) {
-        case cAtomInfoLinear:
-          return "C.1";
-        case cAtomInfoPlanar:
-          if (isAromaticAtom(obj, atm))
-            return "C.ar";
-          if (isGuanidiniumCarbon(obj, atm))
-            return "C.cat";
-          return "C.2";
-        case cAtomInfoTetrahedral:
-          return "C.3";
-      }
-      break;
+  case cAN_C:
+    switch (ai->geom) {
+    case cAtomInfoLinear:
+      return "C.1";
+    case cAtomInfoPlanar:
+      if (isAromaticAtom(obj, atm))
+        return "C.ar";
+      if (isGuanidiniumCarbon(obj, atm))
+        return "C.cat";
+      return "C.2";
+    case cAtomInfoTetrahedral:
+      return "C.3";
+    }
+    break;
 
-    case cAN_N:
-      switch (ai->geom) {
-        case cAtomInfoLinear:
-          return "N.1";
-        case cAtomInfoPlanar:
-          if ((ai->flags & cAtomFlag_polymer)
-              && ai->name == G->lex_const.N)
-            return "N.am";
-          if (isAromaticAtom(obj, atm))
-            return "N.ar";
-          if (ai->valence == 2 && ai->formalCharge == 0)
-            return "N.2";
-          return "N.pl3";
-        case cAtomInfoTetrahedral:
-          return (ai->formalCharge == 1) ? "N.4" : "N.3";
-      }
-      break;
+  case cAN_N:
+    switch (ai->geom) {
+    case cAtomInfoLinear:
+      return "N.1";
+    case cAtomInfoPlanar:
+      if ((ai->flags & cAtomFlag_polymer) && ai->name == G->lex_const.N)
+        return "N.am";
+      if (isAromaticAtom(obj, atm))
+        return "N.ar";
+      if (ai->valence == 2 && ai->formalCharge == 0)
+        return "N.2";
+      return "N.pl3";
+    case cAtomInfoTetrahedral:
+      return (ai->formalCharge == 1) ? "N.4" : "N.3";
+    }
+    break;
 
-    case cAN_O:
-      if (isCarboxylateOrPhosphateOxygen(obj, atm))
-        return "O.co2";
-      switch (ai->geom) {
-        case cAtomInfoPlanar:       return "O.2";
-        case cAtomInfoTetrahedral:  return "O.3";
-      }
-      break;
+  case cAN_O:
+    if (isCarboxylateOrPhosphateOxygen(obj, atm))
+      return "O.co2";
+    switch (ai->geom) {
+    case cAtomInfoPlanar:
+      return "O.2";
+    case cAtomInfoTetrahedral:
+      return "O.3";
+    }
+    break;
 
-    case cAN_S:
-      switch (sulfurCountOxygenNeighbors(obj, atm)) {
-        case 1: return "S.o";
-        case 2: return "S.o2";
-      }
-      switch (ai->geom) {
-        case cAtomInfoPlanar:       return "S.2";
-        case cAtomInfoTetrahedral:  return "S.3";
-      }
-      break;
+  case cAN_S:
+    switch (sulfurCountOxygenNeighbors(obj, atm)) {
+    case 1:
+      return "S.o";
+    case 2:
+      return "S.o2";
+    }
+    switch (ai->geom) {
+    case cAtomInfoPlanar:
+      return "S.2";
+    case cAtomInfoTetrahedral:
+      return "S.3";
+    }
+    break;
 
-    case cAN_P:
-      if (ai->geom == 4)
-        return "P.3";
-      break;
+  case cAN_P:
+    if (ai->geom == 4)
+      return "P.3";
+    break;
 
-    case cAN_Cr:
-      if (ai->geom == 4)
-        return "Cr.th";
-      return "Cr.oh";
+  case cAN_Cr:
+    if (ai->geom == 4)
+      return "Cr.th";
+    return "Cr.oh";
 
-    case cAN_Co:
-      return "Co.oh";
+  case cAN_Co:
+    return "Co.oh";
   }
 
   if (ai->protons >= 0 && ai->protons < ElementTableSize)

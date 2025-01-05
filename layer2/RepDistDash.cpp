@@ -1,36 +1,36 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
+#include "os_python.h"
 
-#include"os_predef.h"
-#include"os_std.h"
-#include"os_gl.h"
+#include "os_gl.h"
+#include "os_predef.h"
+#include "os_std.h"
 
-#include"Err.h"
-#include"RepDistDash.h"
-#include"Color.h"
-#include"Scene.h"
-#include"main.h"
-#include"Vector.h"
-#include"Setting.h"
-#include"PyMOLObject.h"
-#include"CGO.h"
-#include"ShaderMgr.h"
-#include"CoordSet.h"
+#include "CGO.h"
+#include "Color.h"
+#include "CoordSet.h"
+#include "Err.h"
+#include "PyMOLObject.h"
+#include "RepDistDash.h"
+#include "Scene.h"
+#include "Setting.h"
+#include "ShaderMgr.h"
+#include "Vector.h"
+#include "main.h"
 #ifdef _WEBGL
 #include "WebPyMOLLibrary.h"
 #endif
@@ -47,14 +47,14 @@ struct RepDistDash : Rep {
 
   float* V = nullptr;
   int N = 0;
-  DistSet *ds;
+  DistSet* ds;
   float linewidth, radius;
   CGO* shaderCGO = nullptr;
   bool shaderCGO_has_cylinders = false;
   bool shaderCGO_has_trilines = false;
 };
 
-#include"ObjectDist.h"
+#include "ObjectDist.h"
 
 RepDistDash::~RepDistDash()
 {
@@ -63,7 +63,8 @@ RepDistDash::~RepDistDash()
 }
 
 /* Has no prototype */
-static void RepDistDashCGOGenerate(RepDistDash* I, std::optional<float> dash_transparency)
+static void RepDistDashCGOGenerate(
+    RepDistDash* I, std::optional<float> dash_transparency)
 {
   int ok = true;
   PyMOLGlobals* G = I->G;
@@ -206,10 +207,10 @@ static void RepDistDashRay(RepDistDash* I, RenderInfo* info,
       G, nullptr, I->ds->Obj->Setting.get(), cSetting_dash_round_ends);
   auto ray = info->ray;
   float radius;
-  if (dash_transparency){
-    ray->transparentf(*dash_transparency);      
+  if (dash_transparency) {
+    ray->transparentf(*dash_transparency);
   }
-  if(I->radius <= 0.0F) {
+  if (I->radius <= 0.0F) {
     radius = ray->PixelRadius * line_width / 2.0F;
   } else {
     radius = I->radius;
@@ -221,11 +222,13 @@ static void RepDistDashRay(RepDistDash* I, RenderInfo* info,
   bool ok = true;
 
   while (ok && c > 0) {
-    /*      printf("%8.3f %8.3f %8.3f   %8.3f %8.3f %8.3f \n",v[3],v[4],v[5],v[6],v[7],v[8]); */
+    /*      printf("%8.3f %8.3f %8.3f   %8.3f %8.3f %8.3f
+     * \n",v[3],v[4],v[5],v[6],v[7],v[8]); */
     if (round_ends) {
       ok &= ray->sausage3fv(v, v + 3, radius, vc, vc);
     } else {
-      ok &= ray->customCylinder3fv(v, v + 3, radius, vc, vc, cCylCapFlat, cCylCapFlat);
+      ok &= ray->customCylinder3fv(
+          v, v + 3, radius, vc, vc, cCylCapFlat, cCylCapFlat);
     }
     v += 6;
     c -= 2;
@@ -317,21 +320,20 @@ void RepDistDash::render(RenderInfo* info)
   auto I = this;
   CRay* ray = info->ray;
   auto pick = info->pick;
-  int color =
-    SettingGet_color(G, nullptr, I->ds->Obj->Setting.get(), cSetting_dash_color);
+  int color = SettingGet_color(
+      G, nullptr, I->ds->Obj->Setting.get(), cSetting_dash_color);
 
-
-  float dash_transparency =
-    SettingGet<float>(G, nullptr, I->ds->Obj->Setting.get(), cSetting_dash_transparency);
+  float dash_transparency = SettingGet<float>(
+      G, nullptr, I->ds->Obj->Setting.get(), cSetting_dash_transparency);
   dash_transparency = std::clamp(dash_transparency, 0.0f, 1.0f);
   std::optional<float> dash_transparency_opt;
   if (dash_transparency > 0.f) {
     dash_transparency_opt = dash_transparency;
   }
 
-  if (!(ray || pick) &&
-      (info->pass == RenderPass::Antialias ||
-          (info->pass == RenderPass::Opaque) == dash_transparency_opt.has_value()))
+  if (!(ray || pick) && (info->pass == RenderPass::Antialias ||
+                            (info->pass == RenderPass::Opaque) ==
+                                dash_transparency_opt.has_value()))
     return;
 
   if (color < 0)
@@ -340,8 +342,8 @@ void RepDistDash::render(RenderInfo* info)
   I->radius = SettingGet<float>(
       G, nullptr, I->ds->Obj->Setting.get(), cSetting_dash_radius);
 
-  float line_width =
-    SettingGet<float>(G, nullptr, I->ds->Obj->Setting.get(), cSetting_dash_width);
+  float line_width = SettingGet<float>(
+      G, nullptr, I->ds->Obj->Setting.get(), cSetting_dash_width);
   line_width = SceneGetDynamicLineWidth(info, line_width);
 
   if (ray) {
@@ -366,9 +368,9 @@ void RepDistDash::render(RenderInfo* info)
   RepDistDashRenderImmediate(I, info, dash_transparency_opt, line_width, color);
 }
 
-Rep *RepDistDashNew(DistSet * ds, int state)
+Rep* RepDistDashNew(DistSet* ds, int state)
 {
-  PyMOLGlobals *G = ds->G;
+  PyMOLGlobals* G = ds->G;
   int a;
   int n;
   float *v, *v1, *v2, d[3];
@@ -376,25 +378,27 @@ Rep *RepDistDashNew(DistSet * ds, int state)
   float dash_len, dash_gap, dash_sum;
   int ok = true;
 
-  if(!ok || !ds->NIndex) {
+  if (!ok || !ds->NIndex) {
     return (nullptr);
   }
 
   auto I = new RepDistDash(ds->Obj, state);
 
-  dash_len = SettingGet_f(G, nullptr, ds->Obj->Setting.get(), cSetting_dash_length);
-  dash_gap = SettingGet_f(G, nullptr, ds->Obj->Setting.get(), cSetting_dash_gap);
+  dash_len =
+      SettingGet_f(G, nullptr, ds->Obj->Setting.get(), cSetting_dash_length);
+  dash_gap =
+      SettingGet_f(G, nullptr, ds->Obj->Setting.get(), cSetting_dash_gap);
   dash_sum = dash_len + dash_gap;
-  if(dash_sum < R_SMALL4)
+  if (dash_sum < R_SMALL4)
     dash_sum = 0.5;
 
   I->ds = ds;
 
   n = 0;
-  if(ds->NIndex) {
+  if (ds->NIndex) {
     I->V = VLAlloc(float, ds->NIndex * 10);
     CHECKOK(ok, I->V);
-    for(a = 0; ok && a < ds->NIndex; a = a + 2) {
+    for (a = 0; ok && a < ds->NIndex; a = a + 2) {
       v1 = ds->Coord + 3 * a;
       v2 = ds->Coord + 3 * (a + 1);
 
@@ -403,21 +407,22 @@ Rep *RepDistDashNew(DistSet * ds, int state)
 
       l = (float) length3f(d);
 
-      if(l > R_SMALL4) {
+      if (l > R_SMALL4) {
 
-	/* this makes d the direction vector of the distance measure from v2->v1 */
+        /* this makes d the direction vector of the distance measure from v2->v1
+         */
         normalize3f(d);
 
-        if(dash_gap > R_SMALL4) {
+        if (dash_gap > R_SMALL4) {
           float avg[3], proj1[3], proj2[3];
           float l_left = l / 2.0F;
           float l_used = 0.0F;
           float half_dash_gap = dash_gap * 0.5;
 
           average3f(v1, v2, avg);
-          while(ok && l_left > dash_sum) {
+          while (ok && l_left > dash_sum) {
             VLACheck(I->V, float, (n * 3) + 11);
-	    CHECKOK(ok, I->V);
+            CHECKOK(ok, I->V);
             v = I->V + n * 3;
             scale3f(d, l_used + half_dash_gap, proj1);
             scale3f(d, l_used + dash_len + half_dash_gap, proj2);
@@ -429,7 +434,7 @@ Rep *RepDistDashNew(DistSet * ds, int state)
             l_left -= dash_sum;
             l_used += dash_sum;
           }
-          if(ok && l_left > dash_gap) {
+          if (ok && l_left > dash_gap) {
             l_left -= dash_gap;
             scale3f(d, l_used + half_dash_gap, proj1);
             scale3f(d, l_used + l_left + half_dash_gap, proj2);
@@ -441,15 +446,15 @@ Rep *RepDistDashNew(DistSet * ds, int state)
             subtract3f(avg, proj2, v + 9);
             n += 4;
           }
-        } else if(dash_len > R_SMALL4) {
+        } else if (dash_len > R_SMALL4) {
           VLACheck(I->V, float, (n * 3) + 5);
-	  CHECKOK(ok, I->V);
-	  if (ok){
-	    v = I->V + n * 3;
-	    copy3f(v1, v);
-	    copy3f(v2, v + 3);
-	    n += 2;
-	  }
+          CHECKOK(ok, I->V);
+          if (ok) {
+            v = I->V + n * 3;
+            copy3f(v1, v);
+            copy3f(v2, v + 3);
+            n += 2;
+          }
         }
       }
     }
@@ -459,9 +464,9 @@ Rep *RepDistDashNew(DistSet * ds, int state)
     if (ok)
       I->N = n;
   }
-  if (!ok){
+  if (!ok) {
     delete I;
     I = nullptr;
   }
-  return (Rep *) I;
+  return (Rep*) I;
 }

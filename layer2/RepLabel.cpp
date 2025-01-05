@@ -1404,8 +1404,8 @@ void RepLabel::render(RenderInfo* info)
         int pre_use_shaders = info->use_shaders;
 
         Pickable* p = I->P;
-        use_shader = SettingGetGlobal_b(G, cSetting_use_shaders)
-                     && G->ShaderMgr->GeometryShadersPresent();
+        use_shader = SettingGetGlobal_b(G, cSetting_use_shaders) &&
+                     G->ShaderMgr->GeometryShadersPresent();
         info->use_shaders = use_shader;
         if (use_shader) {
           if (!I->shaderCGO) {

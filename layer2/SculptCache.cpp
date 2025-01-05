@@ -1,24 +1,24 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
 
 #include <unordered_map>
 
-#include"os_predef.h"
-#include"SculptCache.h"
+#include "SculptCache.h"
+#include "os_predef.h"
 
 struct SculptCacheKey {
   int rest_type;
@@ -49,28 +49,28 @@ struct _CSculptCache {
   std::unordered_map<SculptCacheKey, float, SculptCacheKey::Hash> m_data;
 };
 
-int SculptCacheInit(PyMOLGlobals * G)
+int SculptCacheInit(PyMOLGlobals* G)
 {
   G->SculptCache = new CSculptCache();
   return 1;
 }
 
-void SculptCachePurge(PyMOLGlobals * G)
+void SculptCachePurge(PyMOLGlobals* G)
 {
-  CSculptCache *I = G->SculptCache;
+  CSculptCache* I = G->SculptCache;
   I->m_data.clear();
 }
 
-void SculptCacheFree(PyMOLGlobals * G)
+void SculptCacheFree(PyMOLGlobals* G)
 {
   delete G->SculptCache;
   G->SculptCache = nullptr;
 }
 
-int SculptCacheQuery(PyMOLGlobals * G, int rest_type, int id0, int id1, int id2, int id3,
-                     float *value)
+int SculptCacheQuery(PyMOLGlobals* G, int rest_type, int id0, int id1, int id2,
+    int id3, float* value)
 {
-  CSculptCache *I = G->SculptCache;
+  CSculptCache* I = G->SculptCache;
   SculptCacheKey key = {rest_type, id0, id1, id2, id3};
   auto it = I->m_data.find(key);
   if (it != I->m_data.end()) {
@@ -80,10 +80,10 @@ int SculptCacheQuery(PyMOLGlobals * G, int rest_type, int id0, int id1, int id2,
   return false;
 }
 
-void SculptCacheStore(PyMOLGlobals * G, int rest_type, int id0, int id1, int id2, int id3,
-                      float value)
+void SculptCacheStore(PyMOLGlobals* G, int rest_type, int id0, int id1, int id2,
+    int id3, float value)
 {
-  CSculptCache *I = G->SculptCache;
+  CSculptCache* I = G->SculptCache;
   SculptCacheKey key = {rest_type, id0, id1, id2, id3};
   I->m_data[key] = value;
 }

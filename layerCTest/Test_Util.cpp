@@ -27,7 +27,8 @@ TEST_CASE("string_format", "[Util]")
   REQUIRE(str3 == "");
 #endif
 
-  auto str4 = pymol::string_format("%s %d!", "ThisStringWillNotBeSmallStringOptimized", 42);
+  auto str4 = pymol::string_format(
+      "%s %d!", "ThisStringWillNotBeSmallStringOptimized", 42);
   REQUIRE(str4 == "ThisStringWillNotBeSmallStringOptimized 42!");
 }
 

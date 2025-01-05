@@ -8,9 +8,9 @@
 #include <fstream>
 #include <iostream>
 #define CATCH_CONFIG_RUNNER
-#include <catch2/catch.hpp>
 #include "Test.h"
 #include "TestCmdTest2.h"
+#include <catch2/catch.hpp>
 
 #include "P.h"
 #include "PyMOL.h"
@@ -21,15 +21,17 @@
  * @pre GIL
  * @return 0 on success, non-zero on error
  */
-PyObject *CmdTest2(PyObject *, PyObject *) {
+PyObject* CmdTest2(PyObject*, PyObject*)
+{
   int argc = 1;
   char argv0[] = "pymol";
-  char *argv[] = {argv0};
+  char* argv[] = {argv0};
   auto result = Catch::Session().run(argc, argv);
   return PyLong_FromLong(result);
 }
 
-namespace pymol {
+namespace pymol
+{
 
 PyMOLInstance::PyMOLInstance()
 {
@@ -54,27 +56,28 @@ PyMOLGlobals* PyMOLInstance::G() noexcept
   return m_G;
 }
 
-namespace test {
+namespace test
+{
 
 TmpFILE::TmpFILE()
 {
 #ifdef _WIN32
-    tmpFilename.resize(L_tmpnam_s);
-    tmpnam_s(&tmpFilename[0], tmpFilename.size());
-    tmpFilename.resize(strlen(tmpFilename.c_str()));
+  tmpFilename.resize(L_tmpnam_s);
+  tmpnam_s(&tmpFilename[0], tmpFilename.size());
+  tmpFilename.resize(strlen(tmpFilename.c_str()));
 
-    // file 'touch'
-    std::ofstream(tmpFilename);
+  // file 'touch'
+  std::ofstream(tmpFilename);
 #else
-    tmpFilename = P_tmpdir;
+  tmpFilename = P_tmpdir;
 
-    if (!tmpFilename.empty() && tmpFilename.back() != '/') {
-      tmpFilename += '/';
-    }
+  if (!tmpFilename.empty() && tmpFilename.back() != '/') {
+    tmpFilename += '/';
+  }
 
-    tmpFilename.append("tmppymoltestXXXXXX");
+  tmpFilename.append("tmppymoltestXXXXXX");
 
-    close(mkstemp(&tmpFilename[0]));
+  close(mkstemp(&tmpFilename[0]));
 #endif
 }
 

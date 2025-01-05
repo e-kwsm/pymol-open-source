@@ -1,23 +1,22 @@
 
-/* 
+/*
    A* -------------------------------------------------------------------
    B* This file contains source code for the PyMOL computer program
-   C* Copyright (c) Schrodinger, LLC. 
+   C* Copyright (c) Schrodinger, LLC.
    D* -------------------------------------------------------------------
    E* It is unlawful to modify or remove this copyright notice.
    F* -------------------------------------------------------------------
-   G* Please see the accompanying LICENSE file for further information. 
+   G* Please see the accompanying LICENSE file for further information.
    H* -------------------------------------------------------------------
    I* Additional authors of this source file include:
-   -* 
-   -* 
+   -*
+   -*
    -*
    Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
+#include "os_python.h"
 
 #include "os_predef.h"
-
 
 /* BEGIN PROPRIETARY CODE SEGMENT (see disclaimer in "os_proprietary.h") */
 #ifdef WIN32
@@ -27,31 +26,31 @@
 
 /* END PROPRIETARY CODE SEGMENT */
 
-#include "os_std.h"
 #include "os_gl.h"
+#include "os_std.h"
 
 #ifdef _DRI_WORKAROUND
 #include <dlfcn.h>
 #endif
 
-#include "PyMOLGlobals.h"
 #include "PyMOL.h"
+#include "PyMOLGlobals.h"
 #include "PyMOLOptions.h"
 
-#include "MemoryDebug.h"
 #include "Base.h"
+#include "MemoryDebug.h"
 #include "main.h"
 
+#include "Control.h"
+#include "Executive.h"
+#include "Feedback.h"
+#include "Movie.h"
+#include "Ortho.h"
 #include "P.h"
 #include "PConv.h"
-#include "Ortho.h"
 #include "Scene.h"
 #include "Seq.h"
 #include "Util.h"
-#include "Control.h"
-#include "Movie.h"
-#include "Executive.h"
-#include "Feedback.h"
 
 int _gScaleFactor = 1;
 
@@ -64,13 +63,12 @@ int MainSavingUnderWhileIdle(void)
 
 #else
 
-
 void MainFree(void);
 static void MainReshape(int width, int height);
 static void MainDrawLocked(void);
 static void MainDrag(int x, int y);
 
-static CPyMOL *PyMOLInstance = nullptr;    /* eliminate */
+static CPyMOL* PyMOLInstance = nullptr; /* eliminate */
 
 struct _CMain {
   int IdleMode;
@@ -85,34 +83,32 @@ struct _CMain {
   int DrawGovernorActive, DrawDeferred, DrawSignalled;
   int DrawnFlag, DeferReshapeDeferral;
   int MaximizeCheck;
-  CPyMOLOptions *OwnedOptions;
+  CPyMOLOptions* OwnedOptions;
   /* if Main owns a reference to a copy of the startup options that
      needs to be freed upon shutdown to fully scrub the heap */
 };
 
-
 /* global options */
 
-static
-void MainOnExit(void);
+static void MainOnExit(void);
 
-static void MainPushValidContext(PyMOLGlobals * G)
+static void MainPushValidContext(PyMOLGlobals* G)
 {
   PLockStatus(G);
   PyMOL_PushValidContext(G->PyMOL);
   PUnlockStatus(G);
 }
 
-static void MainPopValidContext(PyMOLGlobals * G)
+static void MainPopValidContext(PyMOLGlobals* G)
 {
   PLockStatus(G);
   PyMOL_PopValidContext(G->PyMOL);
   PUnlockStatus(G);
 }
 
-static void DrawBlueLine(PyMOLGlobals * G)
+static void DrawBlueLine(PyMOLGlobals* G)
 {
-  if(G->Option->blue_line) {
+  if (G->Option->blue_line) {
     GLint i;
     unsigned long buffer;
     GLint window_width, window_height;
@@ -124,7 +120,7 @@ static void DrawBlueLine(PyMOLGlobals * G)
 
     glDisable(GL_ALPHA_TEST);
     glDisable(GL_BLEND);
-    for(i = 0; i < 6; i++)
+    for (i = 0; i < 6; i++)
       glDisable(GL_CLIP_PLANE0 + i);
     glDisable(GL_COLOR_LOGIC_OP);
     glDisable(GL_COLOR_MATERIAL);
@@ -137,7 +133,6 @@ static void DrawBlueLine(PyMOLGlobals * G)
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_STENCIL_TEST);
 
-
 /* BEGIN PROPRIETARY CODE SEGMENT (see disclaimer in "os_proprietary.h") */
 #ifdef _PYMOL_OSX
     /*glDisable(GL_SHARED_TEXTURE_PALETTE_EXT); */
@@ -149,9 +144,9 @@ static void DrawBlueLine(PyMOLGlobals * G)
     glDisable(GL_VERTEX_PROGRAM_ARB);
 #endif
 
-/* END PROPRIETARY CODE SEGMENT */
+    /* END PROPRIETARY CODE SEGMENT */
 
-    for(buffer = GL_BACK_LEFT; buffer <= GL_BACK_RIGHT; buffer++) {
+    for (buffer = GL_BACK_LEFT; buffer <= GL_BACK_RIGHT; buffer++) {
       GLint matrixMode;
       GLint vp[4];
 
@@ -173,15 +168,15 @@ static void DrawBlueLine(PyMOLGlobals * G)
 
       /* draw sync lines */
       glColor3d(0.0f, 0.0f, 0.0f);
-      glBegin(GL_LINES);        /* Draw a background line */
+      glBegin(GL_LINES); /* Draw a background line */
       glVertex3f(0.0F, window_height - 0.5F, 0.0F);
       glVertex3f((float) window_width, window_height - 0.5F, 0.0F);
       glEnd();
       glColor3d(0.0f, 0.0f, 1.0f);
-      glBegin(GL_LINES);        /* Draw a line of the correct length (the cross
-                                   over is about 40% across the screen from the left */
+      glBegin(GL_LINES); /* Draw a line of the correct length (the cross
+                            over is about 40% across the screen from the left */
       glVertex3f(0.0f, window_height - 0.5f, 0.0f);
-      if(buffer == GL_BACK_LEFT)
+      if (buffer == GL_BACK_LEFT)
         glVertex3f(window_width * 0.30f, window_height - 0.5f, 0.0f);
       else
         glVertex3f(window_width * 0.80f, window_height - 0.5f, 0.0f);
@@ -202,60 +197,56 @@ static void DrawBlueLine(PyMOLGlobals * G)
 
 void MainOnExit(void)
 {
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
-  /* 
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
+  /*
      here we enter not knowing anything about the current state...
      so, no graceful exit is possible -- in fact under Window's we'll
-     crash unless we take the drastic way out 
+     crash unless we take the drastic way out
    */
-  if(G && !G->Terminating) {
+  if (G && !G->Terminating) {
     G->Terminating = true;
     printf(" PyMOL: abrupt program termination.\n");
 
 /* BEGIN PROPRIETARY CODE SEGMENT (see disclaimer in "os_proprietary.h") */
 #ifdef WIN32
-    TerminateProcess(GetCurrentProcess(), 0);   /* only way to avoid a crash */
+    TerminateProcess(GetCurrentProcess(), 0); /* only way to avoid a crash */
 #endif
 
-/* END PROPRIETARY CODE SEGMENT */
+    /* END PROPRIETARY CODE SEGMENT */
     exit(EXIT_SUCCESS);
   }
 }
 
-
 /*========================================================================*/
 int MainSavingUnderWhileIdle(void)
 {
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
-  CMain *I = G->Main;
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
+  CMain* I = G->Main;
   return (I && (I->IdleMode > 3));
 }
-
 
 /*========================================================================*/
 void MainSetWindowVisibility(int mode)
 {
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
   G->Option->window_visible = mode;
-
 }
-
 
 /*========================================================================*/
 static void MainDrag(int x, int y)
 {
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
 
-  CMain *I = G->Main;
+  CMain* I = G->Main;
 
-  if(PLockAPIAsGlut(G, false)) {
+  if (PLockAPIAsGlut(G, false)) {
 
     y = G->Option->winY - y;
 
     PyMOL_Drag(PyMOLInstance, x, y, I->Modifiers);
 
-    if(PyMOL_GetRedisplay(PyMOLInstance, true)) {
-      if(G->HaveGUI) {
+    if (PyMOL_GetRedisplay(PyMOLInstance, true)) {
+      if (G->HaveGUI) {
         p_glutPostRedisplay();
       }
     }
@@ -265,19 +256,18 @@ static void MainDrag(int x, int y)
   }
 }
 
-
 /*========================================================================*/
 static void MainButton(int button, int state, int x, int y)
 {
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
 
   int glMod;
 
-  CMain *I = G->Main;
+  CMain* I = G->Main;
 
 #ifdef WIN32
   // fix wheel x/y on Windows (PYMOL-2173)
-  switch(button) {
+  switch (button) {
   case P_GLUT_BUTTON_SCROLL_FORWARD:
   case P_GLUT_BUTTON_SCROLL_BACKWARD:
     x -= p_glutGet(P_GLUT_WINDOW_X);
@@ -287,11 +277,11 @@ static void MainButton(int button, int state, int x, int y)
 
   glMod = p_glutGetModifiers();
 
-  if(PLockAPIAsGlut(G, false)) {
+  if (PLockAPIAsGlut(G, false)) {
 
-    I->IdleMode = 0;            /* restore responsiveness */
+    I->IdleMode = 0; /* restore responsiveness */
 
-    if(PyMOL_GetPassive(PyMOLInstance, (button < 3) ? true : false)) {
+    if (PyMOL_GetPassive(PyMOLInstance, (button < 3) ? true : false)) {
       MainDrag(x, y);
     } else {
       /* stay blocked here because Clicks->SexFrame->PParse */
@@ -299,8 +289,8 @@ static void MainButton(int button, int state, int x, int y)
       y = G->Option->winY - y;
 
       I->Modifiers = ((glMod & P_GLUT_ACTIVE_SHIFT) ? cOrthoSHIFT : 0) |
-        ((glMod & P_GLUT_ACTIVE_CTRL) ? cOrthoCTRL : 0) |
-        ((glMod & P_GLUT_ACTIVE_ALT) ? cOrthoALT : 0);
+                     ((glMod & P_GLUT_ACTIVE_CTRL) ? cOrthoCTRL : 0) |
+                     ((glMod & P_GLUT_ACTIVE_ALT) ? cOrthoALT : 0);
 
       PyMOL_Button(PyMOLInstance, button, state, x, y, I->Modifiers);
     }
@@ -309,43 +299,42 @@ static void MainButton(int button, int state, int x, int y)
   }
 }
 
-
 /*========================================================================*/
 static void MainPassive(int x, int y)
 {
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
-  CMain *I = G->Main;
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
+  CMain* I = G->Main;
 
 #define PASSIVE_EDGE 20
 
-  if(PyMOL_GetPassive(G->PyMOL, false)) {       /* a harmless race condition -- we don't want
-                                                   to slow Python down buy locking on passive
-                                                   mouse motion */
+  if (PyMOL_GetPassive(G->PyMOL, false)) { /* a harmless race condition -- we
+                                              don't want to slow Python down buy
+                                              locking on passive mouse motion */
 
-    if(PLockAPIAsGlut(G, false)) {
-      if((y < -PASSIVE_EDGE) || (x < -PASSIVE_EDGE) ||
-         (x > (G->Option->winX + PASSIVE_EDGE)) ||
-         (y > (G->Option->winY + PASSIVE_EDGE))) {
+    if (PLockAPIAsGlut(G, false)) {
+      if ((y < -PASSIVE_EDGE) || (x < -PASSIVE_EDGE) ||
+          (x > (G->Option->winX + PASSIVE_EDGE)) ||
+          (y > (G->Option->winY + PASSIVE_EDGE))) {
 
-        /* release passive drag if mouse leaves window... 
+        /* release passive drag if mouse leaves window...
            [IF we continue to receive mouse events...] */
 
         y = G->Option->winY - y;
 
-        PyMOL_Button(PyMOLInstance, P_GLUT_LEFT_BUTTON, P_GLUT_UP, x, y, I->Modifiers);
+        PyMOL_Button(
+            PyMOLInstance, P_GLUT_LEFT_BUTTON, P_GLUT_UP, x, y, I->Modifiers);
 
-        PyMOL_GetPassive(G->PyMOL, true);       /* reset the flag */
+        PyMOL_GetPassive(G->PyMOL, true); /* reset the flag */
 
       } else {
 
         y = G->Option->winY - y;
 
         PyMOL_Drag(PyMOLInstance, x, y, I->Modifiers);
-
       }
 
-      if(PyMOL_GetRedisplay(PyMOLInstance, true)) {
-        if(G->HaveGUI) {
+      if (PyMOL_GetRedisplay(PyMOLInstance, true)) {
+        if (G->HaveGUI) {
           p_glutPostRedisplay();
         }
         I->IdleMode = 0;
@@ -354,17 +343,15 @@ static void MainPassive(int x, int y)
       PUnlockAPIAsGlut(G);
     }
   }
-
 }
-
 
 /*========================================================================*/
 static void MainDrawLocked(void)
 {
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
 
-  CMain *I = G->Main;
-  if(I->FinalInitTrigger) {
+  CMain* I = G->Main;
+  if (I->FinalInitTrigger) {
 
     I->FinalInitTrigger = false;
 
@@ -375,58 +362,60 @@ static void MainDrawLocked(void)
 
     PBlock(G);
 
-    if(PyErr_Occurred())
+    if (PyErr_Occurred())
       PyErr_Print();
 
     /* next, we need to let PyMOL know we have a valid context,
        because some initializations, involve GL calls (such as going
        into full-screen or stereo mode) */
 
-    if(G->HaveGUI)
+    if (G->HaveGUI)
       MainPushValidContext(G);
 
     /* restore working directory if asked to */
-    PRunStringModule(G,
-                     "if 'PYMOL_WD' in os.environ: os.chdir(os.environ['PYMOL_WD'])");
+    PRunStringModule(
+        G, "if 'PYMOL_WD' in os.environ: os.chdir(os.environ['PYMOL_WD'])");
 
-    if(PyErr_Occurred())
+    if (PyErr_Occurred())
       PyErr_Print();
-
 
 /* BEGIN PROPRIETARY CODE SEGMENT (see disclaimer in "os_proprietary.h") */
 #ifdef _PYMOL_OSX
-    PRunStringModule(G,
-                     "if os.getcwd()[-23:]=='.app/Contents/Resources': os.chdir('../../..')");
+    PRunStringModule(G, "if os.getcwd()[-23:]=='.app/Contents/Resources': "
+                        "os.chdir('../../..')");
 #endif
 
-/* END PROPRIETARY CODE SEGMENT */
+    /* END PROPRIETARY CODE SEGMENT */
 
-    if(PyErr_Occurred())
+    if (PyErr_Occurred())
       PyErr_Print();
 
-    PXDecRef(PYOBJECT_CALLMETHOD(G->P_inst->obj, "launch_gui", "O", G->P_inst->obj));
+    PXDecRef(
+        PYOBJECT_CALLMETHOD(G->P_inst->obj, "launch_gui", "O", G->P_inst->obj));
 
-    if(PyErr_Occurred())
+    if (PyErr_Occurred())
       PyErr_Print();
 
-    PXDecRef(PYOBJECT_CALLMETHOD
-             (G->P_inst->obj, "adapt_to_hardware", "O", G->P_inst->obj));
+    PXDecRef(PYOBJECT_CALLMETHOD(
+        G->P_inst->obj, "adapt_to_hardware", "O", G->P_inst->obj));
 
-    if(PyErr_Occurred())
+    if (PyErr_Occurred())
       PyErr_Print();
 
-    if(G->Option->incentive_product) {  /* perform incentive product initialization (if any) */
+    if (G->Option->incentive_product) { /* perform incentive product
+                                           initialization (if any) */
       PyRun_SimpleString("try:\n   import ipymol\nexcept:\n   pass\n");
-      if(PyErr_Occurred())
+      if (PyErr_Occurred())
         PyErr_Print();
     }
 
-    PXDecRef(PYOBJECT_CALLMETHOD(G->P_inst->obj, "exec_deferred", "O", G->P_inst->obj));
+    PXDecRef(PYOBJECT_CALLMETHOD(
+        G->P_inst->obj, "exec_deferred", "O", G->P_inst->obj));
 
-    if(PyErr_Occurred())
+    if (PyErr_Occurred())
       PyErr_Print();
 
-    if(G->HaveGUI)
+    if (G->HaveGUI)
       MainPopValidContext(G);
 
     PUnblock(G);
@@ -437,22 +426,22 @@ static void MainDrawLocked(void)
 
   PyMOL_Draw(PyMOLInstance);
 
-  if(G->HaveGUI) {
-    if(Feedback(G, FB_OpenGL, FB_Debugging)) {
+  if (G->HaveGUI) {
+    if (Feedback(G, FB_OpenGL, FB_Debugging)) {
       PyMOLCheckOpenGLErr("During Rendering");
     }
   }
 
-  if(PyMOL_GetSwap(G->PyMOL, true)) {
-    if(!SettingGetGlobal_b(G, cSetting_suspend_updates))
-      if(G->HaveGUI) {
+  if (PyMOL_GetSwap(G->PyMOL, true)) {
+    if (!SettingGetGlobal_b(G, cSetting_suspend_updates))
+      if (G->HaveGUI) {
         DrawBlueLine(G);
         p_glutSwapBuffers();
       }
   }
 }
 
-static void MainDrawProgress(PyMOLGlobals * G)
+static void MainDrawProgress(PyMOLGlobals* G)
 {
   int progress[PYMOL_PROGRESS_SIZE];
   int update = false;
@@ -467,14 +456,14 @@ static void MainDrawProgress(PyMOLGlobals * G)
      progress[0],progress[1],progress[2],
      progress[3],progress[4],progress[5]); */
 
-  if(update &&
-     (progress[PYMOL_PROGRESS_SLOW] ||
-      progress[PYMOL_PROGRESS_MED] || progress[PYMOL_PROGRESS_FAST])) {
+  if (update &&
+      (progress[PYMOL_PROGRESS_SLOW] || progress[PYMOL_PROGRESS_MED] ||
+          progress[PYMOL_PROGRESS_FAST])) {
 
     int offset;
     int x = 0, y;
-    float black[3] = { 0, 0, 0 };
-    float white[3] = { 1, 1, 1 };
+    float black[3] = {0, 0, 0};
+    float white[3] = {1, 1, 1};
     GLint ViewPort[4];
 
 #define cBusyWidth 240
@@ -491,8 +480,8 @@ static void MainDrawProgress(PyMOLGlobals * G)
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
-    glTranslatef(0.33F, 0.33F, 0.0F);   /* this generates better 
-                                           rasterization on macs */
+    glTranslatef(0.33F, 0.33F, 0.0F); /* this generates better
+                                         rasterization on macs */
 
     glDisable(GL_ALPHA_TEST);
     glDisable(GL_LIGHTING);
@@ -510,9 +499,9 @@ static void MainDrawProgress(PyMOLGlobals * G)
       int draw_both = SceneMustDrawBoth(G);
 
       glClear(GL_DEPTH_BUFFER_BIT);
-      while(1) {
-        if(draw_both) {
-          if(!pass)
+      while (1) {
+        if (draw_both) {
+          if (!pass)
             OrthoDrawBuffer(G, GL_FRONT_LEFT);
           else
             OrthoDrawBuffer(G, GL_FRONT_RIGHT);
@@ -526,13 +515,13 @@ static void MainDrawProgress(PyMOLGlobals * G)
         glVertex2i(cBusyWidth, ViewPort[3]);
         glVertex2i(cBusyWidth, ViewPort[3] - cBusyHeight);
         glVertex2i(0, ViewPort[3] - cBusyHeight);
-        glVertex2i(0, ViewPort[3]);     /* needed on old buggy Mesa */
+        glVertex2i(0, ViewPort[3]); /* needed on old buggy Mesa */
         glEnd();
         y = ViewPort[3] - cBusyMargin;
 
         glColor3fv(white);
 
-        /* 
+        /*
            c=I->BusyMessage;
            if(*c) {
            TextSetColor(G,white);
@@ -542,9 +531,9 @@ static void MainDrawProgress(PyMOLGlobals * G)
            }
          */
 
-        for(offset = 0; offset < PYMOL_PROGRESS_SIZE; offset += 2) {
+        for (offset = 0; offset < PYMOL_PROGRESS_SIZE; offset += 2) {
 
-          if(progress[offset + 1]) {
+          if (progress[offset + 1]) {
             glBegin(GL_LINE_LOOP);
             glVertex2i(cBusyMargin, y);
             glVertex2i(cBusyWidth - cBusyMargin, y);
@@ -553,9 +542,9 @@ static void MainDrawProgress(PyMOLGlobals * G)
             glVertex2i(cBusyMargin, y); /* needed on old buggy Mesa */
             glEnd();
             glColor3fv(white);
-            x =
-              (progress[offset] * (cBusyWidth - 2 * cBusyMargin) / progress[offset + 1]) +
-              cBusyMargin;
+            x = (progress[offset] * (cBusyWidth - 2 * cBusyMargin) /
+                    progress[offset + 1]) +
+                cBusyMargin;
             glBegin(GL_POLYGON);
             glVertex2i(cBusyMargin, y);
             glVertex2i(x, y);
@@ -566,16 +555,16 @@ static void MainDrawProgress(PyMOLGlobals * G)
             y -= cBusySpacing;
           }
         }
-        if(!draw_both)
+        if (!draw_both)
           break;
-        if(pass > 1)
+        if (pass > 1)
           break;
         pass++;
       }
 
       glFlush();
       glFinish();
-      if(draw_both)
+      if (draw_both)
         OrthoDrawBuffer(G, GL_BACK_LEFT);
       else
         OrthoDrawBuffer(G, GL_BACK);
@@ -585,27 +574,25 @@ static void MainDrawProgress(PyMOLGlobals * G)
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
-
   }
 }
-
 
 /*========================================================================*/
 static void MainDraw(void)
 {
   int usec_sleep_after_draw = 0;
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
 
   PRINTFD(G, FB_Main)
-    " MainDraw: called.\n" ENDFD;
-  if(PLockAPIAsGlut(G, false)) {
-    CMain *I = G->Main;
-    if(I->DrawGovernorActive &&
-       (!I->DrawSignalled) && (UtilGetSeconds(G) < I->DrawAfter) && I->FinalInitDone) {
+  " MainDraw: called.\n" ENDFD;
+  if (PLockAPIAsGlut(G, false)) {
+    CMain* I = G->Main;
+    if (I->DrawGovernorActive && (!I->DrawSignalled) &&
+        (UtilGetSeconds(G) < I->DrawAfter) && I->FinalInitDone) {
       I->DrawDeferred = true;
     } else {
       int skip = false;
-      if(I->MaximizeCheck) {
+      if (I->MaximizeCheck) {
         {
           /* is the window manager screwing us over??? */
 
@@ -616,11 +603,11 @@ static void MainDraw(void)
 
           I->MaximizeCheck = false;
 
-          if(actual_x != 0) {
+          if (actual_x != 0) {
             width -= 2 * actual_x;
             height -= actual_x;
           }
-          if(actual_y != 0) {
+          if (actual_y != 0) {
             height -= actual_y;
           }
           p_glutPositionWindow(0, 0);
@@ -628,22 +615,23 @@ static void MainDraw(void)
           skip = true;
         }
       }
-      if((!skip) && (!I->DrawnFlag) && I->FinalInitDone) {
-        if(I->DeferReshapeDeferral > 0)
+      if ((!skip) && (!I->DrawnFlag) && I->FinalInitDone) {
+        if (I->DeferReshapeDeferral > 0)
           I->DeferReshapeDeferral--;
         else {
           double time_since_reshape = UtilGetSeconds(G) - I->ReshapeTime;
-          if(time_since_reshape < 0.05) {
+          if (time_since_reshape < 0.05) {
             /* defer screen updates while it's being actively resized */
             skip = true;
           }
         }
       }
-      if(!skip) {
+      if (!skip) {
         MainDrawLocked();
         I->DrawnFlag = true;
-        if(PyMOL_GetModalDraw(PyMOLInstance)) {
-          usec_sleep_after_draw = 10000;        /* give other threads a chance to run */
+        if (PyMOL_GetModalDraw(PyMOLInstance)) {
+          usec_sleep_after_draw =
+              10000; /* give other threads a chance to run */
         }
       } else {
         PyMOL_NeedRedisplay(PyMOLInstance);
@@ -654,22 +642,21 @@ static void MainDraw(void)
       I->DrawDeferred = false;
     }
     PUnlockAPIAsGlut(G);
-  } else {                      /* we're busy -- so try to display a progress indicator */
+  } else { /* we're busy -- so try to display a progress indicator */
     MainDrawProgress(G);
   }
   PRINTFD(G, FB_Main)
-    " MainDraw: completed.\n" ENDFD;
-  if(usec_sleep_after_draw && G) {
+  " MainDraw: completed.\n" ENDFD;
+  if (usec_sleep_after_draw && G) {
     PSleepUnlocked(G, usec_sleep_after_draw);
   }
 }
 
-
 /*========================================================================*/
 static void MainKey(unsigned char k, int x, int y)
 {
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
-  CMain *I = G->Main;
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
+  CMain* I = G->Main;
   int glMod;
 
   glMod = p_glutGetModifiers();
@@ -677,26 +664,30 @@ static void MainKey(unsigned char k, int x, int y)
 #if defined(_PYMOL_OSX) && !defined(_PYMOL_LIB)
   // MacOS GLUT.framework: swap delete and backspace
   switch (k) {
-    case 0x08: k = 0x7f; break;
-    case 0x7f: k = 0x08; break;
+  case 0x08:
+    k = 0x7f;
+    break;
+  case 0x7f:
+    k = 0x08;
+    break;
   }
 #endif
 
   PRINTFB(G, FB_Main, FB_Blather)
-    " MainKey: code:%d modifiers:0x%02x x:%d y:%d\n", k, glMod, x, y ENDFB(G);
-  if(PLockAPIAsGlut(G, false)) {
+  " MainKey: code:%d modifiers:0x%02x x:%d y:%d\n", k, glMod, x, y ENDFB(G);
+  if (PLockAPIAsGlut(G, false)) {
 
-    I->IdleMode = 0;            /* restore responsiveness */
+    I->IdleMode = 0; /* restore responsiveness */
 
     I->Modifiers = ((glMod & P_GLUT_ACTIVE_SHIFT) ? cOrthoSHIFT : 0) |
-      ((glMod & P_GLUT_ACTIVE_CTRL) ? cOrthoCTRL : 0) |
-      ((glMod & P_GLUT_ACTIVE_ALT) ? cOrthoALT : 0);
+                   ((glMod & P_GLUT_ACTIVE_CTRL) ? cOrthoCTRL : 0) |
+                   ((glMod & P_GLUT_ACTIVE_ALT) ? cOrthoALT : 0);
 
     PyMOL_Key(PyMOLInstance, k, x, y, I->Modifiers);
 
     PUnlockAPIAsGlut(G);
   } else {
-    if((k == 8) || (k == 127)) {        /* interrupt busy state (if possibele) */
+    if ((k == 8) || (k == 127)) { /* interrupt busy state (if possibele) */
       PBlock(G);
       PLockStatus(G);
       PyMOL_SetInterrupt(G->PyMOL, true);
@@ -706,22 +697,21 @@ static void MainKey(unsigned char k, int x, int y)
   }
 }
 
-
 /*========================================================================*/
 static void MainSpecial(int k, int x, int y)
 {
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
-  CMain *I = G->Main;
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
+  CMain* I = G->Main;
   int glMod;
 
   PRINTFB(G, FB_Main, FB_Blather)
-    " MainSpecial: %d %d %d\n", k, x, y ENDFB(G);
+  " MainSpecial: %d %d %d\n", k, x, y ENDFB(G);
   glMod = p_glutGetModifiers();
-  if(PLockAPIAsGlut(G, false)) {
+  if (PLockAPIAsGlut(G, false)) {
 
     I->Modifiers = ((glMod & P_GLUT_ACTIVE_SHIFT) ? cOrthoSHIFT : 0) |
-      ((glMod & P_GLUT_ACTIVE_CTRL) ? cOrthoCTRL : 0) |
-      ((glMod & P_GLUT_ACTIVE_ALT) ? cOrthoALT : 0);
+                   ((glMod & P_GLUT_ACTIVE_CTRL) ? cOrthoCTRL : 0) |
+                   ((glMod & P_GLUT_ACTIVE_ALT) ? cOrthoALT : 0);
 
     PyMOL_Special(PyMOLInstance, k, x, y, I->Modifiers);
 
@@ -729,35 +719,35 @@ static void MainSpecial(int k, int x, int y)
   }
 }
 
-
 /* new window size or exposure */
 
 /*========================================================================*/
 void MainReshape(int width, int height)
-{                               /* called by Glut */
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
+{ /* called by Glut */
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
 
-  if(G) {
-    CMain *I = G->Main;
+  if (G) {
+    CMain* I = G->Main;
 
     I->ReshapeTime = (double) UtilGetSeconds(G);
     I->DrawnFlag = false;
 
-    if (width==0 || height==0)
+    if (width == 0 || height == 0)
       return;
-    if(PLockAPIAsGlut(G, true)) {
-      if(G->HaveGUI) {
+    if (PLockAPIAsGlut(G, true)) {
+      if (G->HaveGUI) {
         glViewport(0, 0, (GLint) width, (GLint) height);
-        if((!PyMOLInstance) ||
-           (width != OrthoGetWidth(G)) || (height != OrthoGetHeight(G))) {
+        if ((!PyMOLInstance) || (width != OrthoGetWidth(G)) ||
+            (height != OrthoGetHeight(G))) {
           /* wipe the screen ASAP to prevent display of garbage... */
 
-          int draw_both = G->StereoCapable &&
-            ((SceneGetStereo(G) == 1) ||
-             SettingGetGlobal_b(G, cSetting_stereo_double_pump_mono));
+          int draw_both =
+              G->StereoCapable &&
+              ((SceneGetStereo(G) == 1) ||
+                  SettingGetGlobal_b(G, cSetting_stereo_double_pump_mono));
 
           SceneGLClearColor(0.0, 0.0, 0.0, 1.0);
-          if(draw_both) {
+          if (draw_both) {
             OrthoDrawBuffer(G, GL_FRONT_LEFT);
             glClear(GL_COLOR_BUFFER_BIT);
             OrthoDrawBuffer(G, GL_FRONT_RIGHT);
@@ -776,58 +766,60 @@ void MainReshape(int width, int height)
         PyMOL_SwapBuffers(PyMOLInstance);
       }
     }
-    if(PyMOLInstance)
+    if (PyMOLInstance)
       PyMOL_Reshape(PyMOLInstance, width, height, false);
     PUnlockAPIAsGlut(G);
   }
 }
-
 
 /*========================================================================*/
 /**
  * only called from CmdViewport(), and only with !_PYMOL_NO_MAIN
  */
 void MainDoReshape(int width, int height)
-{                               /* called internally */
+{ /* called internally */
   int internal_feedback;
   int force = false;
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
 
-  if(G) {
-    /* if width and height are negative and we are in full screen, don't reshape window */
-    bool keep_fullscreen = (width < 0 && height < 0 && ExecutiveIsFullScreen(G));
+  if (G) {
+    /* if width and height are negative and we are in full screen, don't reshape
+     * window */
+    bool keep_fullscreen =
+        (width < 0 && height < 0 && ExecutiveIsFullScreen(G));
 
     /* if width is negative, force a reshape based on the current width */
 
-    if(width < 0) {
+    if (width < 0) {
       width = SceneGetBlock(G)->getWidth();
-      if(SettingGetGlobal_b(G, cSetting_internal_gui))
+      if (SettingGetGlobal_b(G, cSetting_internal_gui))
         width += SettingGetGlobal_i(G, cSetting_internal_gui_width);
       force = true;
-    } 
+    }
 
     /* if height is negative, force a reshape based on the current height */
 
-    if(height < 0) {
+    if (height < 0) {
       height = SceneGetBlock(G)->getHeight();
       internal_feedback = SettingGetGlobal_i(G, cSetting_internal_feedback);
-      if(internal_feedback)
-        height += (internal_feedback - 1) * cOrthoLineHeight + cOrthoBottomSceneMargin;
-      if(SettingGetGlobal_b(G, cSetting_seq_view)
-         && !SettingGetGlobal_b(G, cSetting_seq_view_overlay))
+      if (internal_feedback)
+        height += (internal_feedback - 1) * cOrthoLineHeight +
+                  cOrthoBottomSceneMargin;
+      if (SettingGetGlobal_b(G, cSetting_seq_view) &&
+          !SettingGetGlobal_b(G, cSetting_seq_view_overlay))
         height += SeqGetHeight(G);
       height += MovieGetPanelHeight(G);
       force = true;
-    } 
+    }
 
     /* if we have a GUI, for a reshape event */
 
-    if(G->HaveGUI && G->ValidContext && width > 0 && height > 0) {
+    if (G->HaveGUI && G->ValidContext && width > 0 && height > 0) {
       p_glutReshapeWindow(width, height);
       glViewport(0, 0, (GLint) width, (GLint) height);
     }
 
-    if((!width)||(!height)) {
+    if ((!width) || (!height)) {
       int actual_width = width ? width : G->Option->winX;
       int actual_height = height ? height : G->Option->winY;
 
@@ -835,25 +827,23 @@ void MainDoReshape(int width, int height)
 
     } else {
       PyMOL_Reshape(G->PyMOL, width, height, force);
-      if(G->Main) {
+      if (G->Main) {
         G->Main->DeferReshapeDeferral = 1;
       }
 
       /* do we need to become full-screen? */
-      if(keep_fullscreen) {
+      if (keep_fullscreen) {
         p_glutFullScreen();
       }
     }
   }
-
 }
 
-
 /*========================================================================*/
-static void MainInit(PyMOLGlobals * G)
+static void MainInit(PyMOLGlobals* G)
 {
 
-  CMain *I = (G->Main = pymol::calloc<CMain>(1));
+  CMain* I = (G->Main = pymol::calloc<CMain>(1));
   /* Data structure is zeroed on start...no need for explicit zero inits */
 
   I->DeferReshapeDeferral = 1;
@@ -863,26 +853,26 @@ static void MainInit(PyMOLGlobals * G)
   // moved to PyMOL_DrawWithoutLock
   // PyMOL_ConfigureShadersGL(PyMOLInstance);
 
-  PyMOL_SetSwapBuffersFn(PyMOLInstance, (PyMOLSwapBuffersFn *) p_glutSwapBuffers);
+  PyMOL_SetSwapBuffersFn(
+      PyMOLInstance, (PyMOLSwapBuffersFn*) p_glutSwapBuffers);
   I->ReshapeTime = (I->IdleTime = UtilGetSeconds(G));
 
   I->DrawGovernorActive = false;
   I->DrawSignalled = true;
-  I->DrawDelay = 0.01;          /* 100 FPS max */
+  I->DrawDelay = 0.01; /* 100 FPS max */
   I->DrawAfter = 0.0;
   I->DrawDeferred = false;
 }
 
-
 /*========================================================================*/
 void MainFree(void)
 {
-  PyMOLGlobals *G = PyMOL_GetGlobals(PyMOLInstance);    /* temporary -- will change */
+  PyMOLGlobals* G =
+      PyMOL_GetGlobals(PyMOLInstance); /* temporary -- will change */
 
-  CPyMOLOptions *owned_options = G->Main->OwnedOptions;
+  CPyMOLOptions* owned_options = G->Main->OwnedOptions;
 
   int show_message = G->Option->show_splash && !G->Option->quiet;
-
 
 /* BEGIN PROPRIETARY CODE SEGMENT (see disclaimer in "os_proprietary.h") */
 #ifdef WIN32
@@ -895,33 +885,34 @@ void MainFree(void)
   int theWindow = G->Main->TheWindow;
 #endif
 
-/* END PROPRIETARY CODE SEGMENT */
+  /* END PROPRIETARY CODE SEGMENT */
 
   FreeP(G->Main);
 
-  if(owned_options)
-    PyMOLOptions_Free(owned_options);   /* clean up launch options if we're supposed to */
+  if (owned_options)
+    PyMOLOptions_Free(
+        owned_options); /* clean up launch options if we're supposed to */
 
-  if(show_message) {
+  if (show_message) {
     printf(" PyMOL: normal program termination.\n");
   }
 
 /* BEGIN PROPRIETARY CODE SEGMENT (see disclaimer in "os_proprietary.h") */
 #ifdef WIN32
-  if(haveGUI)
+  if (haveGUI)
     p_glutDestroyWindow(theWindow);
-  TerminateProcess(GetCurrentProcess(), 0);     /* only way to avoid a crash */
+  TerminateProcess(GetCurrentProcess(), 0); /* only way to avoid a crash */
 #endif
 #ifdef _PYMOL_OSX
-  if(haveGUI) {
-    if(game_mode) {
+  if (haveGUI) {
+    if (game_mode) {
       p_glutLeaveGameMode();
-      /* force a full-screen refresh to eliminate garbage on screen 
+      /* force a full-screen refresh to eliminate garbage on screen
        * NOTE that we currently have to patch Apple's GLUT to make this work */
       p_glutInitWindowPosition(0, 0);
       p_glutInitWindowSize(640, 480);
       p_glutInitDisplayMode(P_GLUT_RGBA | P_GLUT_DEPTH | P_GLUT_DOUBLE);
-      if(p_glutGet(P_GLUT_DISPLAY_MODE_POSSIBLE)) {
+      if (p_glutGet(P_GLUT_DISPLAY_MODE_POSSIBLE)) {
         theWindow = p_glutCreateWindow("PyMOL Viewer");
         p_glutFullScreen();
         p_glutDestroyWindow(theWindow);
@@ -931,25 +922,23 @@ void MainFree(void)
   }
 #endif
 
-/* END PROPRIETARY CODE SEGMENT */
-
+  /* END PROPRIETARY CODE SEGMENT */
 }
-
 
 /*========================================================================*/
 void MainRefreshNow(void)
-{                               /* should only be called by the master thread, with a locked API */
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
+{ /* should only be called by the master thread, with a locked API */
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
 
-  CMain *I = G->Main;
-  if(PyMOL_GetSwap(G->PyMOL, true)) {
-    if(G->HaveGUI) {
+  CMain* I = G->Main;
+  if (PyMOL_GetSwap(G->PyMOL, true)) {
+    if (G->HaveGUI) {
       DrawBlueLine(G);
       p_glutSwapBuffers();
     }
   }
-  if(PyMOL_GetRedisplay(PyMOLInstance, true)) {
-    if(G->HaveGUI)
+  if (PyMOL_GetRedisplay(PyMOLInstance, true)) {
+    if (G->HaveGUI)
       p_glutPostRedisplay();
     else
       MainDrawLocked();
@@ -957,21 +946,20 @@ void MainRefreshNow(void)
   }
 }
 
-
 /*========================================================================*/
 
 static void MainBusyIdle(void)
 {
-  PyMOLGlobals *G = SingletonPyMOLGlobals;
-  /* This is one of the few places in the program where we can be sure 
+  PyMOLGlobals* G = SingletonPyMOLGlobals;
+  /* This is one of the few places in the program where we can be sure
    * that we have the "glut" thread...glut doesn't seem to be completely
    * thread safe or rather thread consistent
    */
 
-  CMain *I = G->Main;
+  CMain* I = G->Main;
 
   PRINTFD(G, FB_Main)
-    " MainBusyIdle: called.\n" ENDFD;
+  " MainBusyIdle: called.\n" ENDFD;
 
   /* flush command and output queues */
 
@@ -980,17 +968,17 @@ static void MainBusyIdle(void)
      I->IdleMode
      ENDFD; */
 
-  if(PLockAPIAsGlut(G, false)) {
+  if (PLockAPIAsGlut(G, false)) {
 
     PRINTFD(G, FB_Main)
-      " MainBusyIdle: got lock.\n" ENDFD;
+    " MainBusyIdle: got lock.\n" ENDFD;
 
     /* change window visibility & refresh, if necessary */
 
-    if(G->HaveGUI) {
-      if(I->WindowIsVisible != G->Option->window_visible) {
+    if (G->HaveGUI) {
+      if (I->WindowIsVisible != G->Option->window_visible) {
         I->WindowIsVisible = G->Option->window_visible;
-        if(I->WindowIsVisible) {
+        if (I->WindowIsVisible) {
           p_glutShowWindow();
           OrthoDirty(G);
         } else {
@@ -1000,22 +988,22 @@ static void MainBusyIdle(void)
     }
 
     PRINTFD(G, FB_Main)
-      " MainBusyIdle: calling idle function.\n" ENDFD;
+    " MainBusyIdle: calling idle function.\n" ENDFD;
 
-    if(PyMOL_Idle(PyMOLInstance)) {
+    if (PyMOL_Idle(PyMOLInstance)) {
       /* we did some work, so keep PyMOL responsive */
       I->IdleMode = 1;
-    } else if(!I->IdleMode) {
+    } else if (!I->IdleMode) {
       I->IdleMode = 1;
-    } else if(I->IdleMode == 1) {
+    } else if (I->IdleMode == 1) {
       I->IdleMode = 2;
       I->IdleTime = UtilGetSeconds(G);
     }
     PRINTFD(G, FB_Main)
-      " MainBusyIdle: swap check.\n" ENDFD;
+    " MainBusyIdle: swap check.\n" ENDFD;
 
-    if(PyMOL_GetSwap(G->PyMOL, true)) {
-      if(G->HaveGUI) {
+    if (PyMOL_GetSwap(G->PyMOL, true)) {
+      if (G->HaveGUI) {
         DrawBlueLine(G);
         p_glutSwapBuffers();
       }
@@ -1025,65 +1013,75 @@ static void MainBusyIdle(void)
        we're running without a GUI, then call the draw routine (if we */
 
     PRINTFD(G, FB_Main)
-      " MainBusyIdle: redisplay.\n" ENDFD;
+    " MainBusyIdle: redisplay.\n" ENDFD;
 
-    if(PyMOL_GetRedisplay(PyMOLInstance, true)) {
-      if(G->HaveGUI)
+    if (PyMOL_GetRedisplay(PyMOLInstance, true)) {
+      if (G->HaveGUI)
         p_glutPostRedisplay();
       else
         MainDrawLocked();
-      if(I->IdleMode > 1) {
+      if (I->IdleMode > 1) {
         I->IdleMode = 1;
       }
     }
 
     PRINTFD(G, FB_Main)
-      " MainBusyIdle: redisplay.\n" ENDFD;
+    " MainBusyIdle: redisplay.\n" ENDFD;
 
-    /* the following code enables PyMOL to avoid busy-idling 
+    /* the following code enables PyMOL to avoid busy-idling
      * even though we're using GLUT! */
 
     switch (I->IdleMode) {
-    case 2:                    /* avoid racing the CPU */
-      if((UtilGetSeconds(G) - I->IdleTime) > (SettingGetGlobal_f(G, cSetting_idle_delay) / 5.0)) {
+    case 2: /* avoid racing the CPU */
+      if ((UtilGetSeconds(G) - I->IdleTime) >
+          (SettingGetGlobal_f(G, cSetting_idle_delay) / 5.0)) {
         I->IdleMode = 3;
         I->IdleTime = UtilGetSeconds(G);
       }
       break;
     case 3:
-      if((UtilGetSeconds(G) - I->IdleTime) > (SettingGetGlobal_f(G, cSetting_idle_delay))) {
+      if ((UtilGetSeconds(G) - I->IdleTime) >
+          (SettingGetGlobal_f(G, cSetting_idle_delay))) {
         I->IdleMode = 4;
-        if(G->HaveGUI)
-          if(SettingGetGlobal_b(G, cSetting_cache_display)) {
-            p_glutPostRedisplay();      /* trigger caching of the current scene */
+        if (G->HaveGUI)
+          if (SettingGetGlobal_b(G, cSetting_cache_display)) {
+            p_glutPostRedisplay(); /* trigger caching of the current scene */
           }
         break;
       }
     }
 
     PRINTFD(G, FB_Main)
-      " MainBusyIdle: unlocking.\n" ENDFD;
+    " MainBusyIdle: unlocking.\n" ENDFD;
 
     {
       int control_idling = false;
-      if(I->IdleMode == 1) {
+      if (I->IdleMode == 1) {
         control_idling = ControlIdling(G);
       }
       PUnlockAPIAsGlut(G);
 
       switch (I->IdleMode) {
       case 4:
-        PSleepUnlocked(G, SettingGetGlobal_i(G, cSetting_slow_idle));   /* slow idle - save CPU cycles */
+        PSleepUnlocked(
+            G, SettingGetGlobal_i(
+                   G, cSetting_slow_idle)); /* slow idle - save CPU cycles */
         break;
       case 3:
-        PSleepUnlocked(G, SettingGetGlobal_i(G, cSetting_fast_idle));   /* fast idle - more responsive */
+        PSleepUnlocked(
+            G, SettingGetGlobal_i(
+                   G, cSetting_fast_idle)); /* fast idle - more responsive */
         break;
       case 2:
-        PSleepUnlocked(G, SettingGetGlobal_i(G, cSetting_no_idle));     /* give Tcl/Tk a chance to run */
+        PSleepUnlocked(
+            G, SettingGetGlobal_i(
+                   G, cSetting_no_idle)); /* give Tcl/Tk a chance to run */
         break;
       case 1:
-        if(control_idling) {
-          PSleepUnlocked(G, SettingGetGlobal_i(G, cSetting_no_idle));   /* give Tcl/Tk a chance to run */
+        if (control_idling) {
+          PSleepUnlocked(
+              G, SettingGetGlobal_i(
+                     G, cSetting_no_idle)); /* give Tcl/Tk a chance to run */
         }
         break;
       default:
@@ -1094,27 +1092,27 @@ static void MainBusyIdle(void)
     /* run final initilization code for Python-based PyMOL implementations. */
 
 #define FINAL_INIT_AT 10
-    if(I->FinalInitCounter < FINAL_INIT_AT) {
+    if (I->FinalInitCounter < FINAL_INIT_AT) {
       I->FinalInitCounter = I->FinalInitCounter + 1;
-      if(I->FinalInitCounter == FINAL_INIT_AT) {
+      if (I->FinalInitCounter == FINAL_INIT_AT) {
         I->FinalInitTrigger = true;
         PyMOL_NeedRedisplay(PyMOLInstance);
       }
     }
 
     /* when running in command-line mode, if we're not reading from
-     * standard input and if we're not keeping the thread alive, then 
+     * standard input and if we're not keeping the thread alive, then
      * we can have no further input.  Therefore die. */
 
-    if(!G->HaveGUI) {
-      if(!(OrthoCommandWaiting(G) ||
-           PyMOL_GetModalDraw(G->PyMOL) ||
-           OrthoDeferredWaiting(G) || SettingGetGlobal_b(G, cSetting_keep_alive))) {
-        if((!G->Option->keep_thread_alive) &&
-           (!G->Option->read_stdin) && (I->FinalInitCounter >= FINAL_INIT_AT)) {
+    if (!G->HaveGUI) {
+      if (!(OrthoCommandWaiting(G) || PyMOL_GetModalDraw(G->PyMOL) ||
+              OrthoDeferredWaiting(G) ||
+              SettingGetGlobal_b(G, cSetting_keep_alive))) {
+        if ((!G->Option->keep_thread_alive) && (!G->Option->read_stdin) &&
+            (I->FinalInitCounter >= FINAL_INIT_AT)) {
           I->IdleCount++;
-          if(I->IdleCount == 10) {
-            if(PLockAPIAsGlut(G, true)) {
+          if (I->IdleCount == 10) {
+            if (PLockAPIAsGlut(G, true)) {
               PParse(G, "_quit");
               PFlush(G);
               PUnlockAPIAsGlut(G);
@@ -1128,19 +1126,19 @@ static void MainBusyIdle(void)
 
     {
       int max_ups = SettingGetGlobal_i(G, cSetting_max_ups);
-      if(max_ups < 1) {
+      if (max_ups < 1) {
         I->DrawGovernorActive = false;
-        if(I->DrawDeferred) {
+        if (I->DrawDeferred) {
           p_glutPostRedisplay();
         }
       } else {
         I->DrawDelay = 1.0 / max_ups;
         I->DrawGovernorActive = true;
-        if(I->DrawDeferred) {
-          if(UtilGetSeconds(G) > I->DrawAfter) {
+        if (I->DrawDeferred) {
+          if (UtilGetSeconds(G) > I->DrawAfter) {
             I->DrawSignalled = true;
           }
-          if(I->DrawSignalled) {
+          if (I->DrawSignalled) {
             I->DrawDeferred = false;
             p_glutPostRedisplay();
           }
@@ -1149,13 +1147,13 @@ static void MainBusyIdle(void)
     }
   } else {
     PRINTFD(G, FB_Main)
-      " MainBusyIdle: lock not obtained...\n" ENDFD;
+    " MainBusyIdle: lock not obtained...\n" ENDFD;
 
     PSleepWhileBusy(G, 100000); /* 10 per second */
-    if(G->HaveGUI) {
+    if (G->HaveGUI) {
       PBlock(G);
       PLockStatus(G);
-      if(PyMOL_GetProgressChanged(G->PyMOL, false))
+      if (PyMOL_GetProgressChanged(G->PyMOL, false))
         p_glutPostRedisplay();
       PUnlockStatus(G);
       PUnblock(G);
@@ -1163,25 +1161,24 @@ static void MainBusyIdle(void)
   }
 
   PRINTFD(G, FB_Main)
-    " MainBusyIdle: leaving... IdleMode %d\n", I->IdleMode ENDFD;
-
+  " MainBusyIdle: leaving... IdleMode %d\n", I->IdleMode ENDFD;
 }
 
-void MainSetWindowPosition(PyMOLGlobals * G, int x, int y)
+void MainSetWindowPosition(PyMOLGlobals* G, int x, int y)
 {
 #ifdef _PYMOL_FINK
-  y -= 22;                      /* something is wrong with FinkGlut's window positioning... */
+  y -= 22; /* something is wrong with FinkGlut's window positioning... */
 #endif
   p_glutPositionWindow(x, y);
 }
 
-void MainSetWindowSize(PyMOLGlobals * G, int w, int h)
+void MainSetWindowSize(PyMOLGlobals* G, int w, int h)
 {
   G->Main->DeferReshapeDeferral = 1;
   p_glutReshapeWindow(w, h);
 }
 
-void MainMaximizeWindow(PyMOLGlobals * G)
+void MainMaximizeWindow(PyMOLGlobals* G)
 {
   int height = p_glutGet(P_GLUT_SCREEN_HEIGHT);
   int width = p_glutGet(P_GLUT_SCREEN_WIDTH);
@@ -1189,13 +1186,12 @@ void MainMaximizeWindow(PyMOLGlobals * G)
   G->Main->MaximizeCheck = true;
   p_glutPositionWindow(0, 0);
   p_glutReshapeWindow(width, height);
-
 }
 
-void MainCheckWindowFit(PyMOLGlobals * G)
+void MainCheckWindowFit(PyMOLGlobals* G)
 {
-  CMain *I = G->Main;
-  if(G && G->Main) {
+  CMain* I = G->Main;
+  if (G && G->Main) {
     int height = p_glutGet(P_GLUT_SCREEN_HEIGHT);
     int width = p_glutGet(P_GLUT_SCREEN_WIDTH);
     int actual_x = p_glutGet(P_GLUT_WINDOW_X);
@@ -1207,35 +1203,32 @@ void MainCheckWindowFit(PyMOLGlobals * G)
 
     I->DeferReshapeDeferral = 1;
 
-    if((actual_x + actual_width) > width)
-      new_width = (width - actual_x) - 5;       /* allow room for decoration */
-    if((actual_y + actual_height) > height)
-      new_height = (height - actual_y) - 5;     /* allow room for decoration */
-    if((new_width > 0) || (new_height > 0)) {
-      if(new_width < 0)
+    if ((actual_x + actual_width) > width)
+      new_width = (width - actual_x) - 5; /* allow room for decoration */
+    if ((actual_y + actual_height) > height)
+      new_height = (height - actual_y) - 5; /* allow room for decoration */
+    if ((new_width > 0) || (new_height > 0)) {
+      if (new_width < 0)
         new_width = actual_width;
-      if(new_height < 0)
+      if (new_height < 0)
         new_height = actual_height;
       MainSetWindowSize(G, new_width, new_height);
     }
   }
-
 }
-
 
 /*========================================================================*/
 
-
 /* BEGIN PROPRIETARY CODE SEGMENT (see disclaimer in "os_proprietary.h") */
 #ifdef WIN32
-BOOL WINAPI HandlerRoutine(DWORD dwCtrlType     /*  control signal type */
-  )
+BOOL WINAPI HandlerRoutine(DWORD dwCtrlType /*  control signal type */
+)
 {
   switch (dwCtrlType) {
   case CTRL_CLOSE_EVENT:
   case CTRL_BREAK_EVENT:
   case CTRL_C_EVENT:
-    TerminateProcess(GetCurrentProcess(), 0);   /* only way to avoid a crash */
+    TerminateProcess(GetCurrentProcess(), 0); /* only way to avoid a crash */
 
     break;
   }
@@ -1243,12 +1236,12 @@ BOOL WINAPI HandlerRoutine(DWORD dwCtrlType     /*  control signal type */
 }
 #endif
 
-static void launch(CPyMOLOptions * options, int own_the_options)
+static void launch(CPyMOLOptions* options, int own_the_options)
 {
 
   int multisample_mask = 0;
   int theWindow = 0;
-  PyMOLGlobals *G = nullptr;
+  PyMOLGlobals* G = nullptr;
 
   PyMOLInstance = PyMOL_NewWithOptions(options);
   G = PyMOL_GetGlobals(PyMOLInstance);
@@ -1258,30 +1251,30 @@ static void launch(CPyMOLOptions * options, int own_the_options)
   assert(!SingletonPyMOLGlobals);
   SingletonPyMOLGlobals = G;
 
-  if(G->Option->multisample)
+  if (G->Option->multisample)
     multisample_mask = P_GLUT_MULTISAMPLE;
 
   /* if were running GLUT, then we have the ability to increase the
    * size of the window in order to accomodate the context */
 
-  if(G->Option->internal_gui && (!G->Option->game_mode))
+  if (G->Option->internal_gui && (!G->Option->game_mode))
     G->Option->winX += cOrthoRightSceneMargin;
 
-  if(G->Option->internal_feedback && (!G->Option->game_mode))
-    G->Option->winY +=
-      (G->Option->internal_feedback - 1) * cOrthoLineHeight + cOrthoBottomSceneMargin;
+  if (G->Option->internal_feedback && (!G->Option->game_mode))
+    G->Option->winY += (G->Option->internal_feedback - 1) * cOrthoLineHeight +
+                       cOrthoBottomSceneMargin;
 
-  if(G->HaveGUI) {
+  if (G->HaveGUI) {
 #ifndef _PYMOL_OSX
-    atexit(MainOnExit);         /* register callback to help prevent crashes
-                                   when GLUT spontaneously kills us */
+    atexit(MainOnExit); /* register callback to help prevent crashes
+                           when GLUT spontaneously kills us */
 #endif
 
     /* BEGIN PROPRIETARY CODE SEGMENT (see disclaimer in "os_proprietary.h") */
 #ifdef WIN32
-    SetConsoleCtrlHandler(HandlerRoutine,       // address of handler function
-                          true  // handler to add or remove
-      );
+    SetConsoleCtrlHandler(HandlerRoutine, // address of handler function
+        true                              // handler to add or remove
+    );
     SetConsoleTitle(_T("PyMOL"));
 #endif
 
@@ -1291,39 +1284,39 @@ static void launch(CPyMOLOptions * options, int own_the_options)
 
     {
       int display_mode_possible = false;
-      if(G->Option->stereo_mode > 1)
+      if (G->Option->stereo_mode > 1)
         G->Option->force_stereo = 0;
 
       switch (G->Option->force_stereo) {
-      case -1:                 /* force mono */
+      case -1: /* force mono */
         G->StereoCapable = 0;
         break;
-      case 1:                  /* force quad buffer stereo (if possible) */
+      case 1: /* force quad buffer stereo (if possible) */
         G->Option->stereo_mode = cStereo_quadbuffer;
-      case 0:                  /* default/autodetect */
+      case 0: /* default/autodetect */
         switch (G->Option->stereo_mode) {
         case cStereo_default:
         case cStereo_quadbuffer:
           p_glutInitDisplayMode(P_GLUT_RGBA | P_GLUT_DEPTH | multisample_mask |
                                 P_GLUT_DOUBLE | P_GLUT_STEREO);
           display_mode_possible = p_glutGet(P_GLUT_DISPLAY_MODE_POSSIBLE);
-          if(multisample_mask && (!display_mode_possible)) {
+          if (multisample_mask && (!display_mode_possible)) {
             G->LaunchStatus |= cPyMOLGlobals_LaunchStatus_MultisampleFailed;
-            p_glutInitDisplayMode(P_GLUT_RGBA | P_GLUT_DEPTH | P_GLUT_DOUBLE |
-                                  P_GLUT_STEREO);
+            p_glutInitDisplayMode(
+                P_GLUT_RGBA | P_GLUT_DEPTH | P_GLUT_DOUBLE | P_GLUT_STEREO);
             display_mode_possible = p_glutGet(P_GLUT_DISPLAY_MODE_POSSIBLE);
           }
-          if(display_mode_possible) {
+          if (display_mode_possible) {
             G->StereoCapable = 1;
-          } else if(G->Option->stereo_mode == cStereo_quadbuffer) {
+          } else if (G->Option->stereo_mode == cStereo_quadbuffer) {
             G->LaunchStatus |= cPyMOLGlobals_LaunchStatus_StereoFailed;
           }
           break;
         case cStereo_clone_dynamic:
-          p_glutInitDisplayMode(P_GLUT_RGBA | P_GLUT_DEPTH | P_GLUT_DOUBLE | P_GLUT_ACCUM
-                                | P_GLUT_STEREO);
+          p_glutInitDisplayMode(P_GLUT_RGBA | P_GLUT_DEPTH | P_GLUT_DOUBLE |
+                                P_GLUT_ACCUM | P_GLUT_STEREO);
           display_mode_possible = p_glutGet(P_GLUT_DISPLAY_MODE_POSSIBLE);
-          if(!display_mode_possible) {
+          if (!display_mode_possible) {
             G->LaunchStatus |= cPyMOLGlobals_LaunchStatus_StereoFailed;
             G->Option->stereo_mode = 0;
           } else {
@@ -1331,10 +1324,10 @@ static void launch(CPyMOLOptions * options, int own_the_options)
           }
           break;
         case cStereo_dynamic:
-          p_glutInitDisplayMode(P_GLUT_RGBA | P_GLUT_DEPTH | P_GLUT_DOUBLE |
-                                P_GLUT_ACCUM);
+          p_glutInitDisplayMode(
+              P_GLUT_RGBA | P_GLUT_DEPTH | P_GLUT_DOUBLE | P_GLUT_ACCUM);
           display_mode_possible = p_glutGet(P_GLUT_DISPLAY_MODE_POSSIBLE);
-          if(!display_mode_possible) {
+          if (!display_mode_possible) {
             G->LaunchStatus |= cPyMOLGlobals_LaunchStatus_StereoFailed;
             G->Option->stereo_mode = 0;
           }
@@ -1343,10 +1336,10 @@ static void launch(CPyMOLOptions * options, int own_the_options)
         case cStereo_stencil_by_column:
         case cStereo_stencil_checkerboard:
         case cStereo_stencil_custom:
-          p_glutInitDisplayMode(P_GLUT_RGBA | P_GLUT_DEPTH | P_GLUT_DOUBLE |
-                                P_GLUT_STENCIL);
+          p_glutInitDisplayMode(
+              P_GLUT_RGBA | P_GLUT_DEPTH | P_GLUT_DOUBLE | P_GLUT_STENCIL);
           display_mode_possible = p_glutGet(P_GLUT_DISPLAY_MODE_POSSIBLE);
-          if(!display_mode_possible) {
+          if (!display_mode_possible) {
             G->LaunchStatus |= cPyMOLGlobals_LaunchStatus_StereoFailed;
             G->Option->stereo_mode = 0;
           }
@@ -1354,22 +1347,22 @@ static void launch(CPyMOLOptions * options, int own_the_options)
         case cStereo_anaglyph: /* nothing special required for anaglyph */
           G->StereoCapable = 1;
           break;
-        default:               /* fall through */
+        default: /* fall through */
           break;
         }
         break;
       }
       /* fallback behavior */
 
-      if(!display_mode_possible) {
+      if (!display_mode_possible) {
         G->LaunchStatus &= ~cPyMOLGlobals_LaunchStatus_MultisampleFailed;
-        p_glutInitDisplayMode(P_GLUT_RGBA | P_GLUT_DEPTH | multisample_mask |
-                              P_GLUT_DOUBLE);
+        p_glutInitDisplayMode(
+            P_GLUT_RGBA | P_GLUT_DEPTH | multisample_mask | P_GLUT_DOUBLE);
         display_mode_possible = p_glutGet(P_GLUT_DISPLAY_MODE_POSSIBLE);
         G->StereoCapable = 0;
       }
 
-      if(multisample_mask && (!display_mode_possible)) {
+      if (multisample_mask && (!display_mode_possible)) {
         G->LaunchStatus |= cPyMOLGlobals_LaunchStatus_MultisampleFailed;
         p_glutInitDisplayMode(P_GLUT_RGBA | P_GLUT_DEPTH | P_GLUT_DOUBLE);
         display_mode_possible = p_glutGet(P_GLUT_DISPLAY_MODE_POSSIBLE);
@@ -1377,12 +1370,14 @@ static void launch(CPyMOLOptions * options, int own_the_options)
       }
     }
 
-    if(!G->Option->game_mode) {
-      if((G->Option->winPX > -10000) && (G->Option->winPY > -10000)) {
+    if (!G->Option->game_mode) {
+      if ((G->Option->winPX > -10000) && (G->Option->winPY > -10000)) {
 #ifndef _PYMOL_FINK
         p_glutInitWindowPosition(G->Option->winPX, G->Option->winPY);
 #else
-        p_glutInitWindowPosition(G->Option->winPX, G->Option->winPY - 22);      /* somethings wrong with FinkGlut's window positioning... */
+        p_glutInitWindowPosition(G->Option->winPX,
+            G->Option->winPY - 22); /* somethings wrong with FinkGlut's window
+                                       positioning... */
 #endif
       }
 
@@ -1390,11 +1385,11 @@ static void launch(CPyMOLOptions * options, int own_the_options)
 
       theWindow = p_glutCreateWindow("PyMOL Viewer");
 
-      if(G->Option->full_screen) {
+      if (G->Option->full_screen) {
         p_glutFullScreen();
       }
 
-      if(G->Option->window_visible) {
+      if (G->Option->window_visible) {
         p_glutShowWindow();
       } else {
         p_glutHideWindow();
@@ -1408,17 +1403,18 @@ static void launch(CPyMOLOptions * options, int own_the_options)
     }
   }
   MainInit(G);
-  if(own_the_options)
+  if (own_the_options)
     G->Main->OwnedOptions = options;
-  /* make sure we can clean up these options later if we've been asked to do so */
+  /* make sure we can clean up these options later if we've been asked to do so
+   */
   {
-    CMain *I = G->Main;
+    CMain* I = G->Main;
 
     I->TheWindow = theWindow;
 
     PInit(G, true);
 
-    if(G->HaveGUI) {
+    if (G->HaveGUI) {
       p_glutDisplayFunc(MainDraw);
       p_glutReshapeFunc(MainReshape);
       p_glutKeyboardFunc(MainKey);
@@ -1431,19 +1427,20 @@ static void launch(CPyMOLOptions * options, int own_the_options)
 
     PUnblock(G);
 
-    if(G->HaveGUI) {
-      if(!I->WindowIsVisible)
+    if (G->HaveGUI) {
+      if (!I->WindowIsVisible)
         MainReshape(G->Option->winX, G->Option->winY);
       I->IdleMode = 3;
-      p_glutMainLoop();         /* never returns with traditional GLUT implementation */
-      PBlock(G);                /* if we've gotten here, then we're heading back to Python... */
+      p_glutMainLoop(); /* never returns with traditional GLUT implementation */
+      PBlock(
+          G); /* if we've gotten here, then we're heading back to Python... */
     } else {
       SceneSetCardInfo(G, "none", "ray trace only", "none");
-      if(G->Option->show_splash && !G->Option->quiet)
+      if (G->Option->show_splash && !G->Option->quiet)
         printf(" Command mode. No graphics front end.\n");
       MainReshape(G->Option->winX, G->Option->winY);
-      MainDraw();               /* for command line processing */
-      while(1) {
+      MainDraw(); /* for command line processing */
+      while (1) {
         MainBusyIdle();
         MainDraw();
       }
@@ -1451,31 +1448,32 @@ static void launch(CPyMOLOptions * options, int own_the_options)
   }
 }
 
-
 /*========================================================================*/
 
-static int decoy_input_hook(void) { return 0; }
+static int decoy_input_hook(void)
+{
+  return 0;
+}
 
 int main_shared(int block_input_hook)
 {
-  if(block_input_hook)
+  if (block_input_hook)
     PyOS_InputHook = decoy_input_hook;
 
 #ifdef _DRI_WORKAROUND
   dlopen("libGL.so.1", RTLD_LAZY | RTLD_GLOBAL);
 #endif
 
-  {                             /* no matter how PyMOL was built, we always come through here... */
+  { /* no matter how PyMOL was built, we always come through here... */
 
-    CPyMOLOptions *options = PyMOLOptions_New();
+    CPyMOLOptions* options = PyMOLOptions_New();
 
-    if(options) {
+    if (options) {
 
       PGetOptions(options);
 
       launch(options, true);
       /* this only returns when PyMOL is not running under GLUT */
-
     }
   }
   return 0;
@@ -1483,21 +1481,20 @@ int main_shared(int block_input_hook)
 
 #endif
 
-
 /*========================================================================*/
 
-PyObject *MainAsPyList(PyMOLGlobals *G)
+PyObject* MainAsPyList(PyMOLGlobals* G)
 {
 #ifdef _PYMOL_NOPY
   return nullptr;
 #else
-  PyObject *result = nullptr;
+  PyObject* result = nullptr;
   int width, height;
   result = PyList_New(2);
   width = SceneGetBlock(G)->getWidth();
   height = SceneGetBlock(G)->getHeight();
-  if(SettingGetGlobal_b(G, cSetting_seq_view)
-     && !SettingGetGlobal_b(G, cSetting_seq_view_overlay))
+  if (SettingGetGlobal_b(G, cSetting_seq_view) &&
+      !SettingGetGlobal_b(G, cSetting_seq_view_overlay))
     height += SeqGetHeight(G);
   PyList_SetItem(result, 0, PyInt_FromLong(width));
   PyList_SetItem(result, 1, PyInt_FromLong(height));
@@ -1505,7 +1502,7 @@ PyObject *MainAsPyList(PyMOLGlobals *G)
 #endif
 }
 
-int MainFromPyList(PyMOLGlobals *G, PyObject * list)
+int MainFromPyList(PyMOLGlobals* G, PyObject* list)
 {
 #ifdef _PYMOL_NOPY
   return 0;
@@ -1516,22 +1513,22 @@ int MainFromPyList(PyMOLGlobals *G, PyObject * list)
   int ll = 0;
   OrthoLineType buffer;
 
-  if(ok)
+  if (ok)
     ok = (list != nullptr);
-  if(ok)
+  if (ok)
     ok = PyList_Check(list);
-  if(ok)
+  if (ok)
     ll = PyList_Size(list);
-  if(ok && (ll >= 2)) {
-    if(!G->Option->presentation &&
-        !G->Option->full_screen &&
+  if (ok && (ll >= 2)) {
+    if (!G->Option->presentation && !G->Option->full_screen &&
         !ExecutiveIsFullScreen(G)) {
-      if(ok)
+      if (ok)
         ok = PConvPyIntToInt(PyList_GetItem(list, 0), &win_x);
-      if(ok)
+      if (ok)
         ok = PConvPyIntToInt(PyList_GetItem(list, 1), &win_y);
-      /* BlockGetSize(SceneGetBlock(G),&win_x,&win_y); * so how did this get into 0.98beta29?  */
-      if(ok) {
+      /* BlockGetSize(SceneGetBlock(G),&win_x,&win_y); * so how did this get
+       * into 0.98beta29?  */
+      if (ok) {
 
         sprintf(buffer, "viewport %d, %d", win_x, win_y);
         PParse(G, buffer);

@@ -29,8 +29,7 @@ TEST_CASE("Image Default Constructor", "[Image]")
 static const std::size_t width = 64u;
 static const std::size_t height = 128u;
 
-static
-Image getMockImage(bool stereoImage = false)
+static Image getMockImage(bool stereoImage = false)
 {
   auto image = Image(width, height, stereoImage);
   std::fill(image.bits(), image.bits() + image.getSizeInBytes(), 128);
@@ -42,7 +41,7 @@ TEST_CASE("Image Ill-Informed Constructor", "[Image]")
   bool caught = false;
   try {
     Image img(100, -100);
-  } catch (const std::exception&){
+  } catch (const std::exception&) {
     caught = true;
   }
   REQUIRE(caught);
@@ -172,7 +171,8 @@ TEST_CASE("Image Erase", "[Image]")
   REQUIRE(img.empty());
 }
 
-static void save_image(const char* filename, const Image& img){
+static void save_image(const char* filename, const Image& img)
+{
   auto dpi = 0.0f;
   auto format = 0; // png == 0
   auto quiet = 0;

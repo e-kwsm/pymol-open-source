@@ -12,7 +12,8 @@ constexpr float CH_MAX = 255.0f;
 
 static float PyMOLImageGetChannel(std::uint32_t px, pymol::Image::Channel ch)
 {
-  return ((px >> (static_cast<std::uint32_t>(ch) * CH_BIT_SIZE)) & CH_MASK) / CH_MAX;
+  return ((px >> (static_cast<std::uint32_t>(ch) * CH_BIT_SIZE)) & CH_MASK) /
+         CH_MAX;
 }
 
 static std::uint32_t Rgba32fToUint32(float r, float g, float b, float a)
@@ -29,11 +30,11 @@ static std::uint32_t Rgba32fToUint32(float r, float g, float b, float a)
 
 static float pymol_lerp(float a, float b, float t)
 {
-    return a + t * (b - a);
+  return a + t * (b - a);
 }
 
-pymol::Result<pymol::Image> PyMOLImageComposite(PyMOLGlobals* G,
-    const pymol::Image& image, const pymol::Image& overlay)
+pymol::Result<pymol::Image> PyMOLImageComposite(
+    PyMOLGlobals* G, const pymol::Image& image, const pymol::Image& overlay)
 {
   if (image.getSize() != overlay.getSize()) {
     std::string err = "Image and overlay sizes do not match\n";

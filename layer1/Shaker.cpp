@@ -1,34 +1,34 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
+#include "os_python.h"
 
-#include"os_predef.h"
-#include"os_std.h"
-#include"os_gl.h"
-#include"Base.h"
-#include"CGO.h"
+#include "Base.h"
+#include "CGO.h"
+#include "os_gl.h"
+#include "os_predef.h"
+#include "os_std.h"
 
-#include"Map.h"
+#include "Map.h"
 
-#include"Shaker.h"
-#include"vla.h"
-#include<memory>
+#include "Shaker.h"
+#include "vla.h"
+#include <memory>
 
-CShaker::CShaker(PyMOLGlobals * G)
+CShaker::CShaker(PyMOLGlobals* G)
 {
   this->G = G;
   this->DistCon = pymol::vla<ShakerDistCon>(1000);
@@ -43,7 +43,7 @@ CShaker::CShaker(PyMOLGlobals * G)
   this->NTorsCon = 0;
 }
 
-void ShakerReset(CShaker * I)
+void ShakerReset(CShaker* I)
 {
   I->NDistCon = 0;
   I->NPyraCon = 0;
@@ -52,9 +52,10 @@ void ShakerReset(CShaker * I)
   I->NTorsCon = 0;
 }
 
-void ShakerAddDistCon(CShaker * I, int atom0, int atom1, float target, int type, float wt)
+void ShakerAddDistCon(
+    CShaker* I, int atom0, int atom1, float target, int type, float wt)
 {
-  ShakerDistCon *sdc;
+  ShakerDistCon* sdc;
 
   VLACheck(I->DistCon, ShakerDistCon, I->NDistCon);
   sdc = I->DistCon + I->NDistCon;
@@ -66,8 +67,8 @@ void ShakerAddDistCon(CShaker * I, int atom0, int atom1, float target, int type,
   I->NDistCon++;
 }
 
-float ShakerGetPyra(float *targ2,
-    const float *v0, const float *v1, const float *v2, const float *v3)
+float ShakerGetPyra(float* targ2, const float* v0, const float* v1,
+    const float* v2, const float* v3)
 {
   float d0[3], cp[3], d2[3], d3[3];
   float av[3], t0[3];
@@ -86,9 +87,9 @@ float ShakerGetPyra(float *targ2,
   return (dot_product3f(d0, cp));
 }
 
-float ShakerDoPyra(float targ1, float targ2,
-                   const float *v0, const float *v1, const float *v2, const float *v3,
-                   float *p0, float *p1, float *p2, float *p3, float wt, float inv_wt)
+float ShakerDoPyra(float targ1, float targ2, const float* v0, const float* v1,
+    const float* v2, const float* v3, float* p0, float* p1, float* p2,
+    float* p3, float wt, float inv_wt)
 {
   float d0[3], cp[3], d2[3], d3[3];
   float av[3], t0[3], push[3];
@@ -108,10 +109,10 @@ float ShakerDoPyra(float targ1, float targ2,
   cur = dot_product3f(d0, cp);
   dev = cur - targ1;
   result1 = (float) fabs(dev);
-  if(result1 > R_SMALL8) {
+  if (result1 > R_SMALL8) {
     sc = wt * dev;
-    if((cur * targ1) < 0.0)     /* inverted */
-      sc = sc * inv_wt;         /* inversion fixing weight */
+    if ((cur * targ1) < 0.0) /* inverted */
+      sc = sc * inv_wt;      /* inversion fixing weight */
     scale3f(cp, sc, push);
     add3f(push, p0, p0);
     scale3f(push, 0.333333F, push);
@@ -120,14 +121,14 @@ float ShakerDoPyra(float targ1, float targ2,
     subtract3f(p3, push, p3);
   }
 
-  if((targ2 >= 0.0F) && ((cur * targ1 > 0.0) || (fabs(targ1) < 0.1))) {
+  if ((targ2 >= 0.0F) && ((cur * targ1 > 0.0) || (fabs(targ1) < 0.1))) {
     /* so long as we're not inverted...
        also make sure v0 is the right distance from the average point */
     cur = length3f(d0);
     normalize3f(d0);
     dev = cur - targ2;
     result2 = (float) fabs(dev);
-    if(result2 > R_SMALL4) {
+    if (result2 > R_SMALL4) {
       sc = wt * dev * 2.0F;
       scale3f(d0, sc, push);
       add3f(push, p0, p0);
@@ -141,8 +142,8 @@ float ShakerDoPyra(float targ1, float targ2,
   return result1 + result2;
 }
 
-float ShakerDoLine(const float *v0, const float *v1, const float *v2,
-                   float *p0, float *p1, float *p2, float wt)
+float ShakerDoLine(const float* v0, const float* v1, const float* v2, float* p0,
+    float* p1, float* p2, float wt)
 {
   /* v0-v1-v2 */
 
@@ -156,19 +157,19 @@ float ShakerDoLine(const float *v0, const float *v1, const float *v2,
 
   cross_product3f(d2, d0, cp);
   lcp = (float) length3f(cp);
-  if(lcp > R_SMALL4) {
+  if (lcp > R_SMALL4) {
     lcp = 1.0F / lcp;
-    scale3f(cp, lcp, cp);       /* axis 0 */
+    scale3f(cp, lcp, cp); /* axis 0 */
 
     subtract3f(v2, v0, d3);
-    normalize3f(d3);            /* axis 1 */
+    normalize3f(d3); /* axis 1 */
 
     cross_product3f(cp, d3, d4);
-    normalize3f(d4);            /* displacement direction */
+    normalize3f(d4); /* displacement direction */
 
-    dev = dot_product3f(d1, d4);        /* current deviation */
+    dev = dot_product3f(d1, d4); /* current deviation */
 
-    if((result = (float) fabs(dev)) > R_SMALL8) {
+    if ((result = (float) fabs(dev)) > R_SMALL8) {
       sc = wt * dev;
       scale3f(d4, sc, push);
       add3f(push, p1, p1);
@@ -181,21 +182,17 @@ float ShakerDoLine(const float *v0, const float *v1, const float *v2,
   } else
     result = 0.0;
   return result;
-
 }
 
-float ShakerDoPlan(
-    const float *v0,
-    const float *v1,
-    const float *v2,
-    const float *v3,
-                   float *p0, float *p1, float *p2, float *p3,
-                   float target, int fixed, float wt)
+float ShakerDoPlan(const float* v0, const float* v1, const float* v2,
+    const float* v3, float* p0, float* p1, float* p2, float* p3, float target,
+    int fixed, float wt)
 {
 
   float result;
 
-  float d01[3], d12[3], d23[3], d03[3], cp0[3], cp1[3], dp, sc, dev, d0[3], push[3];
+  float d01[3], d12[3], d23[3], d03[3], cp0[3], cp1[3], dp, sc, dev, d0[3],
+      push[3];
   double s01, s12, s23, s03;
 
   subtract3f(v0, v1, d01);
@@ -208,7 +205,7 @@ float ShakerDoPlan(
   s12 = lengthsq3f(d12);
   s23 = lengthsq3f(d23);
 
-  if((s03 < s01) || (s03 < s12) || (s03 < s23))
+  if ((s03 < s01) || (s03 < s12) || (s03 < s23))
     return 0.0F;
 
   cross_product3f(d01, d12, cp0);
@@ -221,7 +218,7 @@ float ShakerDoPlan(
 
   result = (dev = 1.0F - (float) fabs(dp));
 
-  if(dev > R_SMALL4) {
+  if (dev > R_SMALL4) {
 
     /*
        add3f(cp0,cp1,d0);
@@ -231,25 +228,25 @@ float ShakerDoPlan(
        dp2 = dot_product3f(cp1,pos);
      */
 
-    if(fixed && (dp * target < 0.0F)) {
+    if (fixed && (dp * target < 0.0F)) {
 
       /* fixed & backwards... */
 
-      if(dp < 0.0F) {
+      if (dp < 0.0F) {
         sc = -wt * dev * 0.5F;
       } else {
         sc = wt * dev * 0.5F;
       }
-      sc *= 0.02F;              /* weaken considerably to allow resolution of
-                                   inconsistencies (folded rings, etc.) */
+      sc *= 0.02F; /* weaken considerably to allow resolution of
+                      inconsistencies (folded rings, etc.) */
 
-    } else if(dp > 0) {
+    } else if (dp > 0) {
       sc = -wt * dev * 0.5F;
     } else {
       sc = wt * dev * 0.5F;
     }
 
-    if(fixed && (fixed < 7)) {
+    if (fixed && (fixed < 7)) {
       /* in small rings, ramp up the planarity factor */
       sc *= 8;
     } else {
@@ -287,13 +284,12 @@ float ShakerDoPlan(
     result = 0.0;
   }
   return result;
-
 }
 
-void ShakerAddPyraCon(CShaker * I, int atom0, int atom1, int atom2, int atom3,
-                      float targ1, float targ2)
+void ShakerAddPyraCon(CShaker* I, int atom0, int atom1, int atom2, int atom3,
+    float targ1, float targ2)
 {
-  ShakerPyraCon *spc;
+  ShakerPyraCon* spc;
 
   VLACheck(I->PyraCon, ShakerPyraCon, I->NPyraCon);
   spc = I->PyraCon + I->NPyraCon;
@@ -306,9 +302,10 @@ void ShakerAddPyraCon(CShaker * I, int atom0, int atom1, int atom2, int atom3,
   I->NPyraCon++;
 }
 
-void ShakerAddTorsCon(CShaker * I, int atom0, int atom1, int atom2, int atom3, int type)
+void ShakerAddTorsCon(
+    CShaker* I, int atom0, int atom1, int atom2, int atom3, int type)
 {
-  ShakerTorsCon *stc;
+  ShakerTorsCon* stc;
 
   VLACheck(I->TorsCon, ShakerTorsCon, I->NTorsCon);
   stc = I->TorsCon + I->NTorsCon;
@@ -318,13 +315,12 @@ void ShakerAddTorsCon(CShaker * I, int atom0, int atom1, int atom2, int atom3, i
   stc->at3 = atom3;
   stc->type = type;
   I->NTorsCon++;
-
 }
 
-void ShakerAddPlanCon(CShaker * I, int atom0, int atom1, int atom2, int atom3,
-                      float target, int fixed)
+void ShakerAddPlanCon(CShaker* I, int atom0, int atom1, int atom2, int atom3,
+    float target, int fixed)
 {
-  ShakerPlanCon *spc;
+  ShakerPlanCon* spc;
 
   VLACheck(I->PlanCon, ShakerPlanCon, I->NPlanCon);
   spc = I->PlanCon + I->NPlanCon;
@@ -337,9 +333,9 @@ void ShakerAddPlanCon(CShaker * I, int atom0, int atom1, int atom2, int atom3,
   I->NPlanCon++;
 }
 
-void ShakerAddLineCon(CShaker * I, int atom0, int atom1, int atom2)
+void ShakerAddLineCon(CShaker* I, int atom0, int atom1, int atom2)
 {
-  ShakerLineCon *slc;
+  ShakerLineCon* slc;
 
   VLACheck(I->LineCon, ShakerLineCon, I->NLineCon);
   slc = I->LineCon + I->NLineCon;
@@ -348,4 +344,3 @@ void ShakerAddLineCon(CShaker * I, int atom0, int atom1, int atom2)
   slc->at2 = atom2;
   I->NLineCon++;
 }
-

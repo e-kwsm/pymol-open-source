@@ -1,11 +1,12 @@
 #include "SceneView.h"
 
-// #include <glm/ext/matrix_relational.hpp> // Ubuntu 18.04 doesn't have this in its glm
-#include <glm/vector_relational.hpp>
-#include <glm/mat4x4.hpp>
-#include <glm/gtc/type_ptr.hpp>
+// #include <glm/ext/matrix_relational.hpp> // Ubuntu 18.04 doesn't have this in
+// its glm
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/mat4x4.hpp>
+#include <glm/vector_relational.hpp>
 
 #include "pymol/algorithm.h"
 
@@ -14,7 +15,8 @@ namespace pymol
 /**
  * Temp surrogate for glm::all(glm::equal(glm::mat4, glm::mat4, epsilon))
  */
-static bool glm_mat4_equal(const glm::mat4& matA, const glm::mat4& matB, float epsilon)
+static bool glm_mat4_equal(
+    const glm::mat4& matA, const glm::mat4& matB, float epsilon)
 {
   const auto ptrA = glm::value_ptr(matA);
   const auto ptrB = glm::value_ptr(matB);

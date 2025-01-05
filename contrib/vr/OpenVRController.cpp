@@ -38,11 +38,11 @@ SOFTWARE.
 #include "os_gl.h"
 
 OpenVRController::OpenVRController()
-  : m_init(false)
-  , m_deviceIndex(~0U)
-  , m_bShowController(true)
-  , m_gripIsPressed(false)
-  , m_pRenderModel(NULL)
+    : m_init(false)
+    , m_deviceIndex(~0U)
+    , m_bShowController(true)
+    , m_gripIsPressed(false)
+    , m_pRenderModel(NULL)
 {
 }
 
@@ -68,7 +68,8 @@ bool OpenVRController::IsInitialized()
   return m_init;
 }
 
-void OpenVRController::SetHintsTexture(GLuint hintsTexture, unsigned spriteCount)
+void OpenVRController::SetHintsTexture(
+    GLuint hintsTexture, unsigned spriteCount)
 {
   m_hintsQuad->SetTexture(hintsTexture, spriteCount);
   m_hintsQuad->SetMirror(true);

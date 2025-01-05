@@ -1,42 +1,44 @@
 
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* Copyright (c) Schrodinger, LLC. 
+C* Copyright (c) Schrodinger, LLC.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
-#include"os_predef.h"
-#include"os_gl.h"
+#include "os_gl.h"
+#include "os_predef.h"
+#include "os_python.h"
 
-#include"Block.h"
-#include"main.h"
-#include"CGO.h"
+#include "Block.h"
+#include "CGO.h"
+#include "main.h"
 
-int Block::getWidth() const {
-    return rect.right - rect.left;
-}
-
-/*========================================================================*/
-int Block::getHeight() const {
-    return rect.top - rect.bottom;
-}
-
-/*========================================================================*/
-void Block::fill(CGO *orthoCGO)
+int Block::getWidth() const
 {
-  if(m_G->HaveGUI && m_G->ValidContext) {
-    if (orthoCGO){
+  return rect.right - rect.left;
+}
+
+/*========================================================================*/
+int Block::getHeight() const
+{
+  return rect.top - rect.bottom;
+}
+
+/*========================================================================*/
+void Block::fill(CGO* orthoCGO)
+{
+  if (m_G->HaveGUI && m_G->ValidContext) {
+    if (orthoCGO) {
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, rect.right, rect.top, 0.f);
       CGOVertex(orthoCGO, rect.right, rect.bottom, 0.f);
@@ -54,12 +56,11 @@ void Block::fill(CGO *orthoCGO)
   }
 }
 
-
 /*========================================================================*/
-void Block::drawLeftEdge(CGO *orthoCGO)
+void Block::drawLeftEdge(CGO* orthoCGO)
 {
-  if(m_G->HaveGUI && m_G->ValidContext) {
-    if (orthoCGO){
+  if (m_G->HaveGUI && m_G->ValidContext) {
+    if (orthoCGO) {
       CGOColor(orthoCGO, .3f, .3f, .3f);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, rect.left, rect.bottom, 0.f);
@@ -68,12 +69,12 @@ void Block::drawLeftEdge(CGO *orthoCGO)
       CGOVertex(orthoCGO, rect.left + 1.f, rect.top, 0.f);
       CGOEnd(orthoCGO);
     } else {
-      if(m_G->HaveGUI && m_G->ValidContext) {
-	glColor3f(0.3, 0.3, 0.3);
-	glBegin(GL_LINES);
-	glVertex2i(rect.left, rect.bottom);
-	glVertex2i(rect.left, rect.top);
-	glEnd();
+      if (m_G->HaveGUI && m_G->ValidContext) {
+        glColor3f(0.3, 0.3, 0.3);
+        glBegin(GL_LINES);
+        glVertex2i(rect.left, rect.bottom);
+        glVertex2i(rect.left, rect.top);
+        glEnd();
       }
     }
   }
@@ -83,7 +84,7 @@ void Block::drawLeftEdge(CGO *orthoCGO)
 void Block::drawTopEdge()
 {
 #ifndef PURE_OPENGL_ES_2
-  if(m_G->HaveGUI && m_G->ValidContext) {
+  if (m_G->HaveGUI && m_G->ValidContext) {
     glColor3f(0.3, 0.3, 0.3);
     glBegin(GL_LINES);
     glVertex2i(rect.right, rect.top);
@@ -92,7 +93,6 @@ void Block::drawTopEdge()
   }
 #endif
 }
-
 
 /*========================================================================*/
 void Block::setMargin(int t, int l, int b, int r)
@@ -121,7 +121,6 @@ void Block::translate(int dx, int dy)
   rect.right += dx;
 }
 
-
 /*========================================================================*/
 void Block::recursiveDraw(CGO* orthoCGO)
 {
@@ -149,6 +148,6 @@ Block* Block::recursiveFind(int x, int y)
 
 bool Block::rectXYInside(int x, int y) const
 {
-  return ((y <= rect.top) && (y >= rect.bottom) &&
-          (x <= rect.right) && (x >= rect.left));
+  return ((y <= rect.top) && (y >= rect.bottom) && (x <= rect.right) &&
+          (x >= rect.left));
 }

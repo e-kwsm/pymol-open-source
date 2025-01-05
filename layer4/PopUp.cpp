@@ -1,40 +1,38 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
-#include"os_predef.h"
-#include"os_std.h"
-#include"os_gl.h"
-
+#include "os_gl.h"
+#include "os_predef.h"
+#include "os_python.h"
+#include "os_std.h"
 
 #include "Err.h"
 
-#include "main.h"
 #include "Base.h"
+#include "Block.h"
+#include "CGO.h"
+#include "Color.h"
+#include "Ortho.h"
+#include "P.h"
 #include "Pop.h"
 #include "PopUp.h"
-#include "Ortho.h"
-#include "Util.h"
-#include "P.h"
-#include "Util.h"
-#include "Color.h"
-#include "Text.h"
 #include "PyMOL.h"
-#include "CGO.h"
-#include "Block.h"
+#include "Text.h"
+#include "Util.h"
+#include "main.h"
 
 #define cPopUpLineHeight DIP2PIXEL(17)
 #define cPopUpTitleHeight DIP2PIXEL(19)
@@ -48,35 +46,37 @@ Z* -------------------------------------------------------------------
 #define cDirtyDelay 0.05
 
 struct CPopUp : public Block {
-  Block *Parent {};
-  Block *Child {};
-  int ChildLine {};
-  int LastX {}, LastY {};
-  int StartX {}, StartY {};
-  int Selected {};
-  int Width {}, Height {};
-  int NLine {};
-  PyObject **Sub {};
-  char **Command {};
-  char **Text {};
-  int *Code {};
-  double ChildDelay {};
-  double DirtyDelay {};
-  double PassiveDelay {};
-  int DirtyDelayFlag {};
-  int NeverDragged {};
-  int PlacementAffinity {};
+  Block* Parent{};
+  Block* Child{};
+  int ChildLine{};
+  int LastX{}, LastY{};
+  int StartX{}, StartY{};
+  int Selected{};
+  int Width{}, Height{};
+  int NLine{};
+  PyObject** Sub{};
+  char** Command{};
+  char** Text{};
+  int* Code{};
+  double ChildDelay{};
+  double DirtyDelay{};
+  double PassiveDelay{};
+  int DirtyDelayFlag{};
+  int NeverDragged{};
+  int PlacementAffinity{};
 
-  CPopUp(PyMOLGlobals * G) : Block(G){}
+  CPopUp(PyMOLGlobals* G)
+      : Block(G)
+  {
+  }
 
-  void draw(CGO *orthoCGO) override;
+  void draw(CGO* orthoCGO) override;
   int drag(int x, int y, int mod) override;
   int release(int button, int x, int y, int mod) override;
   void reshape(int width, int height) override {};
 };
 
-static
-int PopUpConvertY(CPopUp * I, int value, int mode);
+static int PopUpConvertY(CPopUp* I, int value, int mode);
 
 /*========================================================================
  * If Sub[a] is a list, return it, otherwise assume it's callable so
@@ -85,16 +85,17 @@ int PopUpConvertY(CPopUp * I, int value, int mode);
  * @param Sub : array of lists or callables
  * @param a   : array index
  */
-static PyObject * SubGetItem(PyMOLGlobals * G, PyObject ** Sub, const int a) {
+static PyObject* SubGetItem(PyMOLGlobals* G, PyObject** Sub, const int a)
+{
 #ifndef _PYMOL_NOPY
-  PyObject *elem = Sub[a];
+  PyObject* elem = Sub[a];
   ok_assert(1, elem);
 
-  if(!PyList_Check(elem)) {
+  if (!PyList_Check(elem)) {
     PBlock(G);
     elem = PyObject_CallObject(elem, nullptr);
 
-    if(PyErr_Occurred())
+    if (PyErr_Occurred())
       PyErr_Print();
 
     Py_DECREF(Sub[a]);
@@ -111,25 +112,24 @@ ok_except1:
 }
 
 /*========================================================================*/
-static Block *PopUpRecursiveFind(Block * block, int x, int y)
+static Block* PopUpRecursiveFind(Block* block, int x, int y)
 {
-  PyMOLGlobals *G = block->m_G;
-  CPopUp *I = (CPopUp *) block->reference;
-  if(I->Child) {                /* favor the child */
-    if(PopUpRecursiveFind(I->Child, x, y) == I->Child)
+  PyMOLGlobals* G = block->m_G;
+  CPopUp* I = (CPopUp*) block->reference;
+  if (I->Child) { /* favor the child */
+    if (PopUpRecursiveFind(I->Child, x, y) == I->Child)
       return block;
   }
-  if(block->recursiveFind(x, y) == block) {
+  if (block->recursiveFind(x, y) == block) {
     OrthoGrab(G, block);
     return block;
   }
   return nullptr;
 }
 
-
 /*========================================================================*/
-Block *PopUpNew(PyMOLGlobals * G, int x, int y, int last_x, int last_y,
-                int passive, PyObject * list, Block * parent)
+Block* PopUpNew(PyMOLGlobals* G, int x, int y, int last_x, int last_y,
+    int passive, PyObject* list, Block* parent)
 {
 #ifdef _PYMOL_NOPY
   return nullptr;
@@ -138,13 +138,14 @@ Block *PopUpNew(PyMOLGlobals * G, int x, int y, int last_x, int last_y,
 
   int mx, a, l, cl, cmx;
   int dim[2];
-  PyObject *elem;
+  PyObject* elem;
   const char *str, *c;
   int blocked = PAutoBlock(G);
-  auto ui_light_bg = SettingGet<InternalGUIMode>(cSetting_internal_gui_mode, G->Setting);
-  CPopUp *I = new CPopUp(G);
+  auto ui_light_bg =
+      SettingGet<InternalGUIMode>(cSetting_internal_gui_mode, G->Setting);
+  CPopUp* I = new CPopUp(G);
 
-  I->reference = (void *) I;
+  I->reference = (void*) I;
   I->active = false;
   I->TextColor[0] = 1.0F;
   I->TextColor[1] = 1.0F;
@@ -154,7 +155,7 @@ Block *PopUpNew(PyMOLGlobals * G, int x, int y, int last_x, int last_y,
   I->BackColor[1] = 0.1F;
   I->BackColor[2] = 0.1F;
 
-  if(ui_light_bg != InternalGUIMode::Default) {
+  if (ui_light_bg != InternalGUIMode::Default) {
     I->TextColor[0] = 0.0F;
     I->TextColor[1] = 0.0F;
     I->TextColor[2] = 0.0F;
@@ -180,7 +181,7 @@ Block *PopUpNew(PyMOLGlobals * G, int x, int y, int last_x, int last_y,
   I->PlacementAffinity = 0;
   mx = 1;
   cmx = 1;
-  for(a = 0; a < I->NLine; a++) {
+  for (a = 0; a < I->NLine; a++) {
     PyObject* item = PyList_GetItem(list, a);
     if (PyList_Size(item) < 2) {
       continue;
@@ -190,45 +191,45 @@ Block *PopUpNew(PyMOLGlobals * G, int x, int y, int last_x, int last_y,
     str = PyString_AsString(elem);
     cl = l;
     c = str;
-    while(*c) {
-      if(TextStartsWithColorCode(c)) {  /* discount the markup */
-          c += 3;
-          cl -= 4;
+    while (*c) {
+      if (TextStartsWithColorCode(c)) { /* discount the markup */
+        c += 3;
+        cl -= 4;
       }
       c++;
     }
-    if(cl > cmx)
+    if (cl > cmx)
       cmx = cl;
-    if(l > mx)
+    if (l > mx)
       mx = l;
   }
   I->Width = (cmx * cPopUpCharWidth) + 2 * cPopUpCharMargin;
 
   dim[0] = I->NLine + 1;
   dim[1] = mx + 1;
-  I->Text = (char **) UtilArrayCalloc((unsigned int *) (void *) dim, 2, 1);
+  I->Text = (char**) UtilArrayCalloc((unsigned int*) (void*) dim, 2, 1);
 
   mx = 1;
-  for(a = 0; a < I->NLine; a++) {
+  for (a = 0; a < I->NLine; a++) {
     PyObject* item = PyList_GetItem(list, a);
     if (PyList_Size(item) > 2) {
       PyObject* command = PyList_GetItem(item, 2);
-      if(PyString_Check(command)) {
-	l = PyString_Size(command);
-	if(l > mx)
-	  mx = l;
+      if (PyString_Check(command)) {
+        l = PyString_Size(command);
+        if (l > mx)
+          mx = l;
       }
     }
   }
   dim[0] = I->NLine + 1;
   dim[1] = mx + 1;
-  I->Command = (char **) UtilArrayCalloc((unsigned int *) (void *) dim, 2, 1);
+  I->Command = (char**) UtilArrayCalloc((unsigned int*) (void*) dim, 2, 1);
 
   I->Code = pymol::malloc<int>(I->NLine + 1);
-  I->Sub = pymol::calloc<PyObject *>(I->NLine + 1);
+  I->Sub = pymol::calloc<PyObject*>(I->NLine + 1);
 
-  for(a = 0; a < I->NLine; a++) {
-    PyObject *command;
+  for (a = 0; a < I->NLine; a++) {
+    PyObject* command;
     elem = PyList_GetItem(list, a);
     I->Code[a] = PyInt_AsLong(PyList_GetItem(elem, 0));
     if (I->Code[a] == 0) {
@@ -239,12 +240,12 @@ Block *PopUpNew(PyMOLGlobals * G, int x, int y, int last_x, int last_y,
       continue;
     }
     command = PyList_GetItem(elem, 2);
-    if(command) {
-      if(PyString_Check(command)) {
-	strcpy(I->Command[a], PyString_AsString(command));
+    if (command) {
+      if (PyString_Check(command)) {
+        strcpy(I->Command[a], PyString_AsString(command));
       } else {
-	Py_INCREF(command);
-	I->Sub[a] = command;
+        Py_INCREF(command);
+        I->Sub[a] = command;
       }
     }
   }
@@ -265,30 +266,28 @@ Block *PopUpNew(PyMOLGlobals * G, int x, int y, int last_x, int last_y,
   OrthoGrab(G, I);
   OrthoDirty(G);
 
-  if(passive)
+  if (passive)
     PyMOL_SetPassive(G->PyMOL, true);
 
   PAutoUnblock(G, blocked);
 
-  OrthoInvalidateDoDraw(G);  
+  OrthoInvalidateDoDraw(G);
   return I;
 #endif
-
 }
 
-
 /*========================================================================*/
-int PopUpConvertY(CPopUp * I, int value, int mode)
+int PopUpConvertY(CPopUp* I, int value, int mode)
 {
   int result;
   int a;
   int flag;
-  if(mode) {
+  if (mode) {
     result = 0;
 
     /* line to height */
-    for(a = 0; a < I->NLine; a++) {
-      if(a >= value)
+    for (a = 0; a < I->NLine; a++) {
+      if (a >= value)
         break;
       switch (I->Code[a]) {
       case 0:
@@ -305,35 +304,35 @@ int PopUpConvertY(CPopUp * I, int value, int mode)
   } else {
     flag = false;
     /* height to line */
-    if(value < 0) {
+    if (value < 0) {
       result = -1;
     } else {
       result = 0;
-      for(a = 0; a < I->NLine; a++) {
+      for (a = 0; a < I->NLine; a++) {
         switch (I->Code[a]) {
         case 0:
-          if(value < cPopUpBarHeight)
+          if (value < cPopUpBarHeight)
             flag = true;
           value -= cPopUpBarHeight;
           break;
         case 1:
-          if(value < cPopUpLineHeight)
+          if (value < cPopUpLineHeight)
             flag = true;
           value -= cPopUpLineHeight;
           break;
         case 2:
-          if(value < cPopUpLineHeight)
+          if (value < cPopUpLineHeight)
             flag = true;
           value -= cPopUpTitleHeight;
           break;
         }
-        if(flag)
+        if (flag)
           break;
         result++;
       }
-      if(!flag)
+      if (!flag)
         result = -1;
-      else if(result && !I->Code[result])
+      else if (result && !I->Code[result])
         result--;
     }
     /* height to line */
@@ -341,53 +340,51 @@ int PopUpConvertY(CPopUp * I, int value, int mode)
   return (result);
 }
 
-
 /*========================================================================*/
 
-static void PopUpDetachRecursiveChild(Block * block)
+static void PopUpDetachRecursiveChild(Block* block)
 {
-  PyMOLGlobals *G = block->m_G;
-  CPopUp *I = (CPopUp *) block->reference;
+  PyMOLGlobals* G = block->m_G;
+  CPopUp* I = (CPopUp*) block->reference;
 
   OrthoDetach(G, block);
-  if(I->Child)
+  if (I->Child)
     PopUpDetachRecursiveChild(I->Child);
 }
 
-
 /*========================================================================*/
 
-static void PopUpForgetChild(Block * block)
+static void PopUpForgetChild(Block* block)
 {
 
-  CPopUp *I = (CPopUp *) block->reference;
+  CPopUp* I = (CPopUp*) block->reference;
   I->Child = nullptr;
 }
 
-static void PopUpRecursiveDetach(Block * block)
+static void PopUpRecursiveDetach(Block* block)
 {
-  PyMOLGlobals *G = block->m_G;
-  CPopUp *I = (CPopUp *) block->reference;
+  PyMOLGlobals* G = block->m_G;
+  CPopUp* I = (CPopUp*) block->reference;
   OrthoDetach(G, block);
-  if(I->Child)
+  if (I->Child)
     PopUpDetachRecursiveChild(I->Child);
-  if(I->Parent) {
+  if (I->Parent) {
     PopUpForgetChild(I->Parent);
     PopUpRecursiveDetach(I->Parent);
   }
 }
 
-static void PopUpFree(Block * block)
+static void PopUpFree(Block* block)
 {
-  PyMOLGlobals *G = block->m_G;
-  CPopUp *I = (CPopUp *) block->reference;
+  PyMOLGlobals* G = block->m_G;
+  CPopUp* I = (CPopUp*) block->reference;
 
 #ifndef _PYMOL_NOPY
-  {                             /* purge code */
+  { /* purge code */
     int a;
     int blocked = PAutoBlock(G);
-    for(a = 0; a < I->NLine; a++)
-      if(I->Sub[a]) {
+    for (a = 0; a < I->NLine; a++)
+      if (I->Sub[a]) {
         Py_DECREF(I->Sub[a]);
       }
     PAutoUnblock(G, blocked);
@@ -400,75 +397,73 @@ static void PopUpFree(Block * block)
   FreeP(I->Command);
   FreeP(I->Text);
   DeleteP(I);
-
 }
 
-static void PopUpRecursiveFree(Block * block)
+static void PopUpRecursiveFree(Block* block)
 {
 
-  CPopUp *I = (CPopUp *) block->reference;
+  CPopUp* I = (CPopUp*) block->reference;
 
-  if(I->Child)
+  if (I->Child)
     PopUpFree(I->Child);
   I->Child = nullptr;
-  if(I->Parent) {
+  if (I->Parent) {
     PopUpForgetChild(I->Parent);
     PopUpRecursiveFree(I->Parent);
   }
   PopUpFree(block);
 }
 
-static void PopUpFreeRecursiveChild(Block * block)
+static void PopUpFreeRecursiveChild(Block* block)
 {
-  CPopUp *I = (CPopUp *) block->reference;
-  if(I->Child)
+  CPopUp* I = (CPopUp*) block->reference;
+  if (I->Child)
     PopUpFreeRecursiveChild(I->Child);
   I->Child = nullptr;
   PopUpFree(block);
 }
 
-
 /*========================================================================*/
 int CPopUp::release(int button, int x, int y, int mod)
 {
-  PyMOLGlobals *G = m_G;
-  CPopUp *I = (CPopUp *) reference;
+  PyMOLGlobals* G = m_G;
+  CPopUp* I = (CPopUp*) reference;
   int gone_passive = false;
 
   int scroll_dy = 10;
   switch (button) {
-    case PYMOL_BUTTON_SCROLL_FORWARD:
-      scroll_dy *= -1;
-    case PYMOL_BUTTON_SCROLL_REVERSE:
-      translate(0, scroll_dy);
-      return 1;
+  case PYMOL_BUTTON_SCROLL_FORWARD:
+    scroll_dy *= -1;
+  case PYMOL_BUTTON_SCROLL_REVERSE:
+    translate(0, scroll_dy);
+    return 1;
   }
 
-  if(I->NeverDragged) {
-    if(I->PassiveDelay > UtilGetSeconds(G)) {
+  if (I->NeverDragged) {
+    if (I->PassiveDelay > UtilGetSeconds(G)) {
       gone_passive = true;
-      I->PassiveDelay = UtilGetSeconds(G);      /* kill any further delay */
+      I->PassiveDelay = UtilGetSeconds(G); /* kill any further delay */
     }
   }
-  if(!gone_passive) {
-    if(!I->NeverDragged)
+  if (!gone_passive) {
+    if (!I->NeverDragged)
       drag(x, y, mod);
 
     /* go passive if we click and release on a sub-menu */
 
-    if((I->Selected >= 0) && (I->Sub[I->Selected])) {
-      if((x >= I->rect.left) && (x <= I->rect.right)) {
+    if ((I->Selected >= 0) && (I->Sub[I->Selected])) {
+      if ((x >= I->rect.left) && (x <= I->rect.right)) {
         gone_passive = true;
       }
     }
   }
-  if(gone_passive) {
+  if (gone_passive) {
     PyMOL_SetPassive(G->PyMOL, true);
   } else {
     OrthoUngrab(G);
     PopUpRecursiveDetach(this);
-    if(!I->NeverDragged)
-      if((I->Selected >= 0) && (!I->Sub[I->Selected])) {
+    if (!I->NeverDragged)
+      if ((I->Selected >= 0) && (!I->Sub[I->Selected])) {
         PLog(G, I->Command[I->Selected], cPLog_pym);
         PParse(G, I->Command[I->Selected]);
         PFlush(G);
@@ -479,17 +474,16 @@ int CPopUp::release(int button, int x, int y, int mod)
   return (1);
 }
 
-
 /*========================================================================*/
 int CPopUp::drag(int x, int y, int mod)
 {
-  PyMOLGlobals *G = m_G;
-  CPopUp *I = (CPopUp *) reference;
+  PyMOLGlobals* G = m_G;
+  CPopUp* I = (CPopUp*) reference;
 
   int a;
   int was = I->Selected;
 
-  if((!I->NeverDragged) && (((I->StartX - x) > 4) || ((I->StartY - y) > 4)))
+  if ((!I->NeverDragged) && (((I->StartX - x) > 4) || ((I->StartY - y) > 4)))
     I->NeverDragged = false;
 
   I->LastX = x;
@@ -498,40 +492,40 @@ int CPopUp::drag(int x, int y, int mod)
   x -= I->rect.left;
   y = (I->rect.top - cPopUpCharMargin) - y - 1;
 
-  if((x < -2) || (x > (I->Width + 2))) {
+  if ((x < -2) || (x > (I->Width + 2))) {
     int handled_flag = false;
-    if(I->Child) {
-      if(PopUpRecursiveFind(I->Child, I->LastX, I->LastY) == I->Child) {
+    if (I->Child) {
+      if (PopUpRecursiveFind(I->Child, I->LastX, I->LastY) == I->Child) {
         I->Selected = I->ChildLine;
         handled_flag = true;
       }
     }
-    if(!handled_flag) {
-      if(I->Parent) {           /* are we back in the parent window? */
+    if (!handled_flag) {
+      if (I->Parent) { /* are we back in the parent window? */
         I->Selected = -1;
         return I->Parent->drag(I->LastX, I->LastY, mod);
-      } else if(!I->Child) {
+      } else if (!I->Child) {
         I->Selected = -1;
       }
     }
   } else {
     OrthoGrab(G, this);
     a = PopUpConvertY(I, y, false);
-    if(I->NLine && (a == I->NLine))
-      if((y - a * cPopUpLineHeight) < 4)
+    if (I->NLine && (a == I->NLine))
+      if ((y - a * cPopUpLineHeight) < 4)
         a = I->NLine - 1;
-    if((a < 0) || (a >= I->NLine))
+    if ((a < 0) || (a >= I->NLine))
       I->Selected = -1;
     else {
-      if(I->Code[a] == 1) {
-        if((I->Child) && (I->ChildLine != a)) {
-          if(I->ChildDelay < UtilGetSeconds(G)) {
+      if (I->Code[a] == 1) {
+        if ((I->Child) && (I->ChildLine != a)) {
+          if (I->ChildDelay < UtilGetSeconds(G)) {
             PopUpDetachRecursiveChild(I->Child);
             PopUpFreeRecursiveChild(I->Child);
             I->Child = nullptr;
             I->ChildLine = -1;
             OrthoDirty(G);
-	    OrthoInvalidateDoDraw(G);
+            OrthoInvalidateDoDraw(G);
           } else {
             I->Selected = a;
           }
@@ -539,68 +533,69 @@ int CPopUp::drag(int x, int y, int mod)
         }
       }
 
-      if(I->Code[a] != 1)
+      if (I->Code[a] != 1)
         I->Selected = -1;
       else {
         /* activate submenu */
-        PyObject * sub_a = SubGetItem(G, I->Sub, a);
-        if(!sub_a) {
+        PyObject* sub_a = SubGetItem(G, I->Sub, a);
+        if (!sub_a) {
           // do nothing
-        } else if(!I->Child) {
+        } else if (!I->Child) {
           I->ChildLine = a;
-          if(I->ChildDelay > UtilGetSeconds(G)) {
-            PyMOL_NeedFakeDrag(G->PyMOL);       /* keep coming back here... */
+          if (I->ChildDelay > UtilGetSeconds(G)) {
+            PyMOL_NeedFakeDrag(G->PyMOL); /* keep coming back here... */
           } else {
             I->Child = PopUpNew(G, I->LastX - 300, I->LastY, I->LastX, I->LastY,
-                                false, sub_a, I);
+                false, sub_a, I);
             {
               int target_y =
-                rect.top - (PopUpConvertY(I, a, true) + cPopUpCharMargin);
-              CPopUp *child = (CPopUp *) (I->Child->reference);
-              if(child->NLine)
-                if(child->Code[0] != 1)
+                  rect.top - (PopUpConvertY(I, a, true) + cPopUpCharMargin);
+              CPopUp* child = (CPopUp*) (I->Child->reference);
+              if (child->NLine)
+                if (child->Code[0] != 1)
                   target_y += cPopUpTitleHeight + 2;
               child->PlacementAffinity = PopPlaceChild(I->Child, rect.left - 5,
-                                                       rect.right + 5, target_y,
-                                                       I->PlacementAffinity);
+                  rect.right + 5, target_y, I->PlacementAffinity);
             }
 
             OrthoGrab(G, this);
-            I->ChildDelay = UtilGetSeconds(G) + cChildDelay;    /* leave child up for a while */
+            I->ChildDelay = UtilGetSeconds(G) +
+                            cChildDelay; /* leave child up for a while */
           }
           PyMOL_NeedFakeDrag(G->PyMOL); /* keep coming back here... */
-        } else if(I->ChildLine == a) {  /* on correct line */
-          I->ChildDelay = UtilGetSeconds(G) + cChildDelay;      /* keep child here for a while */
+        } else if (I->ChildLine == a) { /* on correct line */
+          I->ChildDelay =
+              UtilGetSeconds(G) + cChildDelay; /* keep child here for a while */
         }
         I->Selected = a;
       }
     }
   }
-  /* delay updates, etc. so that child menus 
+  /* delay updates, etc. so that child menus
      can be comfortably accessed with sloppy mousing */
 
-  if((I->Child) && (I->Selected != I->ChildLine))
+  if ((I->Child) && (I->Selected != I->ChildLine))
     PyMOL_NeedFakeDrag(G->PyMOL);
 
-  if(was != I->Selected) {
+  if (was != I->Selected) {
 
     I->NeverDragged = false;
-    if(!I->Child) {
+    if (!I->Child) {
       /* we moved, so renew the child delay */
       I->ChildDelay = UtilGetSeconds(G) + cChildDelay;
       PyMOL_NeedFakeDrag(G->PyMOL);
     }
 
-    if((I->Child) && (I->Selected != I->ChildLine)) {
+    if ((I->Child) && (I->Selected != I->ChildLine)) {
       I->DirtyDelayFlag = true;
       I->DirtyDelay = UtilGetSeconds(G) + cDirtyDelay;
     }
-    if(!I->DirtyDelayFlag){
+    if (!I->DirtyDelayFlag) {
       OrthoDirty(G);
       OrthoInvalidateDoDraw(G);
     }
   }
-  if(I->DirtyDelayFlag && (I->DirtyDelay < UtilGetSeconds(G))) {
+  if (I->DirtyDelayFlag && (I->DirtyDelay < UtilGetSeconds(G))) {
     I->DirtyDelayFlag = false;
     OrthoDirty(G);
     OrthoInvalidateDoDraw(G);
@@ -608,23 +603,22 @@ int CPopUp::drag(int x, int y, int mod)
   return (1);
 }
 
-
 /*========================================================================*/
 void CPopUp::draw(CGO* orthoCGO)
 {
-  CPopUp *I = this; // TODO: Remove I during PopUp refactor
-  PyMOLGlobals *G = m_G;
+  CPopUp* I = this; // TODO: Remove I during PopUp refactor
+  PyMOLGlobals* G = m_G;
   int x, y, a, xx;
-  char *c;
+  char* c;
 
-  if(G->HaveGUI && G->ValidContext) {
+  if (G->HaveGUI && G->ValidContext) {
 
-    if((I->Child) && (I->Selected != I->ChildLine))
+    if ((I->Child) && (I->Selected != I->ChildLine))
       PyMOL_NeedFakeDrag(G->PyMOL);
 
     /* put raised border around pop-up menu */
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.2F, 0.2F, 0.4F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, rect.left - 2, rect.bottom - 2, 0.f);
@@ -642,7 +636,7 @@ void CPopUp::draw(CGO* orthoCGO)
       glEnd();
     }
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.4F, 0.4F, 0.6F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, rect.left - 1, rect.bottom - 1, 0.f);
@@ -661,7 +655,7 @@ void CPopUp::draw(CGO* orthoCGO)
     }
     /* right */
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.2F, 0.2F, 0.4F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, rect.right, rect.bottom - 2, 0.f);
@@ -679,7 +673,7 @@ void CPopUp::draw(CGO* orthoCGO)
       glEnd();
     }
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.4F, 0.4F, 0.6F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, rect.right, rect.bottom - 1, 0.f);
@@ -698,7 +692,7 @@ void CPopUp::draw(CGO* orthoCGO)
     }
     /* top */
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.5F, 0.5F, 0.7F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, rect.left - 2, rect.top + 2, 0.f);
@@ -716,7 +710,7 @@ void CPopUp::draw(CGO* orthoCGO)
       glEnd();
     }
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.6F, 0.6F, 0.8F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, rect.left - 1, rect.top + 1, 0.f);
@@ -735,7 +729,7 @@ void CPopUp::draw(CGO* orthoCGO)
     }
 
     /* left */
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.5F, 0.5F, 0.7F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, rect.left - 2, rect.bottom - 2, 0.f);
@@ -753,7 +747,7 @@ void CPopUp::draw(CGO* orthoCGO)
       glEnd();
     }
 
-    if (orthoCGO){
+    if (orthoCGO) {
       CGOColor(orthoCGO, 0.6F, 0.6F, 0.8F);
       CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
       CGOVertex(orthoCGO, rect.left - 1, rect.bottom - 1, 0.f);
@@ -786,91 +780,94 @@ void CPopUp::draw(CGO* orthoCGO)
       glColor3fv(TextColor);
 #endif
 
-    if(I->Selected >= 0) {
+    if (I->Selected >= 0) {
 
       x = rect.left;
       y = rect.top - PopUpConvertY(I, I->Selected, true) - cPopUpCharMargin;
 
       y += 2;
-    if (orthoCGO){
-      CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-      CGOVertex(orthoCGO, x, y, 0.f);
-      CGOVertex(orthoCGO, x + I->Width - 1, y, 0.f);
-      CGOVertex(orthoCGO, x, y - (cPopUpLineHeight + 3), 0.f);
-      CGOVertex(orthoCGO, x + I->Width - 1, y - (cPopUpLineHeight + 3), 0.f);
-      CGOEnd(orthoCGO);
-    } else {
-      glBegin(GL_POLYGON);
-      glVertex2i(x, y);
-      glVertex2i(x + I->Width - 1, y);
-      glVertex2i(x + I->Width - 1, y - (cPopUpLineHeight + 3));
-      glVertex2i(x, y - (cPopUpLineHeight + 3));
-      glEnd();
+      if (orthoCGO) {
+        CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+        CGOVertex(orthoCGO, x, y, 0.f);
+        CGOVertex(orthoCGO, x + I->Width - 1, y, 0.f);
+        CGOVertex(orthoCGO, x, y - (cPopUpLineHeight + 3), 0.f);
+        CGOVertex(orthoCGO, x + I->Width - 1, y - (cPopUpLineHeight + 3), 0.f);
+        CGOEnd(orthoCGO);
+      } else {
+        glBegin(GL_POLYGON);
+        glVertex2i(x, y);
+        glVertex2i(x + I->Width - 1, y);
+        glVertex2i(x + I->Width - 1, y - (cPopUpLineHeight + 3));
+        glVertex2i(x, y - (cPopUpLineHeight + 3));
+        glEnd();
+      }
     }
-    }
-    if(I->Code[0] == 2) {       /* menu name */
+    if (I->Code[0] == 2) { /* menu name */
 
       if (SettingGet<InternalGUIMode>(cSetting_internal_gui_mode, G->Setting) ==
-          InternalGUIMode::Default)
-      {
+          InternalGUIMode::Default) {
         if (orthoCGO)
           CGOColor(orthoCGO, 0.3F, 0.3F, 0.6F);
         else
           glColor3f(0.3F, 0.3F, 0.6F);
       } else {
-	if (orthoCGO)
-	  CGOColor(orthoCGO, 1.0F, 1.0F, 1.0F);
-	else
-	  glColor3f(1.0F, 1.0F, 1.0F);
+        if (orthoCGO)
+          CGOColor(orthoCGO, 1.0F, 1.0F, 1.0F);
+        else
+          glColor3f(1.0F, 1.0F, 1.0F);
       }
       x = rect.left;
       y = rect.top;
 
-      if (orthoCGO){
-	CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	CGOVertex(orthoCGO, x, y, 0.f);
-	CGOVertex(orthoCGO, x + I->Width, y, 0.f);
-	CGOVertex(orthoCGO, x, y - (cPopUpLineHeight + cPopUpCharMargin), 0.f);
-	CGOVertex(orthoCGO, x + I->Width, y - (cPopUpLineHeight + cPopUpCharMargin), 0.f);
-	CGOEnd(orthoCGO);
+      if (orthoCGO) {
+        CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+        CGOVertex(orthoCGO, x, y, 0.f);
+        CGOVertex(orthoCGO, x + I->Width, y, 0.f);
+        CGOVertex(orthoCGO, x, y - (cPopUpLineHeight + cPopUpCharMargin), 0.f);
+        CGOVertex(orthoCGO, x + I->Width,
+            y - (cPopUpLineHeight + cPopUpCharMargin), 0.f);
+        CGOEnd(orthoCGO);
       } else {
-	glBegin(GL_POLYGON);
-	glVertex2i(x, y);
-	glVertex2i(x + I->Width, y);
-	glVertex2i(x + I->Width, y - (cPopUpLineHeight + cPopUpCharMargin));
-	glVertex2i(x, y - (cPopUpLineHeight + cPopUpCharMargin));
-	glEnd();
+        glBegin(GL_POLYGON);
+        glVertex2i(x, y);
+        glVertex2i(x + I->Width, y);
+        glVertex2i(x + I->Width, y - (cPopUpLineHeight + cPopUpCharMargin));
+        glVertex2i(x, y - (cPopUpLineHeight + cPopUpCharMargin));
+        glEnd();
       }
 
-      if (orthoCGO){
-	CGOColor(orthoCGO, 0.2F, 0.2F, 0.4F);
-	CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	CGOVertex(orthoCGO, x + I->Width - 1, y - (cPopUpLineHeight + cPopUpCharMargin), 0.f);
-	CGOVertex(orthoCGO, x + I->Width - 1, y - (cPopUpLineHeight + cPopUpCharMargin) - 1.f, 0.f);
-	CGOVertex(orthoCGO, x, y - (cPopUpLineHeight + cPopUpCharMargin), 0.f);
-	CGOVertex(orthoCGO, x, y - (cPopUpLineHeight + cPopUpCharMargin) - 1.f, 0.f);
-	CGOEnd(orthoCGO);
+      if (orthoCGO) {
+        CGOColor(orthoCGO, 0.2F, 0.2F, 0.4F);
+        CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+        CGOVertex(orthoCGO, x + I->Width - 1,
+            y - (cPopUpLineHeight + cPopUpCharMargin), 0.f);
+        CGOVertex(orthoCGO, x + I->Width - 1,
+            y - (cPopUpLineHeight + cPopUpCharMargin) - 1.f, 0.f);
+        CGOVertex(orthoCGO, x, y - (cPopUpLineHeight + cPopUpCharMargin), 0.f);
+        CGOVertex(
+            orthoCGO, x, y - (cPopUpLineHeight + cPopUpCharMargin) - 1.f, 0.f);
+        CGOEnd(orthoCGO);
       } else {
-	glColor3f(0.2F, 0.2F, 0.4F);
-	glBegin(GL_LINES);
-	glVertex2i(x + I->Width - 1, y - (cPopUpLineHeight + cPopUpCharMargin));
-	glVertex2i(x, y - (cPopUpLineHeight + cPopUpCharMargin));
-	glEnd();
+        glColor3f(0.2F, 0.2F, 0.4F);
+        glBegin(GL_LINES);
+        glVertex2i(x + I->Width - 1, y - (cPopUpLineHeight + cPopUpCharMargin));
+        glVertex2i(x, y - (cPopUpLineHeight + cPopUpCharMargin));
+        glEnd();
       }
     }
 
     x = rect.left + cPopUpCharMargin;
     y = (rect.top - cPopUpLineHeight) - cPopUpCharMargin + 2;
 
-    for(a = 0; a < I->NLine; a++) {
+    for (a = 0; a < I->NLine; a++) {
       auto text_color = (a == I->Selected) ? BackColor : TextColor;
       TextSetColor(G, text_color);
-      if(I->Code[a]) {
+      if (I->Code[a]) {
         c = I->Text[a];
         xx = x;
-        while(*c) {
+        while (*c) {
           // note: previously also supported "\\+++red", but was never used
-          if(TextSetColorFromCode(G, c, text_color)) {
+          if (TextSetColorFromCode(G, c, text_color)) {
             c += 4;
           }
 
@@ -879,96 +876,98 @@ void CPopUp::draw(CGO* orthoCGO)
           xx = xx + DIP2PIXEL(8);
         }
 
-        if(I->Sub[a]) {
+        if (I->Sub[a]) {
 
-	  if (orthoCGO){
-	    CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	    CGOColor(orthoCGO, 0.4F, 0.4F, 0.4F);
-	    CGOVertex(orthoCGO, rect.left - 3, y + ((cPopUpLineHeight)) - 4, 0.f);
-	    CGOColor(orthoCGO, 0.4F, 0.4F, 0.4F);
-	    CGOVertex(orthoCGO, rect.left - 3, y + 1, 0.f);
-	    CGOColor(orthoCGO, 0.1F, 0.1F, 0.1F);
-	    CGOVertex(orthoCGO, rect.left, y + ((cPopUpLineHeight)) - 4, 0.f);
-	    CGOColor(orthoCGO, 0.1F, 0.1F, 0.1F);
-	    CGOVertex(orthoCGO, rect.left, y + 1, 0.f);
-	    CGOEnd(orthoCGO);
-	  } else {
-	    glBegin(GL_POLYGON);
-	    glColor3f(0.4F, 0.4F, 0.4F);
-	    glVertex2i(rect.left - 3, y + 1);
-	    glColor3f(0.1F, 0.1F, 0.1F);
-	    glVertex2i(rect.left, y + 1);
-	    glVertex2i(rect.left, y + ((cPopUpLineHeight)) - 4);
-	    glColor3f(0.4F, 0.4F, 0.4F);
-	    glVertex2i(rect.left - 3, y + ((cPopUpLineHeight)) - 4);
-	    glEnd();
-	  }
-	  if (orthoCGO){
-	    CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	    CGOColor(orthoCGO, 0.1F, 0.2F, 0.2F);
-	    CGOVertex(orthoCGO, rect.right, y + 1, 0.f);
-	    CGOColor(orthoCGO, 0.4F, 0.4F, 0.4F);
-	    CGOVertex(orthoCGO, rect.right + 3, y + 1, 0.f);
-	    CGOColor(orthoCGO, 0.1F, 0.2F, 0.2F);
-	    CGOVertex(orthoCGO, rect.right, y + ((cPopUpLineHeight)) - 4, 0.f);
-	    CGOColor(orthoCGO, 0.4F, 0.4F, 0.4F);
-	    CGOVertex(orthoCGO, rect.right + 3, y + ((cPopUpLineHeight)) - 4, 0.f);
-	    CGOEnd(orthoCGO);
-	  } else {
-	    glBegin(GL_POLYGON);
-	    glColor3f(0.1F, 0.2F, 0.2F);
-	    glVertex2i(rect.right, y + 1);
-	    glColor3f(0.4F, 0.4F, 0.4F);
-	    glVertex2i(rect.right + 3, y + 1);
-	    glVertex2i(rect.right + 3, y + ((cPopUpLineHeight)) - 4);
-	    glColor3f(0.1F, 0.2F, 0.2F);
-	    glVertex2i(rect.right, y + ((cPopUpLineHeight)) - 4);
-	    glEnd();
-	  }
+          if (orthoCGO) {
+            CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+            CGOColor(orthoCGO, 0.4F, 0.4F, 0.4F);
+            CGOVertex(
+                orthoCGO, rect.left - 3, y + ((cPopUpLineHeight)) - 4, 0.f);
+            CGOColor(orthoCGO, 0.4F, 0.4F, 0.4F);
+            CGOVertex(orthoCGO, rect.left - 3, y + 1, 0.f);
+            CGOColor(orthoCGO, 0.1F, 0.1F, 0.1F);
+            CGOVertex(orthoCGO, rect.left, y + ((cPopUpLineHeight)) - 4, 0.f);
+            CGOColor(orthoCGO, 0.1F, 0.1F, 0.1F);
+            CGOVertex(orthoCGO, rect.left, y + 1, 0.f);
+            CGOEnd(orthoCGO);
+          } else {
+            glBegin(GL_POLYGON);
+            glColor3f(0.4F, 0.4F, 0.4F);
+            glVertex2i(rect.left - 3, y + 1);
+            glColor3f(0.1F, 0.1F, 0.1F);
+            glVertex2i(rect.left, y + 1);
+            glVertex2i(rect.left, y + ((cPopUpLineHeight)) - 4);
+            glColor3f(0.4F, 0.4F, 0.4F);
+            glVertex2i(rect.left - 3, y + ((cPopUpLineHeight)) - 4);
+            glEnd();
+          }
+          if (orthoCGO) {
+            CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+            CGOColor(orthoCGO, 0.1F, 0.2F, 0.2F);
+            CGOVertex(orthoCGO, rect.right, y + 1, 0.f);
+            CGOColor(orthoCGO, 0.4F, 0.4F, 0.4F);
+            CGOVertex(orthoCGO, rect.right + 3, y + 1, 0.f);
+            CGOColor(orthoCGO, 0.1F, 0.2F, 0.2F);
+            CGOVertex(orthoCGO, rect.right, y + ((cPopUpLineHeight)) - 4, 0.f);
+            CGOColor(orthoCGO, 0.4F, 0.4F, 0.4F);
+            CGOVertex(
+                orthoCGO, rect.right + 3, y + ((cPopUpLineHeight)) - 4, 0.f);
+            CGOEnd(orthoCGO);
+          } else {
+            glBegin(GL_POLYGON);
+            glColor3f(0.1F, 0.2F, 0.2F);
+            glVertex2i(rect.right, y + 1);
+            glColor3f(0.4F, 0.4F, 0.4F);
+            glVertex2i(rect.right + 3, y + 1);
+            glVertex2i(rect.right + 3, y + ((cPopUpLineHeight)) - 4);
+            glColor3f(0.1F, 0.2F, 0.2F);
+            glVertex2i(rect.right, y + ((cPopUpLineHeight)) - 4);
+            glEnd();
+          }
         }
 
         y -= cPopUpLineHeight;
-        if(I->Code[a] == 2)
+        if (I->Code[a] == 2)
           y -= 2;
       } else {
-	  if (orthoCGO){
-	    /* two lines between sections in the menu, one light, one dark */
-	    CGOColor(orthoCGO, 0.3F, 0.3F, 0.5F);
-	    CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	    CGOVertex(orthoCGO, rect.right,
-		      y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4, 0.f);
-	    CGOVertex(orthoCGO, rect.right,
-		      y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 3, 0.f);
-	    CGOVertex(orthoCGO, rect.left,
-		      y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4, 0.f);
-	    CGOVertex(orthoCGO, rect.left,
-		      y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 3, 0.f);
-	    CGOEnd(orthoCGO);
-	    CGOColor(orthoCGO, 0.6F, 0.6F, 0.8F);
-	    CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
-	    CGOVertex(orthoCGO, rect.right,
-		      y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 5, 0.f);
-	    CGOVertex(orthoCGO, rect.right,
-		      y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4, 0.f);
-	    CGOVertex(orthoCGO, rect.left,
-		      y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 5, 0.f);
-	    CGOVertex(orthoCGO, rect.left,
-		      y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4, 0.f);
-	    CGOEnd(orthoCGO);
-	  } else {
-	    glBegin(GL_LINES);
-	    glColor3f(0.3F, 0.3F, 0.5F);
-	    glVertex2i(rect.left,
-		       y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 3);
-	    glVertex2i(rect.right,
-		       y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 3);
-	    glColor3f(0.6F, 0.6F, 0.8F);
-	    glVertex2i(rect.left,
-		       y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4);
-	    glVertex2i(rect.right,
-		       y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4);
-	    glEnd();
-	  }
+        if (orthoCGO) {
+          /* two lines between sections in the menu, one light, one dark */
+          CGOColor(orthoCGO, 0.3F, 0.3F, 0.5F);
+          CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+          CGOVertex(orthoCGO, rect.right,
+              y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4, 0.f);
+          CGOVertex(orthoCGO, rect.right,
+              y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 3, 0.f);
+          CGOVertex(orthoCGO, rect.left,
+              y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4, 0.f);
+          CGOVertex(orthoCGO, rect.left,
+              y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 3, 0.f);
+          CGOEnd(orthoCGO);
+          CGOColor(orthoCGO, 0.6F, 0.6F, 0.8F);
+          CGOBegin(orthoCGO, GL_TRIANGLE_STRIP);
+          CGOVertex(orthoCGO, rect.right,
+              y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 5, 0.f);
+          CGOVertex(orthoCGO, rect.right,
+              y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4, 0.f);
+          CGOVertex(orthoCGO, rect.left,
+              y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 5, 0.f);
+          CGOVertex(orthoCGO, rect.left,
+              y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4, 0.f);
+          CGOEnd(orthoCGO);
+        } else {
+          glBegin(GL_LINES);
+          glColor3f(0.3F, 0.3F, 0.5F);
+          glVertex2i(
+              rect.left, y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 3);
+          glVertex2i(
+              rect.right, y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 3);
+          glColor3f(0.6F, 0.6F, 0.8F);
+          glVertex2i(
+              rect.left, y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4);
+          glVertex2i(
+              rect.right, y + ((cPopUpLineHeight + cPopUpCharMargin) / 2) + 4);
+          glEnd();
+        }
         y -= cPopUpBarHeight;
       }
     }

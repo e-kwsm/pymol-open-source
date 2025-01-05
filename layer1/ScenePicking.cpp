@@ -1,29 +1,29 @@
 
 
-#include"Base.h"
-#include"Scene.h"
-#include"ScenePicking.h"
-#include"SceneRender.h"
-#include"ShaderMgr.h"
-#include"MemoryDebug.h"
-#include"PyMOL.h"
-#include"P.h"
+#include "ScenePicking.h"
+#include "Base.h"
 #include "Err.h"
-#include "Picking.h"
 #include "Feedback.h"
+#include "MemoryDebug.h"
+#include "P.h"
+#include "Picking.h"
+#include "PyMOL.h"
+#include "Scene.h"
+#include "SceneRender.h"
+#include "ShaderMgr.h"
 
 #define cRange 7
 
-int SceneDoXYPick(PyMOLGlobals * G, int x, int y, ClickSide click_side)
+int SceneDoXYPick(PyMOLGlobals* G, int x, int y, ClickSide click_side)
 {
-  CScene *I = G->Scene;
+  CScene* I = G->Scene;
   int defer_builds_mode = SettingGet<int>(G, cSetting_defer_builds_mode);
 
-  if(defer_builds_mode == 5)    /* force generation of a pickable version */
+  if (defer_builds_mode == 5) /* force generation of a pickable version */
     SceneUpdate(G, true);
   if (OrthoGetOverlayStatus(G) || SettingGet<int>(G, cSetting_text)) {
     SceneRenderInfo renderInfo{};
-    SceneRender(G, renderInfo);       /* remove overlay if present */
+    SceneRender(G, renderInfo); /* remove overlay if present */
   }
   SceneDontCopyNext(G);
 
@@ -65,7 +65,8 @@ static void PickColorConverterSetRgbaBitsFromGL(
   }
 
   if (currentFrameBuffer != G->ShaderMgr->defaultBackbuffer.framebuffer) {
-    glBindFramebuffer(GL_FRAMEBUFFER, G->ShaderMgr->defaultBackbuffer.framebuffer);
+    glBindFramebuffer(
+        GL_FRAMEBUFFER, G->ShaderMgr->defaultBackbuffer.framebuffer);
   }
 
   glGetIntegerv(GL_RED_BITS, rgba_bits + 0);
@@ -90,7 +91,7 @@ static void PickColorConverterSetRgbaBitsFromGL(
 static std::vector<unsigned> SceneGetPickIndices(PyMOLGlobals* G,
     SceneUnitContext* context, int x, int y, int w, int h, GLenum gl_buffer)
 {
-  CScene *I = G->Scene;
+  CScene* I = G->Scene;
   auto& pickmgr = I->pickmgr;
   const auto use_shaders = SettingGet<bool>(G, cSetting_use_shaders);
 
@@ -119,18 +120,19 @@ static std::vector<unsigned> SceneGetPickIndices(PyMOLGlobals* G,
     }
     {
       int slot;
-      for(slot = 0; slot <= I->grid.last_slot; slot++) {
-        if(I->grid.active) {
+      for (slot = 0; slot <= I->grid.last_slot; slot++) {
+        if (I->grid.active) {
           GridSetViewport(G, &I->grid, slot);
         }
-        SceneRenderAll(G, context, nullptr, &pickmgr, RenderPass::Antialias, true,
-            0.0F, &I->grid, 0, SceneRenderWhich::All, SceneRenderOrder::GadgetsLast);
+        SceneRenderAll(G, context, nullptr, &pickmgr, RenderPass::Antialias,
+            true, 0.0F, &I->grid, 0, SceneRenderWhich::All,
+            SceneRenderOrder::GadgetsLast);
       }
     }
 
 #ifndef _PYMOL_NO_MAIN
     const auto debug_pick = SettingGet<int>(G, cSetting_debug_pick);
-    if(debug_pick) {
+    if (debug_pick) {
       PyMOL_SwapBuffers(G->PyMOL);
       PSleep(G, 1000000 * debug_pick / 4);
       PyMOL_SwapBuffers(G->PyMOL);
@@ -159,14 +161,14 @@ static std::vector<unsigned> SceneGetPickIndices(PyMOLGlobals* G,
 
     if (pass + 1 == pass_max) {
       PRINTFB(G, FB_Scene, FB_Warnings)
-        " Scene-Warning: Maximum number of picking passes exceeded\n"
-        " (%u picking colors, %u color bits)\n",
-        pickmgr.count(), shift_per_pass ENDFB(G);
+      " Scene-Warning: Maximum number of picking passes exceeded\n"
+      " (%u picking colors, %u color bits)\n",
+          pickmgr.count(), shift_per_pass ENDFB(G);
       break;
     }
   }
 
-  if(I->grid.active)
+  if (I->grid.active)
     GridSetViewport(G, &I->grid, -1);
 
   pickmgr.m_valid = true;
@@ -185,7 +187,7 @@ static void SceneRenderPickingSinglePick(PyMOLGlobals* G,
     SceneUnitContext* context, Picking* pick, int x, int y,
     GLenum render_buffer)
 {
-  CScene *I = G->Scene;
+  CScene* I = G->Scene;
   const int debug_pick = SettingGet<int>(G, cSetting_debug_pick);
   const int cRangeVal = DIP2PIXEL(cRange);
   const int h = (cRangeVal * 2 + 1), w = (cRangeVal * 2 + 1);
@@ -213,10 +215,10 @@ static void SceneRenderPickingSinglePick(PyMOLGlobals* G,
 
   if (pik) {
     *pick = *pik;
-    if(debug_pick) {
+    if (debug_pick) {
       PRINTFB(G, FB_Scene, FB_Details)
-	" SceneClick-Detail: obj %p index %d bond %d\n",
-	pick->context.object, pick->src.index, pick->src.bond ENDFB(G);
+      " SceneClick-Detail: obj %p index %d bond %d\n", pick->context.object,
+          pick->src.index, pick->src.bond ENDFB(G);
     }
     // if cPickableNoPick then set object to nullptr since nothing picked
     if (pick->src.bond == cPickableNoPick)
@@ -228,10 +230,11 @@ static void SceneRenderPickingSinglePick(PyMOLGlobals* G,
 #ifndef PURE_OPENGL_ES_2
   /* Picking changes the Shading model to GL_FLAT,
      we need to change it back to GL_SMOOTH. This is because
-     bg_grad() might be called in OrthoDoDraw() before GL 
+     bg_grad() might be called in OrthoDoDraw() before GL
      settings are set in SceneRender() */
   //      glEnable(GL_COLOR_MATERIAL);
-  glShadeModel(SettingGetGlobal_b(G, cSetting_pick_shading) ? GL_FLAT : GL_SMOOTH);
+  glShadeModel(
+      SettingGetGlobal_b(G, cSetting_pick_shading) ? GL_FLAT : GL_SMOOTH);
 #endif
 }
 
@@ -240,9 +243,10 @@ static void SceneRenderPickingSinglePick(PyMOLGlobals* G,
  * @param[in,out] smp Defines the (x,y,w,h) rectangle (input), and takes the
  * picking result in `smp->picked` (output)
  */
-static
-void SceneRenderPickingMultiPick(PyMOLGlobals * G, SceneUnitContext *context, Multipick * smp, GLenum render_buffer){
-  CScene *I = G->Scene;
+static void SceneRenderPickingMultiPick(PyMOLGlobals* G,
+    SceneUnitContext* context, Multipick* smp, GLenum render_buffer)
+{
+  CScene* I = G->Scene;
   Picking previous;
 
   assert(smp->picked.empty());
@@ -250,7 +254,7 @@ void SceneRenderPickingMultiPick(PyMOLGlobals * G, SceneUnitContext *context, Mu
   auto indices = SceneGetPickIndices(G, context, smp->x, smp->y,
       std::max(1, smp->w), std::max(1, smp->h), render_buffer);
 
-  /* need to scissor this */ 
+  /* need to scissor this */
   for (auto index : indices) {
     const auto* pik = I->pickmgr.getIdentifier(index);
     if (pik) {
@@ -266,10 +270,11 @@ void SceneRenderPickingMultiPick(PyMOLGlobals * G, SceneUnitContext *context, Mu
 #ifndef PURE_OPENGL_ES_2
   /* Picking changes the Shading model to GL_FLAT,
      we need to change it back to GL_SMOOTH. This is because
-     bg_grad() might be called in OrthoDoDraw() before GL 
+     bg_grad() might be called in OrthoDoDraw() before GL
      settings are set in SceneRender() */
   //      glEnable(GL_COLOR_MATERIAL);
-  glShadeModel(SettingGetGlobal_b(G, cSetting_pick_shading) ? GL_FLAT : GL_SMOOTH);
+  glShadeModel(
+      SettingGetGlobal_b(G, cSetting_pick_shading) ? GL_FLAT : GL_SMOOTH);
 #endif
 }
 
@@ -277,7 +282,7 @@ void SceneRenderPicking(PyMOLGlobals* G, int stereo_mode, ClickSide click_side,
     int stereo_double_pump_mono, Picking* pick, int x, int y, Multipick* smp,
     SceneUnitContext* context, GLenum render_buffer)
 {
-  CScene *I = G->Scene;
+  CScene* I = G->Scene;
 
   if (render_buffer == GL_BACK) {
     render_buffer = G->ShaderMgr->defaultBackbuffer.drawBuffer;
@@ -285,12 +290,13 @@ void SceneRenderPicking(PyMOLGlobals* G, int stereo_mode, ClickSide click_side,
 
   SceneSetupGLPicking(G);
 
-  if (!stereo_double_pump_mono){
+  if (!stereo_double_pump_mono) {
     switch (stereo_mode) {
     case cStereo_crosseye:
     case cStereo_walleye:
     case cStereo_sidebyside:
-      SceneSetViewport(G, I->rect.left, I->rect.bottom, I->Width / 2, I->Height);
+      SceneSetViewport(
+          G, I->rect.left, I->rect.bottom, I->Width / 2, I->Height);
       break;
     case cStereo_geowall:
       click_side = OrthoGetWrapClickSide(G);
@@ -298,7 +304,7 @@ void SceneRenderPicking(PyMOLGlobals* G, int stereo_mode, ClickSide click_side,
     }
   }
 #ifndef PURE_OPENGL_ES_2
-  glPushMatrix();           /* 1 */
+  glPushMatrix(); /* 1 */
 #endif
 
   switch (stereo_mode) {
@@ -317,35 +323,35 @@ void SceneRenderPicking(PyMOLGlobals* G, int stereo_mode, ClickSide click_side,
 #endif
   }
   G->ShaderMgr->SetIsPicking(true);
-  if(pick) {
+  if (pick) {
     SceneRenderPickingSinglePick(G, context, pick, x, y, render_buffer);
-  } else if(smp) {
+  } else if (smp) {
     SceneRenderPickingMultiPick(G, context, smp, render_buffer);
   }
   G->ShaderMgr->SetIsPicking(false);
 #ifndef PURE_OPENGL_ES_2
-  glPopMatrix();            /* 1 */
+  glPopMatrix(); /* 1 */
 #endif
 }
 
 /*========================================================================*/
-int SceneMultipick(PyMOLGlobals * G, Multipick * smp)
+int SceneMultipick(PyMOLGlobals* G, Multipick* smp)
 {
-  CScene *I = G->Scene;
+  CScene* I = G->Scene;
   int defer_builds_mode = SettingGet<int>(G, cSetting_defer_builds_mode);
 
-  if(defer_builds_mode == 5)    /* force generation of a pickable version */
+  if (defer_builds_mode == 5) /* force generation of a pickable version */
     SceneUpdate(G, true);
 
   if (OrthoGetOverlayStatus(G) || SettingGet<int>(G, cSetting_text)) {
     SceneRenderInfo renderInfo{};
-    SceneRender(G, renderInfo);       /* remove overlay if present */
+    SceneRender(G, renderInfo); /* remove overlay if present */
   }
   SceneDontCopyNext(G);
 
   auto click_side = ClickSide::None;
   if (StereoIsAdjacent(G)) {
-    if(smp->x > (I->Width / 2))
+    if (smp->x > (I->Width / 2))
       click_side = ClickSide::Right;
     else
       click_side = ClickSide::Left;

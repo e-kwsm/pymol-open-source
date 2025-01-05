@@ -133,8 +133,8 @@ void PickColorConverter::colorNoPick(channel_t* rgba) const
  * Get pick-through color
  * @param[out] rgba RGBA color
  *
- * Note: This only works if the shader discards full-transparent pixels (e.g. may not
- * work in immediate mode)
+ * Note: This only works if the shader discards full-transparent pixels (e.g.
+ * may not work in immediate mode)
  */
 void PickColorConverter::colorPickThrough(channel_t* rgba) const
 {

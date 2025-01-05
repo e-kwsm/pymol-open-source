@@ -3,19 +3,28 @@
  * (c) Schrodinger, Inc.
  */
 
-#include"AtomInfoHistory.h"
-#include"MemoryDebug.h"
+#include "AtomInfoHistory.h"
+#include "MemoryDebug.h"
 
 #define COPY_ATTR(attr_name) dest->attr_name = src->attr_name
-#define COPY_ATTR_ARR_2(attr_name) dest->attr_name[0] = src->attr_name[0]; dest->attr_name[1] = src->attr_name[1]
-#define COPY_ATTR_N(attr_name, N) memcpy( dest->attr_name, src->attr_name, N)
+#define COPY_ATTR_ARR_2(attr_name)                                             \
+  dest->attr_name[0] = src->attr_name[0];                                      \
+  dest->attr_name[1] = src->attr_name[1]
+#define COPY_ATTR_N(attr_name, N) memcpy(dest->attr_name, src->attr_name, N)
 #define COPY_ATTR_S(attr_name) copy_attr_s(dest->attr_name, src->attr_name);
 
-template <typename A>   inline float get_anisou_factor() { return 1.f; }
-template <>             inline float get_anisou_factor<AtomInfoType_1_8_1>() { return 10000.f; }
+template <typename A> inline float get_anisou_factor()
+{
+  return 1.f;
+}
+template <> inline float get_anisou_factor<AtomInfoType_1_8_1>()
+{
+  return 10000.f;
+}
 
 template <typename D, typename S>
-void AtomInfoTypeConverter::copy1(D *dest, const S *src) {
+void AtomInfoTypeConverter::copy1(D* dest, const S* src)
+{
   COPY_ATTR(resv);
   COPY_ATTR(customType);
   COPY_ATTR(priority);
@@ -61,7 +70,7 @@ void AtomInfoTypeConverter::copy1(D *dest, const S *src) {
   COPY_ATTR_N(elem, sizeof(ElemName));
   COPY_ATTR_ARR_2(ssType);
 
-  if (src->has_anisou()){
+  if (src->has_anisou()) {
     auto d_U = dest->get_anisou();
     auto s_U = src->get_anisou();
     if (d_U) {
@@ -73,37 +82,44 @@ void AtomInfoTypeConverter::copy1(D *dest, const S *src) {
 }
 
 template <typename D, typename S>
-void AtomInfoTypeConverter::copyN(D *dest, const S *src) {
-  for (int a = 0; a < NAtom; ++a){
+void AtomInfoTypeConverter::copyN(D* dest, const S* src)
+{
+  for (int a = 0; a < NAtom; ++a) {
     copy1(dest++, src++);
   }
 }
 
-void AtomInfoTypeConverter::copy(AtomInfoType *dest, const void *src, int srcversion) {
-  switch (srcversion){
+void AtomInfoTypeConverter::copy(
+    AtomInfoType* dest, const void* src, int srcversion)
+{
+  switch (srcversion) {
   case 176:
-    copyN(dest, (AtomInfoType_1_7_6*)src);
+    copyN(dest, (AtomInfoType_1_7_6*) src);
     break;
   case 177:
-    copyN(dest, (AtomInfoType_1_7_7*)src);
+    copyN(dest, (AtomInfoType_1_7_7*) src);
     break;
   case 181:
-    copyN(dest, (AtomInfoType_1_8_1*)src);
+    copyN(dest, (AtomInfoType_1_8_1*) src);
     break;
   default:
-    printf("ERROR: Copy_Into_AtomInfoType_From_Version: unknown srcversion=%d from AtomInfoVERSION=%d\n", srcversion, AtomInfoVERSION);
+    printf("ERROR: Copy_Into_AtomInfoType_From_Version: unknown srcversion=%d "
+           "from AtomInfoVERSION=%d\n",
+        srcversion, AtomInfoVERSION);
   }
 }
 
 template <typename D>
-D * AtomInfoTypeConverter::allocCopy(const AtomInfoType *src) {
-  D * dest = VLACalloc(D, NAtom);
+D* AtomInfoTypeConverter::allocCopy(const AtomInfoType* src)
+{
+  D* dest = VLACalloc(D, NAtom);
   copyN(dest, src);
   return dest;
 }
 
-void * AtomInfoTypeConverter::allocCopy(int destversion, const AtomInfoType *src) {
-  switch (destversion){
+void* AtomInfoTypeConverter::allocCopy(int destversion, const AtomInfoType* src)
+{
+  switch (destversion) {
   case 176:
     return allocCopy<AtomInfoType_1_7_6>(src);
   case 177:
@@ -111,6 +127,8 @@ void * AtomInfoTypeConverter::allocCopy(int destversion, const AtomInfoType *src
   case 181:
     return allocCopy<AtomInfoType_1_8_1>(src);
   }
-  printf("ERROR: AtomInfoTypeConverter: unknown destversion=%d from AtomInfoVERSION=%d\n", destversion, AtomInfoVERSION);
+  printf("ERROR: AtomInfoTypeConverter: unknown destversion=%d from "
+         "AtomInfoVERSION=%d\n",
+      destversion, AtomInfoVERSION);
   return nullptr;
 }

@@ -1,61 +1,62 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
 
 #include <algorithm>
 
-#include"os_python.h"
-#include"os_predef.h"
-#include"os_std.h"
-#include"os_gl.h"
-#include"Err.h"
-#include"Util.h"
-#include"Seq.h"
-#include"Seeker.h"
-#include"MemoryDebug.h"
-#include"Executive.h"
-#include"P.h"
-#include"Selector.h"
-#include"Wizard.h"
-#include"Scene.h"
-#include"Menu.h"
+#include "Err.h"
+#include "Executive.h"
 #include "Lex.h"
+#include "MemoryDebug.h"
+#include "Menu.h"
+#include "P.h"
+#include "Scene.h"
+#include "Seeker.h"
+#include "Selector.h"
+#include "Seq.h"
+#include "Util.h"
+#include "Wizard.h"
+#include "os_gl.h"
+#include "os_predef.h"
+#include "os_python.h"
+#include "os_std.h"
 
 struct CSeeker : public CSeqHandler {
   bool dragging;
   SeekerDragInfo dragInfo{};
   double LastClickTime;
 
-
-  CSeqRow* click(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int button, int row, int col,
-                      int mod, int x, int y) override;
-  CSeqRow* drag(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int row, int col, int mod) override;
-  CSeqRow* release(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int button, int row, int col,
-                        int mod) override;
-  void refresh(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA) override;
+  CSeqRow* click(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA, int button,
+      int row, int col, int mod, int x, int y) override;
+  CSeqRow* drag(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA, int row, int col,
+      int mod) override;
+  CSeqRow* release(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA, int button,
+      int row, int col, int mod) override;
+  void refresh(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA) override;
 };
 
-static CSeqRow *SeekerDrag(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int row, int col, int mod);
+static CSeqRow* SeekerDrag(
+    PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA, int row, int col, int mod);
 
-static void SeekerBuildSeleFromAtomList(PyMOLGlobals * G, const char *obj_name, int *atom_list,
-                                        const char *sele_name, int start_fresh)
+static void SeekerBuildSeleFromAtomList(PyMOLGlobals* G, const char* obj_name,
+    int* atom_list, const char* sele_name, int start_fresh)
 {
-  ObjectMolecule *obj = ExecutiveFindObjectMoleculeByName(G, obj_name);
+  ObjectMolecule* obj = ExecutiveFindObjectMoleculeByName(G, obj_name);
 
-  if(start_fresh) {
+  if (start_fresh) {
     SelectorCreateFromObjectIndices(G, sele_name, obj, atom_list, -1);
   } else {
     SelectorCreateFromObjectIndices(G, cTempSeekerSele2, obj, atom_list, -1);
@@ -66,33 +67,33 @@ static void SeekerBuildSeleFromAtomList(PyMOLGlobals * G, const char *obj_name, 
   }
 }
 
-static void SeekerSelectionToggleRange(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int row_num,
-                                       int col_first, int col_last, int inc_or_excl,
-                                       int start_over)
+static void SeekerSelectionToggleRange(PyMOLGlobals* G,
+    std::vector<CSeqRow>& rowVLA, int row_num, int col_first, int col_last,
+    int inc_or_excl, int start_over)
 {
   char selName[WordLength];
 
-  if(row_num >= 0) {
-    CSeqCol *col;
+  if (row_num >= 0) {
+    CSeqCol* col;
     char prefix[3] = "";
     int logging = SettingGetGlobal_i(G, cSetting_logging);
     int col_num;
-    int *atom_vla = nullptr;
+    int* atom_vla = nullptr;
     int n_at = 0;
     int at_idx;
-    int *atom_list;
+    int* atom_list;
 
-    ObjectMolecule *obj;
-    if(logging == cPLog_pml)
+    ObjectMolecule* obj;
+    if (logging == cPLog_pml)
       strcpy(prefix, "_ ");
     auto row = &rowVLA[row_num];
-    if((obj = ExecutiveFindObjectMoleculeByName(G, row->name))) {
+    if ((obj = ExecutiveFindObjectMoleculeByName(G, row->name))) {
       atom_vla = VLAlloc(int, obj->NAtom / 10);
-      for(col_num = col_first; col_num <= col_last; col_num++) {
+      for (col_num = col_first; col_num <= col_last; col_num++) {
         col = row->col + col_num;
-        if(!col->spacer) {
-          if(!start_over) {
-            if(inc_or_excl)
+        if (!col->spacer) {
+          if (!start_over) {
+            if (inc_or_excl)
               col->inverse = true;
             else
               col->inverse = false;
@@ -100,8 +101,9 @@ static void SeekerSelectionToggleRange(PyMOLGlobals * G, std::vector<CSeqRow>& r
             col->inverse = true;
           }
           atom_list = row->atom_lists + col->atom_at;
-          while((at_idx = (*(atom_list++))) >= 0) {     /* build one extra long list 
-                                                           so that we only call selector once */
+          while ((at_idx = (*(atom_list++))) >=
+                 0) { /* build one extra long list
+                         so that we only call selector once */
             VLACheck(atom_vla, int, n_at);
             atom_vla[n_at++] = at_idx;
           }
@@ -109,14 +111,15 @@ static void SeekerSelectionToggleRange(PyMOLGlobals * G, std::vector<CSeqRow>& r
       }
       VLACheck(atom_vla, int, n_at);
       atom_vla[n_at] = -1;
-      SeekerBuildSeleFromAtomList(G, row->name, atom_vla, cTempSeekerSele, true);
+      SeekerBuildSeleFromAtomList(
+          G, row->name, atom_vla, cTempSeekerSele, true);
       VLAFreeP(atom_vla);
 
       {
-        const char *sele_mode_kw;
+        const char* sele_mode_kw;
         sele_mode_kw = SceneGetSeleModeKeyword(G);
 
-        if(logging)
+        if (logging)
           SelectorLogSele(G, cTempSeekerSele);
 
         {
@@ -126,38 +129,40 @@ static void SeekerSelectionToggleRange(PyMOLGlobals * G, std::vector<CSeqRow>& r
 
           /* selection or deselecting? */
 
-          if(!start_over) {
-            if(inc_or_excl) {
+          if (!start_over) {
+            if (inc_or_excl) {
               buf1 = pymol::string_format("((%s(?%s)) or %s(?%s))",
-                      sele_mode_kw, selName, sele_mode_kw, cTempSeekerSele);
+                  sele_mode_kw, selName, sele_mode_kw, cTempSeekerSele);
             } else {
               buf1 = pymol::string_format("((%s(?%s)) and not %s(?%s))",
-                      sele_mode_kw, selName, sele_mode_kw, cTempSeekerSele);
+                  sele_mode_kw, selName, sele_mode_kw, cTempSeekerSele);
             }
           } else {
-            buf1 = pymol::string_format("%s(?%s)", sele_mode_kw, cTempSeekerSele);
+            buf1 =
+                pymol::string_format("%s(?%s)", sele_mode_kw, cTempSeekerSele);
           }
 
           /* create the new active selection */
 
           SelectorCreate(G, selName, buf1.c_str(), nullptr, true, nullptr);
           {
-            auto buf2 = pymol::string_format("%scmd.select(\"%s\",\"%s\",enable=1)\n", prefix, selName,
-                    buf1);
+            auto buf2 =
+                pymol::string_format("%scmd.select(\"%s\",\"%s\",enable=1)\n",
+                    prefix, selName, buf1);
             PLog(G, buf2, cPLog_no_flush);
           }
           WizardDoSelect(G, selName);
-
         }
 
         ExecutiveDelete(G, cTempSeekerSele);
-        if(logging) {
-          auto buf2 = pymol::string_format("%scmd.delete(\"%s\")\n", prefix, cTempSeekerSele);
+        if (logging) {
+          auto buf2 = pymol::string_format(
+              "%scmd.delete(\"%s\")\n", prefix, cTempSeekerSele);
           PLog(G, buf2, cPLog_no_flush);
           PLogFlush(G);
         }
 
-        if(SettingGetGlobal_b(G, cSetting_auto_show_selections))
+        if (SettingGetGlobal_b(G, cSetting_auto_show_selections))
           ExecutiveSetObjVisib(G, selName, 1, false);
         SceneInvalidate(G);
       }
@@ -165,31 +170,32 @@ static void SeekerSelectionToggleRange(PyMOLGlobals * G, std::vector<CSeqRow>& r
   }
 }
 
-static void SeekerSelectionToggle(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int row_num,
-                                  int col_num, int inc_or_excl, int start_over)
+static void SeekerSelectionToggle(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA,
+    int row_num, int col_num, int inc_or_excl, int start_over)
 {
   char selName[WordLength];
 
-  if(row_num >= 0) {
-    int *atom_list;
+  if (row_num >= 0) {
+    int* atom_list;
     char prefix[3] = "";
     int logging = SettingGetGlobal_i(G, cSetting_logging);
 
-    if(logging == cPLog_pml)
+    if (logging == cPLog_pml)
       strcpy(prefix, "_ ");
     auto row = &rowVLA[row_num];
     auto col = &row->col[col_num];
-    if(!col->spacer)
-      if(ExecutiveFindObjectByName(G, row->name)) {
-        const char *sele_mode_kw;
+    if (!col->spacer)
+      if (ExecutiveFindObjectByName(G, row->name)) {
+        const char* sele_mode_kw;
         atom_list = row->atom_lists + col->atom_at;
 
         /* build up a selection consisting of residue atoms */
 
-        SeekerBuildSeleFromAtomList(G, row->name, atom_list, cTempSeekerSele, true);
+        SeekerBuildSeleFromAtomList(
+            G, row->name, atom_list, cTempSeekerSele, true);
         sele_mode_kw = SceneGetSeleModeKeyword(G);
 
-        if(logging)
+        if (logging)
           SelectorLogSele(G, cTempSeekerSele);
 
         {
@@ -198,24 +204,25 @@ static void SeekerSelectionToggle(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA
 
           /* selection or deselecting? */
 
-          if(!start_over) {
-            if(inc_or_excl) {
-              if(!col->spacer) {
+          if (!start_over) {
+            if (inc_or_excl) {
+              if (!col->spacer) {
                 col->inverse = true;
                 buf1 = pymol::string_format("((%s(?%s)) or %s(%s))",
-                        sele_mode_kw, selName, sele_mode_kw, cTempSeekerSele);
+                    sele_mode_kw, selName, sele_mode_kw, cTempSeekerSele);
               }
             } else {
-              if(!col->spacer) {
+              if (!col->spacer) {
                 col->inverse = false;
                 buf1 = pymol::string_format("((%s(?%s)) and not %s(%s))",
-                        sele_mode_kw, selName, sele_mode_kw, cTempSeekerSele);
+                    sele_mode_kw, selName, sele_mode_kw, cTempSeekerSele);
               }
             }
           } else {
-            if(!col->spacer) {
+            if (!col->spacer) {
               col->inverse = true;
-              buf1 = pymol::string_format("%s(%s)", sele_mode_kw, cTempSeekerSele);
+              buf1 =
+                  pymol::string_format("%s(%s)", sele_mode_kw, cTempSeekerSele);
             }
           }
 
@@ -223,114 +230,120 @@ static void SeekerSelectionToggle(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA
 
           SelectorCreate(G, selName, buf1.c_str(), nullptr, true, nullptr);
           {
-            auto buf2 = pymol::string_format("%scmd.select(\"%s\",\"%s\",enable=1)\n", prefix, selName,
-                    buf1);
+            auto buf2 =
+                pymol::string_format("%scmd.select(\"%s\",\"%s\",enable=1)\n",
+                    prefix, selName, buf1);
             PLog(G, buf2, cPLog_no_flush);
           }
           WizardDoSelect(G, selName);
         }
 
         ExecutiveDelete(G, cTempSeekerSele);
-        if(logging) {
-          auto buf2 = pymol::string_format("%scmd.delete(\"%s\")\n", prefix, cTempSeekerSele);
+        if (logging) {
+          auto buf2 = pymol::string_format(
+              "%scmd.delete(\"%s\")\n", prefix, cTempSeekerSele);
           PLog(G, buf2, cPLog_no_flush);
           PLogFlush(G);
         }
 
-        if(SettingGetGlobal_b(G, cSetting_auto_show_selections))
+        if (SettingGetGlobal_b(G, cSetting_auto_show_selections))
           ExecutiveSetObjVisib(G, selName, 1, false);
         SceneInvalidate(G);
       }
   }
 }
 
-void SeekerSelectionUpdateCenter(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int row_num,
-                                        int col_num, int start_over)
+void SeekerSelectionUpdateCenter(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA,
+    int row_num, int col_num, int start_over)
 {
   if (row_num < 0) {
-     return;
+    return;
   }
   auto row = &rowVLA[row_num];
   auto col = &row->col[col_num];
 
-  if(col->spacer) {
+  if (col->spacer) {
     return;
   }
-  if(auto obj = ExecutiveFindObjectByName(G, row->name)) {
+  if (auto obj = ExecutiveFindObjectByName(G, row->name)) {
 
-    if(col->state)
-      SettingSetSmart_i(G, obj->Setting.get(), nullptr, cSetting_state, col->state);
+    if (col->state)
+      SettingSetSmart_i(
+          G, obj->Setting.get(), nullptr, cSetting_state, col->state);
 
     auto* atom_list = &row->atom_lists[col->atom_at];
 
-    SeekerBuildSeleFromAtomList(G, row->name, atom_list, cTempCenterSele,
-                                start_over);
+    SeekerBuildSeleFromAtomList(
+        G, row->name, atom_list, cTempCenterSele, start_over);
     auto logging = SettingGet<bool>(G, cSetting_logging);
-    if(logging)
+    if (logging)
       SelectorLogSele(G, cTempCenterSele);
   }
 }
 
-void SeekerSelectionCenter(PyMOLGlobals * G, int action)
+void SeekerSelectionCenter(PyMOLGlobals* G, int action)
 {
   char prefix[3] = "";
   int logging = SettingGetGlobal_i(G, cSetting_logging);
-  if(logging == cPLog_pml)
+  if (logging == cPLog_pml)
     strcpy(prefix, "_ ");
 
   switch (action) {
-  case 0:                      /* center cumulative */
+  case 0: /* center cumulative */
     ExecutiveCenter(G, cTempCenterSele, -1, true, -1, nullptr, true);
-    if(logging) {
-      auto buf2 = pymol::string_format("%scmd.center(\"%s\")\n", prefix, cTempCenterSele);
+    if (logging) {
+      auto buf2 = pymol::string_format(
+          "%scmd.center(\"%s\")\n", prefix, cTempCenterSele);
       PLog(G, buf2, cPLog_no_flush);
       PLogFlush(G);
     }
     break;
-  case 1:                      /* zoom */
+  case 1: /* zoom */
     ExecutiveWindowZoom(G, cTempCenterSele, 0.0, -1, false, -1, true);
-    if(logging) {
-      auto buf2 = pymol::string_format("%scmd.zoom(\"%s\")\n", prefix, cTempCenterSele);
+    if (logging) {
+      auto buf2 =
+          pymol::string_format("%scmd.zoom(\"%s\")\n", prefix, cTempCenterSele);
       PLog(G, buf2, cPLog_no_flush);
       PLogFlush(G);
     }
     break;
-  case 2:                      /* center seeker */
-    {
-      char selName[WordLength];
-      if(ExecutiveGetActiveSeleName(G, selName, true, logging)) {
-        ExecutiveCenter(G, selName, -1, true, -1, nullptr, true);
-        if(logging) {
-          auto buf2 = pymol::string_format("%scmd.center(\"%s\")\n", prefix, selName);
-          PLog(G, buf2, cPLog_no_flush);
-          PLogFlush(G);
-        }
+  case 2: /* center seeker */
+  {
+    char selName[WordLength];
+    if (ExecutiveGetActiveSeleName(G, selName, true, logging)) {
+      ExecutiveCenter(G, selName, -1, true, -1, nullptr, true);
+      if (logging) {
+        auto buf2 =
+            pymol::string_format("%scmd.center(\"%s\")\n", prefix, selName);
+        PLog(G, buf2, cPLog_no_flush);
+        PLogFlush(G);
       }
     }
-    break;
+  } break;
   }
 }
 
 #define cDoubleTime 0.35
 
-static CSeqRow *SeekerClick(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int button, int row_num,
-                            int col_num, int mod, int x, int y)
+static CSeqRow* SeekerClick(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA,
+    int button, int row_num, int col_num, int mod, int x, int y)
 {
-  CSeqRow *row;
-  CSeqCol *col;
+  CSeqRow* row;
+  CSeqCol* col;
   /*  char selName[WordLength]; */
-  CSeeker *I = G->Seeker;
+  CSeeker* I = G->Seeker;
   int logging = SettingGetGlobal_i(G, cSetting_logging);
   int continuation = false;
-  if((row_num < 0) || (col_num < 0)) {
+  if ((row_num < 0) || (col_num < 0)) {
     switch (button) {
     case P_GLUT_LEFT_BUTTON:
-      if((UtilGetSeconds(G) - I->LastClickTime) < cDoubleTime) {
+      if ((UtilGetSeconds(G) - I->LastClickTime) < cDoubleTime) {
         char name[WordLength];
-        if(ExecutiveGetActiveSeleName(G, name, false, false)) {
+        if (ExecutiveGetActiveSeleName(G, name, false, false)) {
           SelectorCreate(G, name, "none", nullptr, true, nullptr);
-          if(logging) {
-            auto buf2 = pymol::string_format("cmd.select('%s','none', enable=1)", name);
+          if (logging) {
+            auto buf2 =
+                pymol::string_format("cmd.select('%s','none', enable=1)", name);
             PLog(G, buf2, cPLog_no_flush);
           }
           SeqDirty(G);
@@ -346,56 +359,54 @@ static CSeqRow *SeekerClick(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int 
     I->dragInfo.button = button;
     I->box_row = row_num;
     I->box_stop_col = col_num;
-    if((I->dragInfo.row == row_num) && (button == P_GLUT_LEFT_BUTTON) && (mod & cOrthoSHIFT)) {
+    if ((I->dragInfo.row == row_num) && (button == P_GLUT_LEFT_BUTTON) &&
+        (mod & cOrthoSHIFT)) {
       continuation = true;
     } else {
-      I->dragInfo.row = -1;         /* invalidate */
+      I->dragInfo.row = -1; /* invalidate */
       I->box_start_col = col_num;
     }
 
     switch (button) {
-    case P_GLUT_RIGHT_BUTTON:
-      {
-        ObjectMolecule *obj;
-        char name[WordLength];
+    case P_GLUT_RIGHT_BUTTON: {
+      ObjectMolecule* obj;
+      char name[WordLength];
 
-        if(ExecutiveGetActiveSeleName(G, name, false, logging) && col->inverse) {
-          MenuActivate2Arg(G, x, y + 16, x, y, false, "pick_sele", name, name);
-        } else if((obj = ExecutiveFindObjectMoleculeByName(G, row->name))) {
-          {
-            int *atom_list;
-            char prefix[3] = "";
-            int logging = SettingGetGlobal_i(G, cSetting_logging);
+      if (ExecutiveGetActiveSeleName(G, name, false, logging) && col->inverse) {
+        MenuActivate2Arg(G, x, y + 16, x, y, false, "pick_sele", name, name);
+      } else if ((obj = ExecutiveFindObjectMoleculeByName(G, row->name))) {
+        {
+          int* atom_list;
+          char prefix[3] = "";
+          int logging = SettingGetGlobal_i(G, cSetting_logging);
 
-            if(logging == cPLog_pml)
-              strcpy(prefix, "_ ");
+          if (logging == cPLog_pml)
+            strcpy(prefix, "_ ");
 
-            if(ExecutiveFindObjectByName(G, row->name)) {
-              atom_list = row->atom_lists + col->atom_at;
+          if (ExecutiveFindObjectByName(G, row->name)) {
+            atom_list = row->atom_lists + col->atom_at;
 
-              /* build up a selection consisting of residue atoms */
+            /* build up a selection consisting of residue atoms */
 
-              if((*atom_list) >= 0) {
+            if ((*atom_list) >= 0) {
 
-                auto buffer = ObjectMoleculeGetAtomSele(obj, *atom_list);
+              auto buffer = ObjectMoleculeGetAtomSele(obj, *atom_list);
 
-                SeekerBuildSeleFromAtomList(G, row->name, atom_list, cTempSeekerSele,
-                                            true);
-                if(logging)
-                  SelectorLogSele(G, cTempSeekerSele);
+              SeekerBuildSeleFromAtomList(
+                  G, row->name, atom_list, cTempSeekerSele, true);
+              if (logging)
+                SelectorLogSele(G, cTempSeekerSele);
 
-                MenuActivate2Arg(G, x, y + 16, x, y, false, "seq_option", cTempSeekerSele,
-                                 buffer.c_str());
-
-              }
+              MenuActivate2Arg(G, x, y + 16, x, y, false, "seq_option",
+                  cTempSeekerSele, buffer.c_str());
             }
           }
         }
       }
-      break;
+    } break;
     case P_GLUT_MIDDLE_BUTTON:
-      if(!col->spacer) {
-        ObjectMolecule *obj;
+      if (!col->spacer) {
+        ObjectMolecule* obj;
         I->dragInfo.start_col = col_num;
         I->dragInfo.last_col = col_num;
         I->dragInfo.row = row_num;
@@ -404,27 +415,32 @@ static CSeqRow *SeekerClick(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int 
         int action = mod & cOrthoCTRL ? 1 : 0;
         SeekerSelectionCenter(G, action);
         I->box_active = true;
-        if(col->state && (obj = ExecutiveFindObjectMoleculeByName(G, row->name))) {
-          SettingSetSmart_i(G, obj->Setting.get(), nullptr, cSetting_state, col->state);
+        if (col->state &&
+            (obj = ExecutiveFindObjectMoleculeByName(G, row->name))) {
+          SettingSetSmart_i(
+              G, obj->Setting.get(), nullptr, cSetting_state, col->state);
           SceneChanged(G);
         }
       }
       break;
     case P_GLUT_LEFT_BUTTON:
-      if(!col->spacer) {
+      if (!col->spacer) {
         int start_over = false;
         int center = 0;
-        ObjectMolecule *obj;
-        if(mod & cOrthoCTRL) {
+        ObjectMolecule* obj;
+        if (mod & cOrthoCTRL) {
           center = 2;
         }
-        int codes = SettingGet_i(G, row->obj->Setting.get(), nullptr, cSetting_seq_view_format);
-        if(row->obj->DiscreteFlag && SettingGet_b(G,
-                                           row->obj->Setting.get(),
-                                           nullptr, cSetting_seq_view_discrete_by_state))
+        int codes = SettingGet_i(
+            G, row->obj->Setting.get(), nullptr, cSetting_seq_view_format);
+        if (row->obj->DiscreteFlag &&
+            SettingGet_b(G, row->obj->Setting.get(), nullptr,
+                cSetting_seq_view_discrete_by_state))
           codes = 4;
-        if (codes != 4 || row->obj->DiscreteFlag) { // keep only non-discrete states selectable
-          if(!continuation) {
+        if (codes != 4 ||
+            row->obj
+                ->DiscreteFlag) { // keep only non-discrete states selectable
+          if (!continuation) {
             I->dragInfo.start_col = col_num;
             I->dragInfo.last_col = col_num;
             I->dragInfo.row = row_num;
@@ -432,8 +448,10 @@ static CSeqRow *SeekerClick(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int 
             I->dragInfo.start_toggle = true;
           } else {
             int tmp;
-            if(((col_num < I->dragInfo.start_col) && (I->dragInfo.last_col > I->dragInfo.start_col)) ||
-               ((col_num > I->dragInfo.start_col) && (I->dragInfo.last_col < I->dragInfo.start_col))) {
+            if (((col_num < I->dragInfo.start_col) &&
+                    (I->dragInfo.last_col > I->dragInfo.start_col)) ||
+                ((col_num > I->dragInfo.start_col) &&
+                    (I->dragInfo.last_col < I->dragInfo.start_col))) {
               tmp = I->dragInfo.last_col;
               I->dragInfo.last_col = I->dragInfo.start_col;
               I->dragInfo.start_col = tmp;
@@ -443,24 +461,27 @@ static CSeqRow *SeekerClick(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int 
           I->dragging = true;
 
           I->box_active = true;
-          if(continuation) {
+          if (continuation) {
             SeekerDrag(G, rowVLA, row_num, col_num, mod);
           } else {
-            if(col->inverse && !start_over) {
+            if (col->inverse && !start_over) {
               SeekerSelectionToggle(G, rowVLA, row_num, col_num, false, false);
               I->dragInfo.setting = false;
             } else {
-              SeekerSelectionToggle(G, rowVLA, row_num, col_num, true, start_over);
+              SeekerSelectionToggle(
+                  G, rowVLA, row_num, col_num, true, start_over);
               I->dragInfo.setting = true;
             }
           }
         }
 
-        if(center)
+        if (center)
           SeekerSelectionCenter(G, 2);
 
-        if(col->state && (obj = ExecutiveFindObjectMoleculeByName(G, row->name))) {
-          SettingSetSmart_i(G, obj->Setting.get(), nullptr, cSetting_state, col->state);
+        if (col->state &&
+            (obj = ExecutiveFindObjectMoleculeByName(G, row->name))) {
+          SettingSetSmart_i(
+              G, obj->Setting.get(), nullptr, cSetting_state, col->state);
           SceneChanged(G);
         }
       }
@@ -471,47 +492,47 @@ static CSeqRow *SeekerClick(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int 
   return nullptr;
 }
 
-static void SeekerRefresh(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA)
+static void SeekerRefresh(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA)
 {
-  if(rowVLA.empty()) {
+  if (rowVLA.empty()) {
     return;
   }
   auto nRow = rowVLA.size();
   int sele = ExecutiveGetActiveSele(G);
 
-  if(sele < 0)
+  if (sele < 0)
     sele = SelectorIndexByName(G, "_seeker_hilight");
 
-  for(int b = 0; b < nRow; b++) {
+  for (int b = 0; b < nRow; b++) {
     auto row = &rowVLA[b];
 
-    ObjectMolecule *obj;
-    if((obj = ExecutiveFindObjectMoleculeByName(G, row->name))) {
-      const AtomInfoType *atInfo = obj->AtomInfo.data();
+    ObjectMolecule* obj;
+    if ((obj = ExecutiveFindObjectMoleculeByName(G, row->name))) {
+      const AtomInfoType* atInfo = obj->AtomInfo.data();
       int selected;
 
-      if(sele < 0) {
-        for(int a = 0; a < row->nCol; a++) {
+      if (sele < 0) {
+        for (int a = 0; a < row->nCol; a++) {
           auto col = &row->col[a];
           col->inverse = false;
         }
       } else {
-        for(int a = 0; a < row->nCol; a++) {
+        for (int a = 0; a < row->nCol; a++) {
 
           auto col = &row->col[a];
-          if(!col->spacer) {
+          if (!col->spacer) {
             selected = false;
             auto atom_list = &row->atom_lists[col->atom_at];
 
             int at;
-            while((at = (*atom_list)) >= 0) {
+            while ((at = (*atom_list)) >= 0) {
               atom_list++;
-              if(SelectorIsMember(G, atInfo[at].selEntry, sele)) {
+              if (SelectorIsMember(G, atInfo[at].selEntry, sele)) {
                 selected = true;
               }
             }
 
-            if(selected)
+            if (selected)
               col->inverse = true;
             else
               col->inverse = false;
@@ -523,140 +544,147 @@ static void SeekerRefresh(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA)
   }
 }
 
-static CSeqRow *SeekerDrag(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int row, int col, int mod)
+static CSeqRow* SeekerDrag(
+    PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA, int row, int col, int mod)
 {
-  CSeeker *I = G->Seeker;
+  CSeeker* I = G->Seeker;
   int a;
 
-  if((row >= 0) && (col >= 0) && (I->dragging)) {
+  if ((row >= 0) && (col >= 0) && (I->dragging)) {
     I->box_stop_col = col;
 
     switch (I->dragInfo.button) {
     case P_GLUT_LEFT_BUTTON:
-      if(col != I->dragInfo.last_col) {
+      if (col != I->dragInfo.last_col) {
 
-        if(I->dragInfo.dir) {
-          if(I->dragInfo.dir > 0) {
-            if(col <= I->dragInfo.start_col) {
+        if (I->dragInfo.dir) {
+          if (I->dragInfo.dir > 0) {
+            if (col <= I->dragInfo.start_col) {
               col = I->dragInfo.start_col;
-              if(I->dragInfo.start_toggle) {
-                SeekerSelectionToggle(G, rowVLA, I->dragInfo.row, I->dragInfo.start_col,
-                                      !I->dragInfo.setting, false);
+              if (I->dragInfo.start_toggle) {
+                SeekerSelectionToggle(G, rowVLA, I->dragInfo.row,
+                    I->dragInfo.start_col, !I->dragInfo.setting, false);
                 I->dragInfo.start_toggle = false;
               }
-            } else if(col > I->dragInfo.start_col) {
-              if(!I->dragInfo.start_toggle) {
-                SeekerSelectionToggle(G, rowVLA, I->dragInfo.row, I->dragInfo.start_col,
-                                      I->dragInfo.setting, false);
+            } else if (col > I->dragInfo.start_col) {
+              if (!I->dragInfo.start_toggle) {
+                SeekerSelectionToggle(G, rowVLA, I->dragInfo.row,
+                    I->dragInfo.start_col, I->dragInfo.setting, false);
                 I->dragInfo.start_toggle = true;
               }
             }
-          } else if(I->dragInfo.dir < 0) {
-            if(col >= I->dragInfo.start_col) {
+          } else if (I->dragInfo.dir < 0) {
+            if (col >= I->dragInfo.start_col) {
               col = I->dragInfo.start_col;
-              if(I->dragInfo.start_toggle) {
-                SeekerSelectionToggle(G, rowVLA, I->dragInfo.row, I->dragInfo.start_col,
-                                      !I->dragInfo.setting, false);
+              if (I->dragInfo.start_toggle) {
+                SeekerSelectionToggle(G, rowVLA, I->dragInfo.row,
+                    I->dragInfo.start_col, !I->dragInfo.setting, false);
                 I->dragInfo.start_toggle = false;
               }
-            } else if(col < I->dragInfo.start_col) {
-              if(!I->dragInfo.start_toggle) {
-                SeekerSelectionToggle(G, rowVLA, I->dragInfo.row, I->dragInfo.start_col,
-                                      I->dragInfo.setting, false);
+            } else if (col < I->dragInfo.start_col) {
+              if (!I->dragInfo.start_toggle) {
+                SeekerSelectionToggle(G, rowVLA, I->dragInfo.row,
+                    I->dragInfo.start_col, I->dragInfo.setting, false);
                 I->dragInfo.start_toggle = true;
               }
             }
           }
         }
 
-        if((I->dragInfo.last_col < I->dragInfo.start_col) && (col > I->dragInfo.start_col)) {
-          SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row, I->dragInfo.last_col,
-                                     I->dragInfo.start_col - 1, !I->dragInfo.setting, false);
+        if ((I->dragInfo.last_col < I->dragInfo.start_col) &&
+            (col > I->dragInfo.start_col)) {
+          SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row,
+              I->dragInfo.last_col, I->dragInfo.start_col - 1,
+              !I->dragInfo.setting, false);
           I->dragInfo.last_col = I->dragInfo.start_col;
         }
-        if((I->dragInfo.last_col > I->dragInfo.start_col) && (col < I->dragInfo.start_col)) {
-          SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row, I->dragInfo.start_col + 1,
-                                     I->dragInfo.last_col, !I->dragInfo.setting, false);
+        if ((I->dragInfo.last_col > I->dragInfo.start_col) &&
+            (col < I->dragInfo.start_col)) {
+          SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row,
+              I->dragInfo.start_col + 1, I->dragInfo.last_col,
+              !I->dragInfo.setting, false);
           I->dragInfo.last_col = I->dragInfo.start_col;
         }
-        if(I->dragInfo.start_col == I->dragInfo.last_col) {
-          if(col > I->dragInfo.start_col) {
-            if(!I->dragInfo.dir)
+        if (I->dragInfo.start_col == I->dragInfo.last_col) {
+          if (col > I->dragInfo.start_col) {
+            if (!I->dragInfo.dir)
               I->dragInfo.dir = 1;
             I->dragInfo.last_col = I->dragInfo.start_col + 1;
-            SeekerSelectionToggle(G, rowVLA, I->dragInfo.row, I->dragInfo.last_col,
-                                  I->dragInfo.setting, false);
-          } else if(col < I->dragInfo.start_col) {
-            if(!I->dragInfo.dir)
+            SeekerSelectionToggle(G, rowVLA, I->dragInfo.row,
+                I->dragInfo.last_col, I->dragInfo.setting, false);
+          } else if (col < I->dragInfo.start_col) {
+            if (!I->dragInfo.dir)
               I->dragInfo.dir = -1;
             I->dragInfo.last_col = I->dragInfo.start_col - 1;
-            SeekerSelectionToggle(G, rowVLA, I->dragInfo.row, I->dragInfo.last_col,
-                                  I->dragInfo.setting, false);
+            SeekerSelectionToggle(G, rowVLA, I->dragInfo.row,
+                I->dragInfo.last_col, I->dragInfo.setting, false);
           }
         }
-        if(I->dragInfo.start_col < I->dragInfo.last_col) {
+        if (I->dragInfo.start_col < I->dragInfo.last_col) {
 
-          if(col > I->dragInfo.last_col) {
-            SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row, I->dragInfo.last_col + 1, col,
-                                       I->dragInfo.setting, false);
+          if (col > I->dragInfo.last_col) {
+            SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row,
+                I->dragInfo.last_col + 1, col, I->dragInfo.setting, false);
           } else {
-            SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row, col + 1, I->dragInfo.last_col,
-                                       !I->dragInfo.setting, false);
+            SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row, col + 1,
+                I->dragInfo.last_col, !I->dragInfo.setting, false);
           }
         } else {
 
-          if(col < I->dragInfo.last_col) {
-            SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row, col, I->dragInfo.last_col - 1,
-                                       I->dragInfo.setting, false);
+          if (col < I->dragInfo.last_col) {
+            SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row, col,
+                I->dragInfo.last_col - 1, I->dragInfo.setting, false);
           } else {
-            SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row, I->dragInfo.last_col, col - 1,
-                                       !I->dragInfo.setting, false);
+            SeekerSelectionToggleRange(G, rowVLA, I->dragInfo.row,
+                I->dragInfo.last_col, col - 1, !I->dragInfo.setting, false);
           }
         }
         I->dragInfo.last_col = col;
 
-        if(mod & cOrthoCTRL) {
+        if (mod & cOrthoCTRL) {
           SeekerSelectionCenter(G, 2);
         }
-
       }
       break;
     case P_GLUT_MIDDLE_BUTTON:
-      if(col != I->dragInfo.last_col) {
+      if (col != I->dragInfo.last_col) {
         int action = 0;
         int start_over = false;
 
-        if(mod & cOrthoCTRL) {
+        if (mod & cOrthoCTRL) {
           action = 1;
         }
-        if(!(mod & cOrthoSHIFT)) {
+        if (!(mod & cOrthoSHIFT)) {
           start_over = true;
           I->box_start_col = col;
-          SeekerSelectionUpdateCenter(G, rowVLA, I->dragInfo.row, col, start_over);
+          SeekerSelectionUpdateCenter(
+              G, rowVLA, I->dragInfo.row, col, start_over);
         } else {
-          if(I->dragInfo.start_col == I->dragInfo.last_col) {
-            if(col > I->dragInfo.start_col) {
+          if (I->dragInfo.start_col == I->dragInfo.last_col) {
+            if (col > I->dragInfo.start_col) {
               I->dragInfo.last_col = I->dragInfo.start_col + 1;
-              SeekerSelectionUpdateCenter(G, rowVLA, I->dragInfo.row, I->dragInfo.last_col,
-                                          start_over);
-            } else if(col < I->dragInfo.start_col) {
+              SeekerSelectionUpdateCenter(
+                  G, rowVLA, I->dragInfo.row, I->dragInfo.last_col, start_over);
+            } else if (col < I->dragInfo.start_col) {
               I->dragInfo.last_col = I->dragInfo.start_col - 1;
-              SeekerSelectionUpdateCenter(G, rowVLA, I->dragInfo.row, I->dragInfo.last_col,
-                                          start_over);
+              SeekerSelectionUpdateCenter(
+                  G, rowVLA, I->dragInfo.row, I->dragInfo.last_col, start_over);
             }
           }
-          if(I->dragInfo.start_col < I->dragInfo.last_col) {
+          if (I->dragInfo.start_col < I->dragInfo.last_col) {
 
-            if(col > I->dragInfo.last_col) {
-              for(a = I->dragInfo.last_col + 1; a <= col; a++) {
-                SeekerSelectionUpdateCenter(G, rowVLA, I->dragInfo.row, a, start_over);
+            if (col > I->dragInfo.last_col) {
+              for (a = I->dragInfo.last_col + 1; a <= col; a++) {
+                SeekerSelectionUpdateCenter(
+                    G, rowVLA, I->dragInfo.row, a, start_over);
               }
             }
           } else {
 
-            if(col < I->dragInfo.last_col) {
-              for(a = I->dragInfo.last_col - 1; a >= col; a--) {
-                SeekerSelectionUpdateCenter(G, rowVLA, I->dragInfo.row, a, start_over);
+            if (col < I->dragInfo.last_col) {
+              for (a = I->dragInfo.last_col - 1; a >= col; a--) {
+                SeekerSelectionUpdateCenter(
+                    G, rowVLA, I->dragInfo.row, a, start_over);
               }
             }
           }
@@ -671,28 +699,28 @@ static CSeqRow *SeekerDrag(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int r
   return nullptr;
 }
 
-static CSeqRow *SeekerRelease(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int button,
-                              int row, int col, int mod)
+static CSeqRow* SeekerRelease(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA,
+    int button, int row, int col, int mod)
 {
-  CSeeker *I = G->Seeker;
+  CSeeker* I = G->Seeker;
   I->dragging = false;
 
   I->box_active = false;
   return nullptr;
 }
 
-char SeekerGetAbbr(PyMOLGlobals * G, const char *abbr, char water, char unknown)
+char SeekerGetAbbr(PyMOLGlobals* G, const char* abbr, char water, char unknown)
 {
 
   switch (abbr[0]) {
   case 'A':
     switch (abbr[1]) {
     case 'L':
-      if(abbr[2] == 'A')
+      if (abbr[2] == 'A')
         return 'A';
       break;
     case 'R':
-      if(abbr[2] == 'G')
+      if (abbr[2] == 'G')
         return 'R';
       break;
     case 'S':
@@ -797,7 +825,7 @@ char SeekerGetAbbr(PyMOLGlobals * G, const char *abbr, char water, char unknown)
         return 'M';
         break;
       }
-    break;
+      break;
     case 'S':
       switch (abbr[2]) {
       case 'E': // MSE (SELENOMETHIONINE)
@@ -835,7 +863,7 @@ char SeekerGetAbbr(PyMOLGlobals * G, const char *abbr, char water, char unknown)
         break;
       }
       break;
-    case 'O':                  /* SOL -- gromacs solvent residue */
+    case 'O': /* SOL -- gromacs solvent residue */
       switch (abbr[2]) {
       case 'L':
         return water;
@@ -898,25 +926,25 @@ char SeekerGetAbbr(PyMOLGlobals * G, const char *abbr, char water, char unknown)
       break;
     }
     break;
-
   }
 
   return unknown;
 }
 
-static int SeekerFindColor(PyMOLGlobals * G, const AtomInfoType * ai, int n_more_plus_one)
+static int SeekerFindColor(
+    PyMOLGlobals* G, const AtomInfoType* ai, int n_more_plus_one)
 {
-  int result = ai->color;      /* default -- use first atom color */
-  const AtomInfoType *ai0 = ai;
-  while(1) {
-    if(ai0->flags & cAtomFlag_guide)    /* best use guide color */
+  int result = ai->color; /* default -- use first atom color */
+  const AtomInfoType* ai0 = ai;
+  while (1) {
+    if (ai0->flags & cAtomFlag_guide) /* best use guide color */
       return ai0->color;
-    if(ai0->protons == cAN_C)   /* or use carbon color */
+    if (ai0->protons == cAN_C) /* or use carbon color */
       result = ai0->color;
     n_more_plus_one--;
-    if(n_more_plus_one > 0) {
+    if (n_more_plus_one > 0) {
       ai0++;
-      if(!AtomInfoSameResidueP(G, ai, ai0))
+      if (!AtomInfoSameResidueP(G, ai, ai0))
         break;
     } else
       break;
@@ -924,40 +952,43 @@ static int SeekerFindColor(PyMOLGlobals * G, const AtomInfoType * ai, int n_more
   return result;
 }
 
-static int SeekerFindTag(PyMOLGlobals * G, const AtomInfoType * ai, int sele, int codes,
-                         int n_more_plus_one)
+static int SeekerFindTag(PyMOLGlobals* G, const AtomInfoType* ai, int sele,
+    int codes, int n_more_plus_one)
 {
-  int result = 0;      /* default -- no tag */
-  const AtomInfoType *ai0 = ai;
-  while(1) {
+  int result = 0; /* default -- no tag */
+  const AtomInfoType* ai0 = ai;
+  while (1) {
     int tag = SelectorIsMember(G, ai0->selEntry, sele);
-    if(tag && (codes < 2) && (ai0->flags & cAtomFlag_guide))    /* use guide atom if present */
+    if (tag && (codes < 2) &&
+        (ai0->flags & cAtomFlag_guide)) /* use guide atom if present */
       return tag;
-    if(result < tag) {
-      if(!result)
+    if (result < tag) {
+      if (!result)
         result = tag;
-      else if((codes < 2) && (ai0->flags & cAtomFlag_guide))    /* residue based and on guide atom */
+      else if ((codes < 2) &&
+               (ai0->flags &
+                   cAtomFlag_guide)) /* residue based and on guide atom */
         result = tag;
     }
     n_more_plus_one--;
-    if(n_more_plus_one > 0) {
+    if (n_more_plus_one > 0) {
       int do_break = false;
       ai0++;
       switch (codes) {
       case 0:
       case 1:
-        if(!AtomInfoSameResidueP(G, ai, ai0))
+        if (!AtomInfoSameResidueP(G, ai, ai0))
           do_break = true;
         break;
-      case 2:                  /* atoms */
+      case 2: /* atoms */
         do_break = true;
         break;
-      case 3:                  /* chains */
-        if(!AtomInfoSameChainP(G, ai, ai0))
+      case 3: /* chains */
+        if (!AtomInfoSameChainP(G, ai, ai0))
           do_break = true;
         break;
       }
-      if(do_break)
+      if (do_break)
         break;
     } else
       break;
@@ -965,20 +996,20 @@ static int SeekerFindTag(PyMOLGlobals * G, const AtomInfoType * ai, int sele, in
   return result;
 }
 
-void SeekerUpdate(PyMOLGlobals * G)
+void SeekerUpdate(PyMOLGlobals* G)
 {
   /*  pymol::CObject *o = nullptr;
      int s; */
 
-  void *hidden = nullptr;
-  const AtomInfoType *ai;
-  ObjectMolecule *obj;
+  void* hidden = nullptr;
+  const AtomInfoType* ai;
+  ObjectMolecule* obj;
   int nRow = 0;
   int label_mode = 0;
   int codes = 0;
   int max_row = 50;
   int default_color = 0;
-  int align_sele = -1;          /* alignment selection */
+  int align_sele = -1; /* alignment selection */
   const int MAXCONSECUTIVEGAPS = 9;
   CSeqRow *row, *lab = nullptr;
   std::vector<CSeqRow> row_vla;
@@ -988,43 +1019,50 @@ void SeekerUpdate(PyMOLGlobals * G)
   align_sele = ExecutiveGetActiveAlignmentSele(G);
 
   while (ExecutiveIterateObjectMolecule(G, &obj, &hidden)) {
-    bool isHidden = (SettingGet<bool>(G, cSetting_hide_underscore_names) && (obj->Name[0] == '_'));
-    if (obj->Enabled && (SettingGet<bool>(*obj, cSetting_seq_view)) && !isHidden) {
+    bool isHidden = (SettingGet<bool>(G, cSetting_hide_underscore_names) &&
+                     (obj->Name[0] == '_'));
+    if (obj->Enabled && (SettingGet<bool>(*obj, cSetting_seq_view)) &&
+        !isHidden) {
       int a;
-      const AtomInfoType *last = nullptr, *last_segi = nullptr, *last_chain = nullptr;
-      const CoordSet *last_disc = nullptr;
+      const AtomInfoType *last = nullptr, *last_segi = nullptr,
+                         *last_chain = nullptr;
+      const CoordSet* last_disc = nullptr;
       int last_state;
       int last_abbr = true;
       int last_spacer = false;
       int nCol = 0;
-      int nListEntries = 1;     /* first list starts at 1 always... */
+      int nListEntries = 1; /* first list starts at 1 always... */
       int est_col = obj->NAtom / 5 + 1;
       int est_char = obj->NAtom * 4;
       int first_atom_in_label;
-      int missing_color = SettingGet_i(G, obj->Setting.get(), nullptr, cSetting_seq_view_fill_color);
-      const CoordSet *cs = obj->DiscreteFlag ? nullptr : obj->getCoordSet(-2 /* current */);
+      int missing_color = SettingGet_i(
+          G, obj->Setting.get(), nullptr, cSetting_seq_view_fill_color);
+      const CoordSet* cs =
+          obj->DiscreteFlag ? nullptr : obj->getCoordSet(-2 /* current */);
       bool atom_in_state;
 
-      int gapMode = SettingGet_i(G, obj->Setting.get(), nullptr, cSetting_seq_view_gap_mode);
+      int gapMode = SettingGet_i(
+          G, obj->Setting.get(), nullptr, cSetting_seq_view_gap_mode);
       int min_pad = -1;
-      CSeqCol *r1 = nullptr, *l1 = nullptr;   /* *col */
+      CSeqCol *r1 = nullptr, *l1 = nullptr; /* *col */
 
-      if(nRow >= max_row)
+      if (nRow >= max_row)
         break;
 
-      codes = SettingGet_i(G, obj->Setting.get(), nullptr, cSetting_seq_view_format);
-      if(obj->DiscreteFlag && SettingGet_b(G,
-                                           obj->Setting.get(),
-                                           nullptr, cSetting_seq_view_discrete_by_state))
+      codes = SettingGet_i(
+          G, obj->Setting.get(), nullptr, cSetting_seq_view_format);
+      if (obj->DiscreteFlag && SettingGet_b(G, obj->Setting.get(), nullptr,
+                                   cSetting_seq_view_discrete_by_state))
         codes = 4;
-      default_color = SettingGet_i(G, obj->Setting.get(), nullptr, cSetting_seq_view_color);
+      default_color =
+          SettingGet_i(G, obj->Setting.get(), nullptr, cSetting_seq_view_color);
 
       /* allocate a row for labels, if present
-         the text for the labels and the residues will line up exactly 
+         the text for the labels and the residues will line up exactly
        */
 
       VecCheck(row_vla, nRow);
-      if((label_mode == 2) || ((label_mode == 1) && (!nRow))) {
+      if ((label_mode == 2) || ((label_mode == 1) && (!nRow))) {
         lab = row_vla.data() + nRow++;
         lab->txt = pymol::vla<char>(est_char);
         lab->col = pymol::vla<CSeqCol>(est_col);
@@ -1036,13 +1074,13 @@ void SeekerUpdate(PyMOLGlobals * G)
       VecCheck(row_vla, nRow);
 
       row = row_vla.data() + nRow;
-      if(lab)
-        lab = row - 1;          /* critical! */
+      if (lab)
+        lab = row - 1; /* critical! */
       row->txt = pymol::vla<char>(est_char);
       row->col = pymol::vla<CSeqCol>(est_col);
       row->fill = pymol::vla<CSeqCol>(est_col / 8);
       row->atom_lists = pymol::vla<int>(obj->NAtom + est_col + 1);
-      row->atom_lists[0] = -1;  /* terminate the blank listQ (IMPORTANT!) */
+      row->atom_lists[0] = -1; /* terminate the blank listQ (IMPORTANT!) */
       row->char2col = pymol::vla<int>(est_char);
       row->obj = obj;
       strcpy(row->name, obj->Name);
@@ -1051,7 +1089,7 @@ void SeekerUpdate(PyMOLGlobals * G)
 
       /* copy object name onto label row */
 
-      if(lab) {
+      if (lab) {
 
         int st_len;
         /* copy label text */
@@ -1064,7 +1102,7 @@ void SeekerUpdate(PyMOLGlobals * G)
         l1->stop = lab->len;
         st_len = l1->stop - l1->start;
 
-        if(label_mode == 2) {
+        if (label_mode == 2) {
           /* blank equivalent text for sequence row below the fixed label */
           VLACheck(row->col, CSeqCol, nCol);
           r1 = row->col + nCol;
@@ -1075,7 +1113,8 @@ void SeekerUpdate(PyMOLGlobals * G)
           nCol++;
         }
       }
-      if(label_mode < 2) {      /* no label rows, so put object name into left-hand column */
+      if (label_mode <
+          2) { /* no label rows, so put object name into left-hand column */
 
         /* copy label text */
 
@@ -1089,7 +1128,8 @@ void SeekerUpdate(PyMOLGlobals * G)
         row->column_label_flag = true;
         row->title_width = row->len;
         nCol++;
-      } else if(label_mode == 3) {      /* otherwise just insert a blank zero-length column */
+      } else if (label_mode ==
+                 3) { /* otherwise just insert a blank zero-length column */
         VLACheck(row->col, CSeqCol, nCol);
         r1 = row->col + nCol;
         r1->start = row->len;
@@ -1099,7 +1139,7 @@ void SeekerUpdate(PyMOLGlobals * G)
         nCol++;
       }
 
-      if(lab) {
+      if (lab) {
 
         int st_len;
         /* copy label text */
@@ -1107,7 +1147,7 @@ void SeekerUpdate(PyMOLGlobals * G)
         VLACheck(lab->col, CSeqCol, nCol);
         l1 = lab->col + nCol;
         l1->start = lab->len;
-        if(obj->NAtom) {
+        if (obj->NAtom) {
           UtilConcatVLA(&lab->txt, &lab->len, "/");
           UtilConcatVLA(&lab->txt, &lab->len, LexStr(G, ai->segi));
           UtilConcatVLA(&lab->txt, &lab->len, "/");
@@ -1130,7 +1170,7 @@ void SeekerUpdate(PyMOLGlobals * G)
         r1->stop = row->len;
         r1->spacer = true;
         nCol++;
-      } else {                  /* if no labels, just insert a space in row below */
+      } else { /* if no labels, just insert a space in row below */
         VLACheck(row->col, CSeqCol, nCol);
         r1 = row->col + nCol;
         r1->start = row->len;
@@ -1141,13 +1181,13 @@ void SeekerUpdate(PyMOLGlobals * G)
       }
 
       last_state = -1;
-      for(a = 0; a < obj->NAtom; a++) {
+      for (a = 0; a < obj->NAtom; a++) {
         first_atom_in_label = false;
-        if(lab && !AtomInfoSameSegmentP(G, last_segi, ai)) {
+        if (lab && !AtomInfoSameSegmentP(G, last_segi, ai)) {
 
           int st_len;
 
-          if(row->len < min_pad) {
+          if (row->len < min_pad) {
             row->len = min_pad;
           }
           min_pad = -1;
@@ -1179,11 +1219,11 @@ void SeekerUpdate(PyMOLGlobals * G)
           last_segi = ai;
           last_chain = ai;
 
-        } else if(lab && !AtomInfoSameChainP(G, last_chain, ai)) {
+        } else if (lab && !AtomInfoSameChainP(G, last_chain, ai)) {
 
           int st_len;
 
-          if(row->len < min_pad) {
+          if (row->len < min_pad) {
             row->len = min_pad;
           }
           min_pad = -1;
@@ -1213,8 +1253,7 @@ void SeekerUpdate(PyMOLGlobals * G)
           last_chain = ai;
         }
 
-        if(min_pad < 0)
-        {
+        if (min_pad < 0) {
           min_pad = row->len + 1; // + strlen(resi)
           for (int v = ai->resv; v; v /= 10) {
             min_pad++;
@@ -1228,36 +1267,33 @@ void SeekerUpdate(PyMOLGlobals * G)
 
         int gapsNeeded{0};
 
-        if(gapMode != GapMode::NONE
-           && AtomInfoSameChainP(G, ai, last)
-           && (ai->flags & last->flags & cAtomFlag_polymer)
-           && align_sele < 0){
-            gapsNeeded = ai->resv - last->resv - 1;
+        if (gapMode != GapMode::NONE && AtomInfoSameChainP(G, ai, last) &&
+            (ai->flags & last->flags & cAtomFlag_polymer) && align_sele < 0) {
+          gapsNeeded = ai->resv - last->resv - 1;
 
-            if(gapsNeeded > 1 && gapMode == GapMode::SINGLE){
-              gapsNeeded = 1;
-            }
+          if (gapsNeeded > 1 && gapMode == GapMode::SINGLE) {
+            gapsNeeded = 1;
+          }
         }
 
-        auto push_gap = [&](const char* str)
-          {
-            auto str_size = strlen(str);
-            UtilConcatVLA(&row->txt, &row->len, str);
-            VLACheck(row->col, CSeqCol, nCol + str_size);
+        auto push_gap = [&](const char* str) {
+          auto str_size = strlen(str);
+          UtilConcatVLA(&row->txt, &row->len, str);
+          VLACheck(row->col, CSeqCol, nCol + str_size);
+          r1 = row->col + nCol;
+          for (int i = 0; i < str_size; i++) {
+            r1->color = missing_color;
+            r1->spacer = true;
+            r1->stop = r1->start + 1;
+            auto lastStop = r1->stop;
+            nCol++;
             r1 = row->col + nCol;
-            for(int i = 0; i < str_size; i++){
-                r1->color = missing_color;
-                r1->spacer = true;
-                r1->stop = r1->start + 1;
-                auto lastStop = r1->stop;
-                nCol++;
-                r1 = row->col + nCol;
-                r1->start = lastStop;
-            }
-          };
+            r1->start = lastStop;
+          }
+        };
         switch (codes) {
-        case 0:                /* one letter residue codes */
-          if(!AtomInfoSameResidueP(G, last, ai)) {
+        case 0: /* one letter residue codes */
+          if (!AtomInfoSameResidueP(G, last, ai)) {
             char abbr[2] = "1";
             last = ai;
 
@@ -1265,17 +1301,16 @@ void SeekerUpdate(PyMOLGlobals * G)
             r1 = row->col + nCol;
             r1->start = row->len;
 
-            //Only include non-consecutive gaps when not doing alignment
-            if(gapsNeeded > 0 && gapsNeeded <= MAXCONSECUTIVEGAPS){
-              for(int g = 0; g < gapsNeeded; ++g){
+            // Only include non-consecutive gaps when not doing alignment
+            if (gapsNeeded > 0 && gapsNeeded <= MAXCONSECUTIVEGAPS) {
+              for (int g = 0; g < gapsNeeded; ++g) {
                 push_gap("-");
               }
-            }
-            else if(gapsNeeded > MAXCONSECUTIVEGAPS){
-                push_gap("---...---");
+            } else if (gapsNeeded > MAXCONSECUTIVEGAPS) {
+              push_gap("---...---");
             }
 
-            if(obj->DiscreteFlag)
+            if (obj->DiscreteFlag)
               r1->state = ai->discrete_state;
 
             first_atom_in_label = true;
@@ -1289,13 +1324,13 @@ void SeekerUpdate(PyMOLGlobals * G)
 
             r1->hint_no_space = last_abbr || last_spacer;
 
-            if(!abbr[0]) {
-              if(last_abbr) {
+            if (!abbr[0]) {
+              if (last_abbr) {
                 UtilConcatVLA(&row->txt, &row->len, " ");
                 r1->start = row->len;
               }
 
-              if(ai->resn)
+              if (ai->resn)
                 UtilConcatVLA(&row->txt, &row->len, LexStr(G, ai->resn));
               else
                 UtilConcatVLA(&row->txt, &row->len, "''");
@@ -1309,13 +1344,13 @@ void SeekerUpdate(PyMOLGlobals * G)
               r1->stop = row->len;
             }
 
-            if(!atom_in_state)
+            if (!atom_in_state)
               r1->color = missing_color;
-            else if(default_color < 0)
+            else if (default_color < 0)
               r1->color = SeekerFindColor(G, ai, obj->NAtom - a);
             else
               r1->color = default_color;
-            if(align_sele >= 0) {
+            if (align_sele >= 0) {
               r1->tag = SeekerFindTag(G, ai, align_sele, codes, obj->NAtom - a);
             } else {
               r1->tag = 0;
@@ -1325,40 +1360,39 @@ void SeekerUpdate(PyMOLGlobals * G)
           }
 
           break;
-        case 1:                /* explicit residue codes */
-          if(!AtomInfoSameResidueP(G, last, ai)) {
+        case 1: /* explicit residue codes */
+          if (!AtomInfoSameResidueP(G, last, ai)) {
             last = ai;
 
             VLACheck(row->col, CSeqCol, nCol);
             r1 = row->col + nCol;
             r1->start = row->len;
-            if(obj->DiscreteFlag)
+            if (obj->DiscreteFlag)
               r1->state = ai->discrete_state;
             first_atom_in_label = true;
 
-            //Only include non-consecutive gaps when not doing alignment
-            if(gapsNeeded > 0 && gapsNeeded <= MAXCONSECUTIVEGAPS){
-              for(int g = 0; g < gapsNeeded; ++g){
-                  push_gap("--- ");
+            // Only include non-consecutive gaps when not doing alignment
+            if (gapsNeeded > 0 && gapsNeeded <= MAXCONSECUTIVEGAPS) {
+              for (int g = 0; g < gapsNeeded; ++g) {
+                push_gap("--- ");
               }
-            }
-            else if(gapsNeeded > MAXCONSECUTIVEGAPS){
-                push_gap("---...--- ");
+            } else if (gapsNeeded > MAXCONSECUTIVEGAPS) {
+              push_gap("---...--- ");
             }
 
-            if(ai->resn)
+            if (ai->resn)
               UtilConcatVLA(&row->txt, &row->len, LexStr(G, ai->resn));
             else
               UtilConcatVLA(&row->txt, &row->len, "''");
             r1->stop = row->len;
 
-            if(!atom_in_state)
+            if (!atom_in_state)
               r1->color = missing_color;
-            else if(default_color < 0)
+            else if (default_color < 0)
               r1->color = SeekerFindColor(G, ai, obj->NAtom - a);
             else
               r1->color = default_color;
-            if(align_sele >= 0) {
+            if (align_sele >= 0) {
               r1->tag = SeekerFindTag(G, ai, align_sele, codes, obj->NAtom - a);
             } else {
               r1->tag = 0;
@@ -1367,24 +1401,24 @@ void SeekerUpdate(PyMOLGlobals * G)
             nCol++;
           }
           break;
-        case 2:                /* atom names */
+        case 2: /* atom names */
           VLACheck(row->col, CSeqCol, nCol);
           r1 = row->col + nCol;
           r1->start = row->len;
           first_atom_in_label = true;
-          if(ai->name)
+          if (ai->name)
             UtilConcatVLA(&row->txt, &row->len, LexStr(G, ai->name));
           else
             UtilConcatVLA(&row->txt, &row->len, "''");
           r1->stop = row->len;
 
-          if(!atom_in_state)
+          if (!atom_in_state)
             r1->color = missing_color;
-          else if(default_color < 0)
+          else if (default_color < 0)
             r1->color = ai->color;
           else
             r1->color = default_color;
-          if(align_sele >= 0) {
+          if (align_sele >= 0) {
             r1->tag = SeekerFindTag(G, ai, align_sele, codes, obj->NAtom - a);
           } else {
             r1->tag = 0;
@@ -1392,8 +1426,8 @@ void SeekerUpdate(PyMOLGlobals * G)
           UtilConcatVLA(&row->txt, &row->len, " ");
           nCol++;
           break;
-        case 3:                /* chains */
-          if(!AtomInfoSameChainP(G, last, ai)) {
+        case 3: /* chains */
+          if (!AtomInfoSameChainP(G, last, ai)) {
             last = ai;
 
             VLACheck(row->col, CSeqCol, nCol);
@@ -1401,16 +1435,16 @@ void SeekerUpdate(PyMOLGlobals * G)
             r1->start = row->len;
             first_atom_in_label = true;
 
-            if(ai->chain)
+            if (ai->chain)
               UtilConcatVLA(&row->txt, &row->len, LexStr(G, ai->chain));
             else
               UtilConcatVLA(&row->txt, &row->len, "''");
             r1->stop = row->len;
-            if(default_color < 0)
+            if (default_color < 0)
               r1->color = SeekerFindColor(G, ai, obj->NAtom - a);
             else
               r1->color = default_color;
-            if(align_sele >= 0) {
+            if (align_sele >= 0) {
               r1->tag = SeekerFindTag(G, ai, align_sele, codes, obj->NAtom - a);
             } else {
               r1->tag = 0;
@@ -1419,20 +1453,20 @@ void SeekerUpdate(PyMOLGlobals * G)
             nCol++;
           }
           break;
-        case 4:                /* state names */
-          if(obj->DiscreteFlag) {
-            CoordSet *cs;
-            if((cs = obj->DiscreteCSet[a]) != last_disc) {
+        case 4: /* state names */
+          if (obj->DiscreteFlag) {
+            CoordSet* cs;
+            if ((cs = obj->DiscreteCSet[a]) != last_disc) {
               last_disc = cs;
-              if(cs) {
-                default_color = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(),
-                                             cSetting_seq_view_color);
+              if (cs) {
+                default_color = SettingGet_i(G, cs->Setting.get(),
+                    obj->Setting.get(), cSetting_seq_view_color);
                 VLACheck(row->col, CSeqCol, nCol);
                 r1 = row->col + nCol;
                 r1->start = row->len;
                 r1->color = default_color;
                 first_atom_in_label = true;
-                if(cs->Name[0])
+                if (cs->Name[0])
                   UtilConcatVLA(&row->txt, &row->len, cs->Name);
                 else {
                   auto buf1 = pymol::string_format("%d", ai->discrete_state);
@@ -1448,24 +1482,24 @@ void SeekerUpdate(PyMOLGlobals * G)
             /* non-discrete objects simply get their states enumerated
                without selections */
 
-            if(last_state < 0) {
+            if (last_state < 0) {
               int b;
-              const CoordSet *cs;
+              const CoordSet* cs;
               last_state = 1;
               first_atom_in_label = true;
-              for(b = 0; b < obj->NCSet; b++) {
+              for (b = 0; b < obj->NCSet; b++) {
                 cs = obj->CSet[b];
-                if(cs) {
-                  default_color = SettingGet_i(G, cs->Setting.get(), obj->Setting.get(),
-                                               cSetting_seq_view_color);
+                if (cs) {
+                  default_color = SettingGet_i(G, cs->Setting.get(),
+                      obj->Setting.get(), cSetting_seq_view_color);
 
                   VLACheck(row->col, CSeqCol, nCol);
                   r1 = row->col + nCol;
                   r1->state = b + 1;
                   r1->start = row->len;
-                  r1->atom_at = nListEntries + 1;       /* tricky & dangerous */
+                  r1->atom_at = nListEntries + 1; /* tricky & dangerous */
                   r1->color = default_color;
-                  if(cs->Name[0])
+                  if (cs->Name[0])
                     UtilConcatVLA(&row->txt, &row->len, cs->Name);
                   else {
                     auto buf1 = pymol::string_format("%d", b + 1);
@@ -1479,17 +1513,17 @@ void SeekerUpdate(PyMOLGlobals * G)
             }
           }
           break;
-        case 5:                /* movie frames */
+        case 5: /* movie frames */
           break;
         }
 
-        if(first_atom_in_label) {
-          if(nCol > 1) {        /* terminate current list, if any */
+        if (first_atom_in_label) {
+          if (nCol > 1) { /* terminate current list, if any */
             VLACheck(row->atom_lists, int, nListEntries);
             row->atom_lists[nListEntries] = -1;
             nListEntries++;
           }
-          if(r1) {
+          if (r1) {
             r1->atom_at = nListEntries;
           }
         }
@@ -1500,13 +1534,14 @@ void SeekerUpdate(PyMOLGlobals * G)
         ai++;
       }
 
-      if(lab) {
+      if (lab) {
         /*        if(lab->len<row->len) {
            lab->len = row->len;
            } */
         VLASize(lab->txt, char, lab->len + 1);
         lab->txt[lab->len] = 0;
-        VLACheck(lab->col, CSeqCol, nCol);      /* make sure we've got column records for labels too */
+        VLACheck(lab->col, CSeqCol,
+            nCol); /* make sure we've got column records for labels too */
         lab->nCol = nCol;
 
         /*if(row->len<lab->len) {
@@ -1528,49 +1563,49 @@ void SeekerUpdate(PyMOLGlobals * G)
   }
 
   /* SECOND PASS: align columns to reflect current alignment and fixed labels */
-  if(nRow) {
+  if (nRow) {
     int a, b;
     int nCol;
     int maxCol = 0;
     int done_flag = false;
     /* find out the maximum number of columns */
 
-    for(a = 0; a < nRow; a++) {
+    for (a = 0; a < nRow; a++) {
       row = row_vla.data() + a;
       nCol = row->nCol;
-      row->accum = 0;           /* initialize the accumulators */
+      row->accum = 0; /* initialize the accumulators */
       row->current = 0;
-      if(maxCol < nCol)
+      if (maxCol < nCol)
         maxCol = nCol;
     }
 
-    if(align_sele < 0) {
+    if (align_sele < 0) {
       /* in the simplest mode, just start each sequence in the same column */
 
       b = 0;
-      while(!done_flag) {
+      while (!done_flag) {
         int max_offset = 0;
         done_flag = true;
-        for(a = 0; a < nRow; a++) {
+        for (a = 0; a < nRow; a++) {
           row = row_vla.data() + a;
-          if(!row->label_flag) {
-            if(b < row->nCol) {
-              CSeqCol *r1 = row->col + b;
+          if (!row->label_flag) {
+            if (b < row->nCol) {
+              CSeqCol* r1 = row->col + b;
               done_flag = false;
 
               r1->offset = r1->start + row->accum;
-              if(max_offset < r1->offset)
+              if (max_offset < r1->offset)
                 max_offset = r1->offset;
             }
           }
         }
-        for(a = 0; a < nRow; a++) {
+        for (a = 0; a < nRow; a++) {
           row = row_vla.data() + a;
-          if(!row->label_flag) {
-            if(b < row->nCol) {
-              CSeqCol *r1 = row->col + b;
-              if(b < 3) {
-                if(r1->offset < max_offset) {
+          if (!row->label_flag) {
+            if (b < row->nCol) {
+              CSeqCol* r1 = row->col + b;
+              if (b < 3) {
+                if (r1->offset < max_offset) {
                   row->accum += max_offset - r1->offset;
                 }
               }
@@ -1596,16 +1631,16 @@ void SeekerUpdate(PyMOLGlobals * G)
         stagger = true;
         break;
       }
-      for(a = 0; a < nRow; a++) {
+      for (a = 0; a < nRow; a++) {
         row = row_vla.data() + a;
         row->cCol = 0;
-        if((!row->label_flag) && ((row->cCol < row->nCol))) {
-          if(current < row->accum)
+        if ((!row->label_flag) && ((row->cCol < row->nCol))) {
+          if (current < row->accum)
             current = row->accum;
         }
       }
       done_flag = false;
-      while(!done_flag) {
+      while (!done_flag) {
         int hint_tagged_no_space = true;
         done_flag = true;
         {
@@ -1614,27 +1649,28 @@ void SeekerUpdate(PyMOLGlobals * G)
             int untagged_flag = true;
             int saw_untagged_no_abbr = false;
             int hint_untagged_space = false;
-            while(untagged_flag) {
+            while (untagged_flag) {
               int space_added = false;
               int max_width = 0;
               untagged_flag = false;
 
               /* first get the spaces in... */
 
-              for(a = 0; a < nRow; a++) {
+              for (a = 0; a < nRow; a++) {
                 row = row_vla.data() + a;
-                if((!row->label_flag) && (row->cCol < row->nCol)) {
-                  CSeqCol *r1 = row->col + row->cCol;
-                  if(!r1->tag) {        /* not aligned */
+                if ((!row->label_flag) && (row->cCol < row->nCol)) {
+                  CSeqCol* r1 = row->col + row->cCol;
+                  if (!r1->tag) { /* not aligned */
                     int text_len = (r1->stop - r1->start);
-                    if((!first) && (!space_added) && (row->cCol > 2) &&
-                       (codes || (((!r1->is_abbr) && (!r1->spacer))) ||
-                        hint_untagged_space || (r1->is_abbr && (!r1->hint_no_space)))) {
+                    if ((!first) && (!space_added) && (row->cCol > 2) &&
+                        (codes || (((!r1->is_abbr) && (!r1->spacer))) ||
+                            hint_untagged_space ||
+                            (r1->is_abbr && (!r1->hint_no_space)))) {
                       /* insert space */
                       current++;
                       space_added = true;
                     }
-                    if(max_width < text_len)
+                    if (max_width < text_len)
                       max_width = text_len;
                   }
                 }
@@ -1642,11 +1678,11 @@ void SeekerUpdate(PyMOLGlobals * G)
 
               /* then do the rest */
 
-              for(a = 0; a < nRow; a++) {
+              for (a = 0; a < nRow; a++) {
                 row = row_vla.data() + a;
-                if((!row->label_flag) && (row->cCol < row->nCol)) {
-                  CSeqCol *r1 = row->col + row->cCol;
-                  if(!r1->tag) {        /* not aligned */
+                if ((!row->label_flag) && (row->cCol < row->nCol)) {
+                  CSeqCol* r1 = row->col + row->cCol;
+                  if (!r1->tag) { /* not aligned */
                     int text_len = (r1->stop - r1->start);
                     untagged_flag = true;
                     done_flag = false;
@@ -1656,16 +1692,17 @@ void SeekerUpdate(PyMOLGlobals * G)
                     r1->offset = current;
                     r1->unaligned = true;
 
-                    if(!r1->spacer) {
+                    if (!r1->spacer) {
                       int aa;
 
-                      for(aa = 0; aa < nRow; aa++) {    /* infill populate other rows with dashes */
-                        if(aa != a) {
-                          CSeqRow *row2 = row_vla.data() + aa;
-                          if(!row2->label_flag) {
-                            if(row2->cCol < row2->nCol) {
-                              CSeqCol *r2 = row2->col + row2->cCol;
-                              if(stagger || r2->tag || r2->spacer) {
+                      for (aa = 0; aa < nRow;
+                           aa++) { /* infill populate other rows with dashes */
+                        if (aa != a) {
+                          CSeqRow* row2 = row_vla.data() + aa;
+                          if (!row2->label_flag) {
+                            if (row2->cCol < row2->nCol) {
+                              CSeqCol* r2 = row2->col + row2->cCol;
+                              if (stagger || r2->tag || r2->spacer) {
                                 VLACheck(row2->fill, CSeqCol, row2->nFill);
                                 r2 = row2->fill + row2->nFill;
                                 r2->stop = text_len;
@@ -1673,7 +1710,7 @@ void SeekerUpdate(PyMOLGlobals * G)
                                 row2->nFill++;
                               }
                             } else {
-                              CSeqCol *r2 = row2->col + row2->cCol;
+                              CSeqCol* r2 = row2->col + row2->cCol;
                               VLACheck(row2->fill, CSeqCol, row2->nFill);
                               r2 = row2->fill + row2->nFill;
                               r2->stop = text_len;
@@ -1684,16 +1721,16 @@ void SeekerUpdate(PyMOLGlobals * G)
                         }
                       }
                     }
-                    if(stagger)
+                    if (stagger)
                       current += text_len;
-                    else if(max_width < text_len)
+                    else if (max_width < text_len)
                       max_width = text_len;
                   }
                 }
               }
-              if(!stagger)
+              if (!stagger)
                 current += max_width;
-              if(saw_untagged_no_abbr) {
+              if (saw_untagged_no_abbr) {
                 hint_untagged_space = true;
                 hint_tagged_no_space = false;
               } else {
@@ -1701,11 +1738,11 @@ void SeekerUpdate(PyMOLGlobals * G)
                 hint_tagged_no_space = true;
               }
               saw_untagged_no_abbr = false;
-              for(a = 0; a < nRow; a++) {
+              for (a = 0; a < nRow; a++) {
                 row = row_vla.data() + a;
-                if((!row->label_flag) && (row->cCol < row->nCol)) {
-                  CSeqCol *r1 = row->col + row->cCol;
-                  if(!r1->tag) {
+                if ((!row->label_flag) && (row->cCol < row->nCol)) {
+                  CSeqCol* r1 = row->col + row->cCol;
+                  if (!r1->tag) {
                     row->cCol++;
                   }
                 }
@@ -1717,29 +1754,29 @@ void SeekerUpdate(PyMOLGlobals * G)
         {
           /* next insert match-tagged entries into the same column */
           int min_tag = 0;
-          for(a = 0; a < nRow; a++) {
+          for (a = 0; a < nRow; a++) {
             row = row_vla.data() + a;
-            if((!row->label_flag) && (row->cCol < row->nCol)) {
-              CSeqCol *r1 = row->col + row->cCol;
-              if(r1->tag && ((min_tag > r1->tag) || (!min_tag))) {
+            if ((!row->label_flag) && (row->cCol < row->nCol)) {
+              CSeqCol* r1 = row->col + row->cCol;
+              if (r1->tag && ((min_tag > r1->tag) || (!min_tag))) {
                 min_tag = r1->tag;
               }
             }
           }
-          if(min_tag) {
+          if (min_tag) {
             int width, max_width = 0;
             int space_added = false;
             int rep;
-            for(rep = 0; rep < 2; rep++)
-              for(a = 0; a < nRow; a++) {
+            for (rep = 0; rep < 2; rep++)
+              for (a = 0; a < nRow; a++) {
                 row = row_vla.data() + a;
-                if((!row->label_flag) && (row->cCol < row->nCol)) {
-                  CSeqCol *r1 = row->col + row->cCol;
-                  if(r1->tag == min_tag) {
-                    if((!first) && (!space_added) &&
-                       (codes || (((!r1->is_abbr) && (!r1->spacer))) ||
-                        (r1->is_abbr
-                         && (!(r1->hint_no_space || hint_tagged_no_space))))) {
+                if ((!row->label_flag) && (row->cCol < row->nCol)) {
+                  CSeqCol* r1 = row->col + row->cCol;
+                  if (r1->tag == min_tag) {
+                    if ((!first) && (!space_added) &&
+                        (codes || (((!r1->is_abbr) && (!r1->spacer))) ||
+                            (r1->is_abbr && (!(r1->hint_no_space ||
+                                                hint_tagged_no_space))))) {
                       /* insert space */
                       current++;
                       space_added = true;
@@ -1748,7 +1785,7 @@ void SeekerUpdate(PyMOLGlobals * G)
                     first = false;
                     r1->offset = current;
                     width = (r1->stop - r1->start);
-                    if(max_width < width)
+                    if (max_width < width)
                       max_width = width;
                     /*   row->cCol++;  */
                   }
@@ -1756,13 +1793,14 @@ void SeekerUpdate(PyMOLGlobals * G)
               }
             {
               int aa;
-              for(aa = 0; aa < nRow; aa++) {    /* infill populate other rows with dashes */
-                CSeqRow *row2 = row_vla.data() + aa;
-                if(!row2->label_flag) {
-                  if(row2->cCol < row2->nCol) {
-                    CSeqCol *r1 = row2->col + row2->cCol;
-                    if(r1->tag != min_tag) {
-                      CSeqCol *r2;
+              for (aa = 0; aa < nRow;
+                   aa++) { /* infill populate other rows with dashes */
+                CSeqRow* row2 = row_vla.data() + aa;
+                if (!row2->label_flag) {
+                  if (row2->cCol < row2->nCol) {
+                    CSeqCol* r1 = row2->col + row2->cCol;
+                    if (r1->tag != min_tag) {
+                      CSeqCol* r2;
                       VLACheck(row2->fill, CSeqCol, row2->nFill);
                       r2 = row2->fill + row2->nFill;
                       r2->stop = max_width;
@@ -1770,7 +1808,7 @@ void SeekerUpdate(PyMOLGlobals * G)
                       row2->nFill++;
                     }
                   } else {
-                    CSeqCol *r2;
+                    CSeqCol* r2;
                     VLACheck(row2->fill, CSeqCol, row2->nFill);
                     r2 = row2->fill + row2->nFill;
                     r2->stop = max_width;
@@ -1780,11 +1818,11 @@ void SeekerUpdate(PyMOLGlobals * G)
                 }
               }
             }
-            for(a = 0; a < nRow; a++) {
+            for (a = 0; a < nRow; a++) {
               row = row_vla.data() + a;
-              if((!row->label_flag) && (row->cCol < row->nCol)) {
-                CSeqCol *r1 = row->col + row->cCol;
-                if(r1->tag == min_tag) {
+              if ((!row->label_flag) && (row->cCol < row->nCol)) {
+                CSeqCol* r1 = row->col + row->cCol;
+                if (r1->tag == min_tag) {
                   row->cCol++;
                 }
               }
@@ -1795,86 +1833,90 @@ void SeekerUpdate(PyMOLGlobals * G)
       }
     }
 
-    for(a = 0; a < nRow; a++) {
+    for (a = 0; a < nRow; a++) {
       row = row_vla.data() + a;
       nCol = row->nCol;
-      if(row->label_flag)
+      if (row->label_flag)
         lab = row;
       else {
-        for(b = 0; b < nCol; b++) {
+        for (b = 0; b < nCol; b++) {
           CSeqCol *r1 = row->col + b, *l1 = nullptr;
-          if(lab) {
-            l1 = lab->col + b;  /* if a fixed label is present, 
-                                   get the final offset from the residue line */
-            if(l1->stop)
+          if (lab) {
+            l1 = lab->col + b; /* if a fixed label is present,
+                                  get the final offset from the residue line */
+            if (l1->stop)
               l1->offset = r1->offset;
           }
         }
         lab = nullptr;
       }
     }
-
   }
 
   /* THIRD PASS: fill in labels, based on actual residue spacing */
 
-  if(nRow && (codes != 4)) {
+  if (nRow && (codes != 4)) {
     int a, b, c;
     int nCol;
-    for(a = 0; a < nRow; a++) {
+    for (a = 0; a < nRow; a++) {
       lab = row_vla.data() + a;
 
-      if(lab->label_flag) {
+      if (lab->label_flag) {
         int next_open = 0;
-        int *atom_list;
+        int* atom_list;
         int st_len;
         int div, sub;
         int draw_it;
         int n_skipped = 0;
         int last_resv = -1;
-        const AtomInfoType *last_ai = nullptr;
-        const ObjectMolecule *obj;
-        const AtomInfoType *ai;
+        const AtomInfoType* last_ai = nullptr;
+        const ObjectMolecule* obj;
+        const AtomInfoType* ai;
         row = lab + 1;
         nCol = row->nCol;
         obj = row->obj;
-        div = SettingGet_i(G, obj->Setting.get(), nullptr, cSetting_seq_view_label_spacing);
-        sub = SettingGet_i(G, obj->Setting.get(), nullptr, cSetting_seq_view_label_start);
+        div = SettingGet_i(
+            G, obj->Setting.get(), nullptr, cSetting_seq_view_label_spacing);
+        sub = SettingGet_i(
+            G, obj->Setting.get(), nullptr, cSetting_seq_view_label_start);
 
-        for(b = 0; b < nCol; b++) {
-          CSeqCol *r1 = row->col + b;
-          CSeqCol *l1 = lab->col + b;
+        for (b = 0; b < nCol; b++) {
+          CSeqCol* r1 = row->col + b;
+          CSeqCol* l1 = lab->col + b;
 
           ai = nullptr;
-          if(r1->atom_at) {
+          if (r1->atom_at) {
             atom_list = row->atom_lists + r1->atom_at;
-            if(*atom_list >= 0)
-              ai = obj->AtomInfo + (*atom_list);        /* get first atom in list */
+            if (*atom_list >= 0)
+              ai = obj->AtomInfo + (*atom_list); /* get first atom in list */
           }
-          if(l1->stop) {        /* if label is already present, just line it up */
+          if (l1->stop) { /* if label is already present, just line it up */
             l1->offset = r1->offset;
-          } else if((r1->offset >= next_open) && ai) {
-            if((div > 1) && (codes != 2)) {
-              if(!((ai->resv - sub) % div))
+          } else if ((r1->offset >= next_open) && ai) {
+            if ((div > 1) && (codes != 2)) {
+              if (!((ai->resv - sub) % div))
                 draw_it = true;
               else
                 draw_it = false;
             } else {
               draw_it = true;
             }
-            if(ai->resv != (last_resv + 1))     /* gap in sequence?  then draw label ASAP */
+            if (ai->resv !=
+                (last_resv + 1)) /* gap in sequence?  then draw label ASAP */
               draw_it = true;
-            if(n_skipped >= (div + div))        /* don't skip too many without a label! */
+            if (n_skipped >=
+                (div + div)) /* don't skip too many without a label! */
               draw_it = true;
 
-            if(AtomInfoSameResidueP(G, last_ai, ai))    /* don't ever draw a residue label twice */
+            if (AtomInfoSameResidueP(
+                    G, last_ai, ai)) /* don't ever draw a residue label twice */
               draw_it = false;
 
-            if(draw_it) {
+            if (draw_it) {
               n_skipped = 0;
               last_ai = ai;
               l1->start = lab->len;
-              if(codes == 2) {
+              if (codes == 2) {
                 UtilConcatVLA(&lab->txt, &lab->len, LexStr(G, ai->resn));
                 UtilConcatVLA(&lab->txt, &lab->len, "`");
               }
@@ -1891,21 +1933,22 @@ void SeekerUpdate(PyMOLGlobals * G)
 
               /* make sure this label doesn't conflict with a fixed label */
 
-              for(c = b + 1; c < nCol; c++) {
-                CSeqCol *l2 = lab->col + c;
-                if(l2->offset && (l2->offset < next_open)) {
+              for (c = b + 1; c < nCol; c++) {
+                CSeqCol* l2 = lab->col + c;
+                if (l2->offset && (l2->offset < next_open)) {
                   l1->start = 0;
                   l1->stop = 0;
                   break;
                 }
-                if((c - b) > st_len)    /* only search as many columns as characters */
+                if ((c - b) >
+                    st_len) /* only search as many columns as characters */
                   break;
               }
             } else
               n_skipped++;
           }
 
-          if(ai)
+          if (ai)
             last_resv = ai->resv;
         }
       }
@@ -1913,31 +1956,31 @@ void SeekerUpdate(PyMOLGlobals * G)
   }
 
   /* FOURTH PASS: simply fill in character offsets */
-  if(nRow) {
+  if (nRow) {
     int a, b;
     int nCol;
     int start, stop;
-    for(a = 0; a < nRow; a++) {
+    for (a = 0; a < nRow; a++) {
       row = row_vla.data() + a;
       row->ext_len = 0;
 
-      if(!row->label_flag) {
+      if (!row->label_flag) {
         nCol = row->nCol;
 
-        for(b = 0; b < nCol; b++) {
-          CSeqCol *r1 = row->col + b;
+        for (b = 0; b < nCol; b++) {
+          CSeqCol* r1 = row->col + b;
           stop = r1->offset + (r1->stop - r1->start);
-          if(row->ext_len < stop)
+          if (row->ext_len < stop)
             row->ext_len = stop;
         }
         VLACheck(row->char2col, int, row->ext_len);
         UtilZeroMem(row->char2col.data(), row->ext_len);
-        for(b = 0; b < nCol; b++) {
-          CSeqCol *r1 = row->col + b;
+        for (b = 0; b < nCol; b++) {
+          CSeqCol* r1 = row->col + b;
           int c;
           start = r1->offset;
           stop = r1->offset + (r1->stop - r1->start);
-          for(c = start; c < stop; c++)
+          for (c = start; c < stop; c++)
             row->char2col[c] = b + 1;
         }
       }
@@ -1947,10 +1990,10 @@ void SeekerUpdate(PyMOLGlobals * G)
   SeqSetHandler(G, G->Seeker);
 }
 
-int SeekerInit(PyMOLGlobals * G)
+int SeekerInit(PyMOLGlobals* G)
 {
-  CSeeker *I = nullptr;
-  if((I = (G->Seeker = new CSeeker()))) {
+  CSeeker* I = nullptr;
+  if ((I = (G->Seeker = new CSeeker()))) {
     I->dragInfo.row = -1;
     I->LastClickTime = UtilGetSeconds(G) - 1.0F;
     return 1;
@@ -1959,29 +2002,30 @@ int SeekerInit(PyMOLGlobals * G)
   }
 }
 
-void SeekerFree(PyMOLGlobals * G)
+void SeekerFree(PyMOLGlobals* G)
 {
   DeleteP(G->Seeker);
 }
 
-CSeqRow* CSeeker::click(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int button, int row, int col,
-                    int mod, int x, int y)
+CSeqRow* CSeeker::click(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA,
+    int button, int row, int col, int mod, int x, int y)
 {
   return SeekerClick(G, rowVLA, button, row, col, mod, x, y);
 }
 
-CSeqRow* CSeeker::drag(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int row, int col, int mod)
+CSeqRow* CSeeker::drag(
+    PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA, int row, int col, int mod)
 {
   return SeekerDrag(G, rowVLA, row, col, mod);
 }
 
-CSeqRow* CSeeker::release(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA, int button, int row, int col,
-                      int mod)
+CSeqRow* CSeeker::release(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA,
+    int button, int row, int col, int mod)
 {
   return SeekerRelease(G, rowVLA, button, row, col, mod);
 }
 
-void CSeeker::refresh(PyMOLGlobals * G, std::vector<CSeqRow>& rowVLA)
+void CSeeker::refresh(PyMOLGlobals* G, std::vector<CSeqRow>& rowVLA)
 {
   return SeekerRefresh(G, rowVLA);
 }

@@ -20,10 +20,10 @@
  *
  ***************************************************************************/
 
-/* 
+/*
  * fsfour format density maps
  *
- * More info for this format can be found at 
+ * More info for this format can be found at
  * <http://www.csb.yale.edu/userguides/datamanip/phases/FSFOUR.html>
  *
  * Old versions of the cns2fsfour and ccp2fsfour utilities produced a
@@ -33,40 +33,40 @@
  *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if defined(_AIX)
 #include <strings.h>
 #endif
 
-#include "molfile_plugin.h"
 #include "endianswap.h"
 #include "fortread.h"
+#include "molfile_plugin.h"
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
 typedef struct {
-  FILE *fd;
+  FILE* fd;
   int nsets;
   int swap;
   int f, m, s, x, y, z; // indecies mapping fast-medium-slow to x-y-z
   float scale;
-  molfile_volumetric_t *vol;
+  molfile_volumetric_t* vol;
 } fs4_t;
 
-
-static void *open_fs4_read(const char *filepath, const char *filetype,
-    int *natoms) {
-  fs4_t *fs4;
-  FILE *fd;
+static void* open_fs4_read(
+    const char* filepath, const char* filetype, int* natoms)
+{
+  fs4_t* fs4;
+  FILE* fd;
   float header[32], scale, fmsCellSize[3], alpha, beta, gamma, z1, z2, z3;
-  int dataBegin, blocksize, geom[16], fmsGridSize[3], norn, swap=0;
+  int dataBegin, blocksize, geom[16], fmsGridSize[3], norn, swap = 0;
 
   fd = fopen(filepath, "rb");
   if (!fd) {
@@ -83,7 +83,8 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
     if (dataBegin <= 255) {
       swap = 1;
     } else {
-      fprintf(stderr, "fs4plugin) Cannot read file: header block is too large.\n");
+      fprintf(
+          stderr, "fs4plugin) Cannot read file: header block is too large.\n");
       return NULL;
     }
   }
@@ -94,7 +95,7 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
 
   // Handle files produced by old versions of (cns|ccp)2fsfour
   if (blocksize == 28) {
-    printf("fs4plugin) Recognized %s cns2fsfour map.\n", 
+    printf("fs4plugin) Recognized %s cns2fsfour map.\n",
         swap ? "opposite-endian" : "same-endian");
 
     // Read the geometry block
@@ -110,7 +111,8 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
     norn = geom[4];
 
     // Warn about assumptions
-    printf("fs4plugin) Warning: file does not contain unit cell lengths or angles.\n");
+    printf("fs4plugin) Warning: file does not contain unit cell lengths or "
+           "angles.\n");
 
     scale = 50.0;
     fmsCellSize[0] = 1.0;
@@ -131,7 +133,7 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
     alpha = header[24];
     beta = header[25];
     gamma = header[26];
-    
+
     // Skip the symmetry block if one present
     blocksize = fortread_4(geom, 16, swap, fd);
     if (blocksize == 9) {
@@ -149,7 +151,7 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
     fmsGridSize[1] = geom[1];
     fmsGridSize[2] = geom[2];
 
-    scale = *((float *) geom + 3);
+    scale = *((float*) geom + 3);
     if (scale == 0) {
       scale = 50;
     }
@@ -169,11 +171,12 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
 
   // Convert degrees to radians
   alpha *= M_PI / 180.0;
-  beta  *= M_PI / 180.0;
+  beta *= M_PI / 180.0;
   gamma *= M_PI / 180.0;
 
   // Warn about assumptions
-  printf("fs4plugin) Warning: file does not contain molecule center.\nCentering at <0, 0, 0>\n");
+  printf("fs4plugin) Warning: file does not contain molecule "
+         "center.\nCentering at <0, 0, 0>\n");
 
   // Allocate and initialize the fs4 structure
   fs4 = new fs4_t;
@@ -191,8 +194,7 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
     fs4->f = 0;
     fs4->m = 2;
     fs4->s = 1;
-  }
-  else if (norn == 1) {
+  } else if (norn == 1) {
     // y fast, z medium, x slow
     fs4->x = 2;
     fs4->y = 0;
@@ -200,8 +202,7 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
     fs4->f = 1;
     fs4->m = 2;
     fs4->s = 0;
-  }
-  else { // norn ==2
+  } else { // norn ==2
     // x fast, y medium, z slow
     fs4->x = 0;
     fs4->y = 1;
@@ -226,10 +227,10 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
   fs4->vol[0].yaxis[0] = cos(gamma) * fmsCellSize[1];
   fs4->vol[0].yaxis[1] = sin(gamma) * fmsCellSize[1];
   fs4->vol[0].yaxis[2] = 0.0;
- 
+
   z1 = cos(beta);
-  z2 = (cos(alpha) - cos(beta)*cos(gamma)) / sin(gamma);
-  z3 = sqrt(1.0 - z1*z1 - z2*z2);
+  z2 = (cos(alpha) - cos(beta) * cos(gamma)) / sin(gamma);
+  z3 = sqrt(1.0 - z1 * z1 - z2 * z2);
   fs4->vol[0].zaxis[0] = z1 * fmsCellSize[2];
   fs4->vol[0].zaxis[1] = z2 * fmsCellSize[2];
   fs4->vol[0].zaxis[2] = z3 * fmsCellSize[2];
@@ -243,20 +244,19 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
   return fs4;
 }
 
-
-static int read_fs4_metadata(void *v, int *nsets, 
-  molfile_volumetric_t **metadata) {
-  fs4_t *fs4 = (fs4_t *)v;
-  *nsets = fs4->nsets; 
-  *metadata = fs4->vol;  
+static int read_fs4_metadata(
+    void* v, int* nsets, molfile_volumetric_t** metadata)
+{
+  fs4_t* fs4 = (fs4_t*) v;
+  *nsets = fs4->nsets;
+  *metadata = fs4->vol;
 
   return MOLFILE_SUCCESS;
 }
 
-
-static int read_fs4_data(void *v, int set, float *dstBlock, 
-                         float *colorblock) {
-  fs4_t *fs4 = (fs4_t *) v;
+static int read_fs4_data(void* v, int set, float* dstBlock, float* colorblock)
+{
+  fs4_t* fs4 = (fs4_t*) v;
   int *srcBlock, index;
   int col, row, plane, colSize, rowSize, planeSize;
   int xyzGridSize[3], xyzIndexIncrement[3];
@@ -280,8 +280,9 @@ static int read_fs4_data(void *v, int set, float *dstBlock,
 
       // Read one row of data
       if (fortread_4(srcBlock, colSize, fs4->swap, fs4->fd) != colSize) {
-        fprintf(stderr, "fs4plugin) Error reading data: incorrect record size.\n");
-        delete [] srcBlock;
+        fprintf(
+            stderr, "fs4plugin) Error reading data: incorrect record size.\n");
+        delete[] srcBlock;
         return MOLFILE_ERROR;
       }
 
@@ -290,22 +291,23 @@ static int read_fs4_data(void *v, int set, float *dstBlock,
         index += xyzIndexIncrement[fs4->f];
       }
 
-      index += xyzIndexIncrement[fs4->m] - colSize*xyzIndexIncrement[fs4->f];
+      index += xyzIndexIncrement[fs4->m] - colSize * xyzIndexIncrement[fs4->f];
     } // end for (row)
 
-    index += xyzIndexIncrement[fs4->s] - rowSize*xyzIndexIncrement[fs4->m];
+    index += xyzIndexIncrement[fs4->s] - rowSize * xyzIndexIncrement[fs4->m];
   } // end for (plane)
 
-  delete [] srcBlock;
+  delete[] srcBlock;
   return MOLFILE_SUCCESS;
 }
 
-static void close_fs4_read(void *v) {
-  fs4_t *fs4 = (fs4_t *)v;
+static void close_fs4_read(void* v)
+{
+  fs4_t* fs4 = (fs4_t*) v;
 
   fclose(fs4->fd);
   if (fs4->vol != NULL)
-    delete [] fs4->vol; 
+    delete[] fs4->vol;
   delete fs4;
 }
 
@@ -314,7 +316,8 @@ static void close_fs4_read(void *v) {
  */
 static molfile_plugin_t plugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) { 
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -329,24 +332,29 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   plugin.read_volumetric_metadata = read_fs4_metadata;
   plugin.read_volumetric_data = read_fs4_data;
   plugin.close_file_read = close_fs4_read;
-  return VMDPLUGIN_SUCCESS; 
-}
-
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
+  return VMDPLUGIN_SUCCESS;
+}
+
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}
 
 #ifdef TEST_FS4_PLUGIN
 
-int main(int argc, char **argv) {
-  fs4_t *fs4;
+int main(int argc, char** argv)
+{
+  fs4_t* fs4;
   int natoms;
-  char *filetype;
-  float *datablock;
-  
+  char* filetype;
+  float* datablock;
+
   while (--argc) {
     ++argv;
 
@@ -356,24 +364,23 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    printf("a:\t%f\nb:\t%f\nc:\t%f\n",
-           fs4->vol[0].xaxis[0], fs4->vol[0].yaxis[1], fs4->vol[0].zaxis[2]);
-    printf("ncol:\t%d\nnrow:\t%d\nnplane:\t%d\n", 
-           fs4->vol[0].xsize, fs4->vol[0].ysize, fs4->vol[0].zsize);
+    printf("a:\t%f\nb:\t%f\nc:\t%f\n", fs4->vol[0].xaxis[0],
+        fs4->vol[0].yaxis[1], fs4->vol[0].zaxis[2]);
+    printf("ncol:\t%d\nnrow:\t%d\nnplane:\t%d\n", fs4->vol[0].xsize,
+        fs4->vol[0].ysize, fs4->vol[0].zsize);
 
-    datablock = new float[fs4->vol[0].xsize * fs4->vol[0].ysize * 
-                          fs4->vol[0].zsize];
+    datablock =
+        new float[fs4->vol[0].xsize * fs4->vol[0].ysize * fs4->vol[0].zsize];
 
     if (read_fs4_data(fs4, 0, datablock, NULL) != 0) {
       fprintf(stderr, "read_fs4_data failed for file %s\n", *argv);
       return 1;
     }
 
-    delete [] datablock;
+    delete[] datablock;
   }
 
   return 0;
 }
 
-# endif
-
+#endif

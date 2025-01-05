@@ -1,22 +1,22 @@
 
-/* 
+/*
    A* -------------------------------------------------------------------
    B* This file contains source code for the PyMOL computer program
-   C* Copyright (c) Schrodinger, LLC. 
+   C* Copyright (c) Schrodinger, LLC.
    D* -------------------------------------------------------------------
    E* It is unlawful to modify or remove this copyright notice.
    F* -------------------------------------------------------------------
-   G* Please see the accompanying LICENSE file for further information. 
+   G* Please see the accompanying LICENSE file for further information.
    H* -------------------------------------------------------------------
    I* Additional authors of this source file include:
-   -* 
-   -* 
+   -*
+   -*
    -*
    Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
-#include "os_std.h"
 #include "os_gl.h"
+#include "os_python.h"
+#include "os_std.h"
 
 #include <clocale>
 
@@ -26,56 +26,55 @@
 
 #include "OVContext.h"
 
-#include "MemoryDebug.h"
-#include "Err.h"
-#include "Util.h"
-#include "Selector.h"
-#include "Color.h"
-#include "Ortho.h"
-#include "Scene.h"
-#include "PyMOLObject.h"
-#include "Executive.h"
-#include "Word.h"
-#include "RepMesh.h"
-#include "ObjectMolecule.h"
-#include "Control.h"
-#include "Sphere.h"
-#include "Setting.h"
-#include "Ray.h"
-#include "Util.h"
-#include "Movie.h"
-#include "P.h"
-#include "Editor.h"
-#include "SculptCache.h"
-#include "Isosurf.h"
-#include "Tetsurf.h"
-#include "PConv.h"
-#include "VFont.h"
-#include "Wizard.h"
-#include "Text.h"
-#include "Character.h"
-#include "Seq.h"
-#include "Seeker.h"
-#include "Texture.h"
-#include "TestPyMOL.h"
-#include "TypeFace.h"
-#include "PlugIOManager.h"
-#include "MovieScene.h"
-#include "Lex.h"
-#include "SelectorDef.h"
 #include "ButMode.h"
 #include "CGORenderer.h"
+#include "Character.h"
+#include "Color.h"
+#include "Control.h"
+#include "Editor.h"
+#include "Err.h"
+#include "Executive.h"
 #include "GFXManager.h"
+#include "Isosurf.h"
+#include "Lex.h"
+#include "MemoryDebug.h"
+#include "Movie.h"
+#include "MovieScene.h"
+#include "ObjectMolecule.h"
+#include "Ortho.h"
+#include "P.h"
+#include "PConv.h"
+#include "PlugIOManager.h"
+#include "PyMOLObject.h"
+#include "Ray.h"
+#include "RepMesh.h"
+#include "Scene.h"
+#include "SculptCache.h"
+#include "Seeker.h"
+#include "Selector.h"
+#include "SelectorDef.h"
+#include "Seq.h"
+#include "Setting.h"
+#include "Sphere.h"
+#include "TestPyMOL.h"
+#include "Tetsurf.h"
+#include "Text.h"
+#include "Texture.h"
+#include "TypeFace.h"
+#include "Util.h"
+#include "VFont.h"
+#include "Wizard.h"
+#include "Word.h"
 
 #ifdef _PYMOL_OPENVR
 #include "OpenVRMode.h"
 #endif
 
+#include "Feedback.h"
+#include "GraphicsUtil.h"
 #include "PyMOL.h"
 #include "PyMOLGlobals.h"
 #include "PyMOLOptions.h"
-#include "Feedback.h"
-#include "GraphicsUtil.h"
 #include "pymol/zstring_view.h"
 
 #include "ShaderMgr.h"
@@ -84,26 +83,40 @@
 #include <unordered_map>
 
 #ifndef _PYMOL_NOPY
-PyMOLGlobals *SingletonPyMOLGlobals = nullptr;
+PyMOLGlobals* SingletonPyMOLGlobals = nullptr;
 #endif
 
 #ifdef _PYMOL_LIB_HAS_PYTHON
-#define PYMOL_API_LOCK if(I->PythonInitStage && (!I->ModalDraw)) { PLockAPIAndUnblock(I->G); {
-#define PYMOL_API_LOCK_MODAL if(I->PythonInitStage) { PLockAPIAndUnblock(I->G); {
-#define PYMOL_API_TRYLOCK if(I->PythonInitStage && (!I->ModalDraw)) { if(PTryLockAPIAndUnblock(I->G)) {
-#define PYMOL_API_UNLOCK PBlockAndUnlockAPI(I->G); }}
-#define PYMOL_API_UNLOCK_NO_FLUSH PBlockAndUnlockAPI(I->G); }}
+#define PYMOL_API_LOCK                                                         \
+  if (I->PythonInitStage && (!I->ModalDraw)) {                                 \
+    PLockAPIAndUnblock(I->G);                                                  \
+    {
+#define PYMOL_API_LOCK_MODAL                                                   \
+  if (I->PythonInitStage) {                                                    \
+    PLockAPIAndUnblock(I->G);                                                  \
+    {
+#define PYMOL_API_TRYLOCK                                                      \
+  if (I->PythonInitStage && (!I->ModalDraw)) {                                 \
+    if (PTryLockAPIAndUnblock(I->G)) {
+#define PYMOL_API_UNLOCK                                                       \
+  PBlockAndUnlockAPI(I->G);                                                    \
+  }                                                                            \
+  }
+#define PYMOL_API_UNLOCK_NO_FLUSH                                              \
+  PBlockAndUnlockAPI(I->G);                                                    \
+  }                                                                            \
+  }
 #else
-#define PYMOL_API_LOCK if(!I->ModalDraw) {
+#define PYMOL_API_LOCK if (!I->ModalDraw) {
 #define PYMOL_API_LOCK_MODAL {
-#define PYMOL_API_TRYLOCK if(!I->ModalDraw) {
+#define PYMOL_API_TRYLOCK if (!I->ModalDraw) {
 #define PYMOL_API_UNLOCK }
 #define PYMOL_API_UNLOCK_NO_FLUSH }
 #endif
 #define IDLE_AND_READY 3
 
 struct CPyMOL {
-  PyMOLGlobals *G = nullptr;
+  PyMOLGlobals* G = nullptr;
   int FakeDragFlag{};
   int RedisplayFlag{};
   int PassiveFlag{};
@@ -114,7 +127,8 @@ struct CPyMOL {
   int ClickReadyFlag{};
   int DrawnFlag{};
   ObjectNameType ClickedObject{};
-  int ClickedIndex{}, ClickedButton{}, ClickedModifiers{}, ClickedX{}, ClickedY{}, ClickedHavePos{}, ClickedPosState{};
+  int ClickedIndex{}, ClickedButton{}, ClickedModifiers{}, ClickedX{},
+      ClickedY{}, ClickedHavePos{}, ClickedPosState{};
   int ClickedBondIndex{};
   float ClickedPos[3]{};
   int ImageRequestedFlag{}, ImageReadyFlag{};
@@ -126,10 +140,9 @@ struct CPyMOL {
   int ExpireCount{};
   bool done_ConfigureShaders{};
 
-  PyMOLModalDrawFn *ModalDraw = nullptr;
+  PyMOLModalDrawFn* ModalDraw = nullptr;
 
-  PyMOLSwapBuffersFn *SwapFn = nullptr;
-
+  PyMOLSwapBuffersFn* SwapFn = nullptr;
 
 /* Python stuff */
 #ifndef _PYMOL_NOPY
@@ -137,7 +150,7 @@ struct CPyMOL {
 #endif
   /* dynamically mapped string constants */
 
-  OVLexicon *Lex = nullptr;
+  OVLexicon* Lex = nullptr;
   std::unordered_map<int, int> Rep;
   ov_word lex_everything{}, lex_sticks{}, lex_spheres{}, lex_surface{};
   ov_word lex_labels{}, lex_nb_spheres{}, lex_cartoon{}, lex_ribbon{};
@@ -164,17 +177,26 @@ struct CPyMOL {
   ov_word lex_alt{}, lex_alsh{}, lex_ctal{}, lex_ctas{};
 
   std::unordered_map<int, int> MouseButtonActionCodeLexicon;
-  ov_word lex_but_rota{}, lex_but_move{}, lex_but_movz{}, lex_but_clip{}, lex_but_rotz{};
-  ov_word lex_but_clpn{}, lex_but_clpf{}, lex_but_lb, lex_but_mb{}, lex_but_rb{};
-  ov_word lex_but_plus_lb{}, lex_but_plus_mb{}, lex_but_plus_rb{}, lex_but_pkat{}, lex_but_pkbd{};
-  ov_word lex_but_rotf{}, lex_but_torf{}, lex_but_movf{}, lex_but_orig{}, lex_but_plus_lbx{};
-  ov_word lex_but_minus_lbx{}, lex_but_lbbx, lex_but_none{}, lex_but_cent{}, lex_but_pktb{};
+  ov_word lex_but_rota{}, lex_but_move{}, lex_but_movz{}, lex_but_clip{},
+      lex_but_rotz{};
+  ov_word lex_but_clpn{}, lex_but_clpf{}, lex_but_lb, lex_but_mb{},
+      lex_but_rb{};
+  ov_word lex_but_plus_lb{}, lex_but_plus_mb{}, lex_but_plus_rb{},
+      lex_but_pkat{}, lex_but_pkbd{};
+  ov_word lex_but_rotf{}, lex_but_torf{}, lex_but_movf{}, lex_but_orig{},
+      lex_but_plus_lbx{};
+  ov_word lex_but_minus_lbx{}, lex_but_lbbx, lex_but_none{}, lex_but_cent{},
+      lex_but_pktb{};
   ov_word lex_but_slab{}, lex_but_movs{}, lex_but_pk1{};
   ov_word lex_but_mova{}, lex_but_menu{}, lex_but_sele{}, lex_but_plus_minus{};
-  ov_word lex_but_plus_box{}, lex_but_minus_box{}, lex_but_mvsz, lex_but_dgrt{}, lex_but_dgmv{};
-  ov_word lex_but_dgmz{}, lex_but_roto{}, lex_but_movo{}, lex_but_mvoz{}, lex_but_mvfz{};
-  ov_word lex_but_mvaz{}, lex_but_drgm{}, lex_but_rotv{}, lex_but_movv{}, lex_but_mvvz{};
-  ov_word lex_but_drgo{}, lex_but_imsz{}, lex_but_imvz{}, lex_but_box{}, lex_but_irtz{};
+  ov_word lex_but_plus_box{}, lex_but_minus_box{}, lex_but_mvsz, lex_but_dgrt{},
+      lex_but_dgmv{};
+  ov_word lex_but_dgmz{}, lex_but_roto{}, lex_but_movo{}, lex_but_mvoz{},
+      lex_but_mvfz{};
+  ov_word lex_but_mvaz{}, lex_but_drgm{}, lex_but_rotv{}, lex_but_movv{},
+      lex_but_mvvz{};
+  ov_word lex_but_drgo{}, lex_but_imsz{}, lex_but_imvz{}, lex_but_box{},
+      lex_but_irtz{};
   ov_word lex_but_clik{};
 
   std::unordered_map<int, int> MouseModeLexicon;
@@ -188,36 +210,31 @@ struct CPyMOL {
   AtomPropertyInfo AtomPropertyInfos[NUM_ATOM_PROPERTIES]{};
   std::unordered_map<int, int> AtomPropertyLexicon;
   ov_word lex_atom_prop_model{}, lex_atom_prop_index{}, lex_atom_prop_type{},
-    lex_atom_prop_name{}, lex_atom_prop_resn{}, lex_atom_prop_resi{},
-    lex_atom_prop_resv{}, lex_atom_prop_chain{}, lex_atom_prop_alt{},
-    lex_atom_prop_segi{}, lex_atom_prop_elem{},
-    lex_atom_prop_ss{}, lex_atom_prop_text_type{},
-    lex_atom_prop_custom{}, lex_atom_prop_label{}, lex_atom_prop_numeric_type{},
-    lex_atom_prop_q{}, lex_atom_prop_b, lex_atom_prop_vdw{},
-    lex_atom_prop_elec_radius{}, lex_atom_prop_partial_charge{}, lex_atom_prop_formal_charge{},
-    lex_atom_prop_stereo{}, lex_atom_prop_cartoon{}, lex_atom_prop_color{},
-    lex_atom_prop_ID{}, lex_atom_prop_rank{}, lex_atom_prop_flags{},
-    lex_atom_prop_geom{}, lex_atom_prop_valence{},
-    lex_atom_prop_explicit_degree{},
-    lex_atom_prop_explicit_valence{},
-    lex_atom_prop_x{}, lex_atom_prop_y, lex_atom_prop_z{},
-    lex_atom_prop_settings{}, lex_atom_prop_properties{},
-    lex_atom_prop_reps{},
-    lex_atom_prop_protons{},
-    lex_atom_prop_oneletter{},
-    lex_atom_prop_s{}, lex_atom_prop_p{}, lex_atom_prop_state{};
+      lex_atom_prop_name{}, lex_atom_prop_resn{}, lex_atom_prop_resi{},
+      lex_atom_prop_resv{}, lex_atom_prop_chain{}, lex_atom_prop_alt{},
+      lex_atom_prop_segi{}, lex_atom_prop_elem{}, lex_atom_prop_ss{},
+      lex_atom_prop_text_type{}, lex_atom_prop_custom{}, lex_atom_prop_label{},
+      lex_atom_prop_numeric_type{}, lex_atom_prop_q{}, lex_atom_prop_b,
+      lex_atom_prop_vdw{}, lex_atom_prop_elec_radius{},
+      lex_atom_prop_partial_charge{}, lex_atom_prop_formal_charge{},
+      lex_atom_prop_stereo{}, lex_atom_prop_cartoon{}, lex_atom_prop_color{},
+      lex_atom_prop_ID{}, lex_atom_prop_rank{}, lex_atom_prop_flags{},
+      lex_atom_prop_geom{}, lex_atom_prop_valence{},
+      lex_atom_prop_explicit_degree{}, lex_atom_prop_explicit_valence{},
+      lex_atom_prop_x{}, lex_atom_prop_y, lex_atom_prop_z{},
+      lex_atom_prop_settings{}, lex_atom_prop_properties{},
+      lex_atom_prop_reps{}, lex_atom_prop_protons{}, lex_atom_prop_oneletter{},
+      lex_atom_prop_s{}, lex_atom_prop_p{}, lex_atom_prop_state{};
   /*
     lex_atom_prop_, lex_atom_prop_, lex_atom_prop_,
     lex_atom_prop_, lex_atom_prop_, lex_atom_prop_,*/
-
 };
-
 
 /* convenience functions -- inline */
 
 inline PyMOLstatus get_status_ok(int ok)
 {
-  if(ok)
+  if (ok)
     return PyMOLstatus_SUCCESS;
   else
     return PyMOLstatus_FAILURE;
@@ -250,8 +267,7 @@ inline PyMOLreturn_float return_result(const pymol::Result<float>& res)
 static PyMOLreturn_string_array return_result(
     const pymol::Result<std::vector<const char*>>& res)
 {
-  PyMOLreturn_string_array result = {
-      PyMOLstatus_SUCCESS, 0, nullptr};
+  PyMOLreturn_string_array result = {PyMOLstatus_SUCCESS, 0, nullptr};
   if (!res) {
     result.status = PyMOLstatus_FAILURE;
   } else if (!res.result().empty()) {
@@ -276,10 +292,10 @@ static PyMOLreturn_string_array return_result(
   return result;
 }
 
-pymol::Result<int> get_setting_id(CPyMOL * I, const char *setting)
+pymol::Result<int> get_setting_id(CPyMOL* I, const char* setting)
 {
   OVreturn_word result;
-  if(!OVreturn_IS_OK((result = OVLexicon_BorrowFromCString(I->Lex, setting))))
+  if (!OVreturn_IS_OK((result = OVLexicon_BorrowFromCString(I->Lex, setting))))
     return pymol::make_error(setting, " not found.");
   auto it = I->Setting.find(result.word);
   if (it == I->Setting.end()) {
@@ -352,22 +368,26 @@ static pymol::Result<int> get_button_mod_code(CPyMOL* I, char* modcode)
   return it->second;
 }
 
-static pymol::Result<int> get_button_action_code(CPyMOL * I, char *actioncode)
+static pymol::Result<int> get_button_action_code(CPyMOL* I, char* actioncode)
 {
   OVreturn_word result;
-  if(!OVreturn_IS_OK((result = OVLexicon_BorrowFromCString(I->Lex, actioncode))))
-    return pymol::make_error("Mouse button action code ", actioncode, " not found.");
+  if (!OVreturn_IS_OK(
+          (result = OVLexicon_BorrowFromCString(I->Lex, actioncode))))
+    return pymol::make_error(
+        "Mouse button action code ", actioncode, " not found.");
   auto it = I->MouseButtonActionCodeLexicon.find(result.word);
   if (it == I->MouseButtonActionCodeLexicon.end()) {
-    return pymol::make_error("Mouse button action code ", actioncode, " not found.");
+    return pymol::make_error(
+        "Mouse button action code ", actioncode, " not found.");
   }
   return it->second;
 }
 
-static pymol::Result<int> get_mouse_mode(CPyMOL * I, char *mousemode)
+static pymol::Result<int> get_mouse_mode(CPyMOL* I, char* mousemode)
 {
   OVreturn_word result;
-  if(!OVreturn_IS_OK((result = OVLexicon_BorrowFromCString(I->Lex, mousemode))))
+  if (!OVreturn_IS_OK(
+          (result = OVLexicon_BorrowFromCString(I->Lex, mousemode))))
     return pymol::make_error("Mouse mode", mousemode, " not found.");
   auto it = I->MouseModeLexicon.find(result.word);
   if (it == I->MouseModeLexicon.end()) {
@@ -436,24 +456,22 @@ extern "C" {
 int initial_button_modes[cButModeInputCount];
 #endif
 
-static OVstatus PyMOL_InitAPI(CPyMOL * I)
+static OVstatus PyMOL_InitAPI(CPyMOL* I)
 {
-  OVContext *C = I->G->Context;
+  OVContext* C = I->G->Context;
   OVreturn_word result;
   I->Lex = OVLexicon_New(C->heap);
-  if(!I->Lex)
+  if (!I->Lex)
     return_OVstatus_FAILURE;
 
-  /* the following preprocessor macros may require GNU's cpp or VC++
-     we'll see... */
+    /* the following preprocessor macros may require GNU's cpp or VC++
+       we'll see... */
 
-#define LEX(ARG)  \
-  if(!OVreturn_IS_OK( (result= OVLexicon_GetFromCString(I->Lex,#ARG))))  \
-    return_OVstatus_FAILURE \
-    else \
-      I -> lex_ ## ARG = result.word;
+#define LEX(ARG)                                                               \
+  if (!OVreturn_IS_OK((result = OVLexicon_GetFromCString(I->Lex, #ARG))))      \
+    return_OVstatus_FAILURE else I->lex_##ARG = result.word;
 
-  /* string constants that are accepted on input */
+    /* string constants that are accepted on input */
 
 #define LEX_REP(NAME, CODE)                                                    \
   LEX(NAME)                                                                    \
@@ -499,7 +517,7 @@ static OVstatus PyMOL_InitAPI(CPyMOL * I)
   LEX_SELLIST(id, 1);
   LEX_SELLIST(rank, 2);
 
-  if(!CPyMOLInitSetting(I->Lex, I->Setting))
+  if (!CPyMOLInitSetting(I->Lex, I->Setting))
     return_OVstatus_FAILURE;
 
 #ifdef _PYMOL_LIB
@@ -575,7 +593,7 @@ static OVstatus PyMOL_InitAPI(CPyMOL * I)
   LEX_BUTTONACTIONCODE(mova, 28);
   LEX_BUTTONACTIONCODE(menu, 29);
   LEX_BUTTONACTIONCODE(sele, 30);
-  LEX_BUTTONACTIONCODEWITHSTRING(plus_minus,"+/-", 31);
+  LEX_BUTTONACTIONCODEWITHSTRING(plus_minus, "+/-", 31);
   LEX_BUTTONACTIONCODEWITHSTRING(plus_box, "+box", 32);
   LEX_BUTTONACTIONCODEWITHSTRING(minus_box, "-box", 33);
   LEX_BUTTONACTIONCODE(mvsz, 34);
@@ -597,8 +615,9 @@ static OVstatus PyMOL_InitAPI(CPyMOL * I)
   LEX_BUTTONACTIONCODE(box, 52);
   LEX_BUTTONACTIONCODE(irtz, 53);
 
-#define LEX_MOUSEMODECODE(NAME,CODE) LEX(NAME) \
-  I->MouseModeLexicon[I->lex_ ## NAME] = CODE;
+#define LEX_MOUSEMODECODE(NAME, CODE)                                          \
+  LEX(NAME)                                                                    \
+  I->MouseModeLexicon[I->lex_##NAME] = CODE;
 
 #include "buttonmodes_lex_init.h"
 
@@ -606,26 +625,29 @@ static OVstatus PyMOL_InitAPI(CPyMOL * I)
     int a;
     /* These are set by default for the modes, basically, any single or double
        click is a simple click (i.e., cButModeSimpleClick), mouse button
-       actions are initialized to a potential click, wheel actions are set to none.
-       This is very similar to what is done in PyMOL_SetMouseButtonMode(), 
+       actions are initialized to a potential click, wheel actions are set to
+       none. This is very similar to what is done in PyMOL_SetMouseButtonMode(),
        and it makes it easier to specify new modes without needing to set
        every mouse function */
-    for(a = cButModeLeftDouble /* 16 */; a <= cButModeRightCtrlAltShftSingle /* 63 */; a++) {
+    for (a = cButModeLeftDouble /* 16 */;
+         a <= cButModeRightCtrlAltShftSingle /* 63 */; a++) {
       /* all single and double clicks */
       initial_button_modes[a] = cButModeSimpleClick;
     }
-    for(a = cButModeLeftAlt /* 68 */; a <= cButModeRightCtrlAltShft /* 79 */; a++) {
+    for (a = cButModeLeftAlt /* 68 */; a <= cButModeRightCtrlAltShft /* 79 */;
+         a++) {
       /* all button modes with Alt */
       initial_button_modes[a] = cButModePotentialClick;
     }
-    for(a = cButModeLeftNone /* 0 */; a <= cButModeRightCtSh /* 11 */; a++) {
+    for (a = cButModeLeftNone /* 0 */; a <= cButModeRightCtSh /* 11 */; a++) {
       /* all button modes without Alt */
       initial_button_modes[a] = cButModePotentialClick;
     }
-    for(a = cButModeWheelNone /* 12 */; a <= cButModeWheelCtSh /* 15 */; a++) {
+    for (a = cButModeWheelNone /* 12 */; a <= cButModeWheelCtSh /* 15 */; a++) {
       initial_button_modes[a] = cButModeNone;
-    }  
-    for(a = cButModeWheelAlt /* 64 */; a <= cButModeWheelCtrlAltShft /* 67 */; a++) {
+    }
+    for (a = cButModeWheelAlt /* 64 */; a <= cButModeWheelCtrlAltShft /* 67 */;
+         a++) {
       initial_button_modes[a] = cButModeNone;
     }
   }
@@ -661,33 +683,40 @@ static OVstatus PyMOL_InitAPI(CPyMOL * I)
   LEX_ATOM_PROP(model, 0, cPType_model, 0);
   LEX_ATOM_PROP(index, 1, cPType_index, 0);
   LEX_ATOM_PROP(type, 2, cPType_char_as_type, 0);
-  LEX_ATOM_PROP(name, 3, cPType_int_as_string, offsetof(AtomInfoType,name));
-  LEX_ATOM_PROP(resn, 4, cPType_int_as_string, offsetof(AtomInfoType,resn));
+  LEX_ATOM_PROP(name, 3, cPType_int_as_string, offsetof(AtomInfoType, name));
+  LEX_ATOM_PROP(resn, 4, cPType_int_as_string, offsetof(AtomInfoType, resn));
   LEX_ATOM_PROP(resi, 5, 0, 0);
-  LEX_ATOM_PROP(resv, 6, cPType_int, offsetof(AtomInfoType,resv));
-  LEX_ATOM_PROP(chain, 7, cPType_int_as_string, offsetof(AtomInfoType,chain));
-  LEX_ATOM_PROP_S(alt, 8, cPType_string, offsetof(AtomInfoType,alt), 1);
-  LEX_ATOM_PROP(segi, 9, cPType_int_as_string, offsetof(AtomInfoType,segi));
-  LEX_ATOM_PROP_S(elem, 10, cPType_string, offsetof(AtomInfoType,elem), cElemNameLen);
-  LEX_ATOM_PROP_S(ss, 11, cPType_string, offsetof(AtomInfoType,ssType), 1);
-  LEX_ATOM_PROP(text_type, 12, cPType_int_as_string, offsetof(AtomInfoType,textType));
-  LEX_ATOM_PROP(custom, 13, cPType_int_as_string, offsetof(AtomInfoType,custom));
-  LEX_ATOM_PROP(label, 14, cPType_int_as_string, offsetof(AtomInfoType,label));
-  LEX_ATOM_PROP(numeric_type, 15, cPType_int_custom_type, offsetof(AtomInfoType,customType));
-  LEX_ATOM_PROP(q, 16, cPType_float, offsetof(AtomInfoType,q));
-  LEX_ATOM_PROP(b, 17, cPType_float, offsetof(AtomInfoType,b));
-  LEX_ATOM_PROP(vdw, 18, cPType_float, offsetof(AtomInfoType,vdw));
-  LEX_ATOM_PROP(elec_radius, 19, cPType_float, offsetof(AtomInfoType,elec_radius));
-  LEX_ATOM_PROP(partial_charge, 20, cPType_float, offsetof(AtomInfoType,partialCharge));
-  LEX_ATOM_PROP(formal_charge, 21, cPType_schar, offsetof(AtomInfoType,formalCharge));
+  LEX_ATOM_PROP(resv, 6, cPType_int, offsetof(AtomInfoType, resv));
+  LEX_ATOM_PROP(chain, 7, cPType_int_as_string, offsetof(AtomInfoType, chain));
+  LEX_ATOM_PROP_S(alt, 8, cPType_string, offsetof(AtomInfoType, alt), 1);
+  LEX_ATOM_PROP(segi, 9, cPType_int_as_string, offsetof(AtomInfoType, segi));
+  LEX_ATOM_PROP_S(
+      elem, 10, cPType_string, offsetof(AtomInfoType, elem), cElemNameLen);
+  LEX_ATOM_PROP_S(ss, 11, cPType_string, offsetof(AtomInfoType, ssType), 1);
+  LEX_ATOM_PROP(
+      text_type, 12, cPType_int_as_string, offsetof(AtomInfoType, textType));
+  LEX_ATOM_PROP(
+      custom, 13, cPType_int_as_string, offsetof(AtomInfoType, custom));
+  LEX_ATOM_PROP(label, 14, cPType_int_as_string, offsetof(AtomInfoType, label));
+  LEX_ATOM_PROP(numeric_type, 15, cPType_int_custom_type,
+      offsetof(AtomInfoType, customType));
+  LEX_ATOM_PROP(q, 16, cPType_float, offsetof(AtomInfoType, q));
+  LEX_ATOM_PROP(b, 17, cPType_float, offsetof(AtomInfoType, b));
+  LEX_ATOM_PROP(vdw, 18, cPType_float, offsetof(AtomInfoType, vdw));
+  LEX_ATOM_PROP(
+      elec_radius, 19, cPType_float, offsetof(AtomInfoType, elec_radius));
+  LEX_ATOM_PROP(
+      partial_charge, 20, cPType_float, offsetof(AtomInfoType, partialCharge));
+  LEX_ATOM_PROP(
+      formal_charge, 21, cPType_schar, offsetof(AtomInfoType, formalCharge));
   LEX_ATOM_PROP(stereo, 22, 0, 0);
-  LEX_ATOM_PROP(cartoon, 23, cPType_schar, offsetof(AtomInfoType,cartoon));
-  LEX_ATOM_PROP(color, 24, cPType_int, offsetof(AtomInfoType,color));
-  LEX_ATOM_PROP(ID, 25, cPType_int, offsetof(AtomInfoType,id));
-  LEX_ATOM_PROP(rank, 26, cPType_int, offsetof(AtomInfoType,rank));
-  LEX_ATOM_PROP(flags, 27, cPType_uint32, offsetof(AtomInfoType,flags));
-  LEX_ATOM_PROP(geom, 28, cPType_schar, offsetof(AtomInfoType,geom));
-  LEX_ATOM_PROP(valence, 29, cPType_schar, offsetof(AtomInfoType,valence));
+  LEX_ATOM_PROP(cartoon, 23, cPType_schar, offsetof(AtomInfoType, cartoon));
+  LEX_ATOM_PROP(color, 24, cPType_int, offsetof(AtomInfoType, color));
+  LEX_ATOM_PROP(ID, 25, cPType_int, offsetof(AtomInfoType, id));
+  LEX_ATOM_PROP(rank, 26, cPType_int, offsetof(AtomInfoType, rank));
+  LEX_ATOM_PROP(flags, 27, cPType_uint32, offsetof(AtomInfoType, flags));
+  LEX_ATOM_PROP(geom, 28, cPType_schar, offsetof(AtomInfoType, geom));
+  LEX_ATOM_PROP(valence, 29, cPType_schar, offsetof(AtomInfoType, valence));
   LEX_ATOM_PROP(x, 30, cPType_xyz_float, 0);
   LEX_ATOM_PROP(y, 31, cPType_xyz_float, 1);
   LEX_ATOM_PROP(z, 32, cPType_xyz_float, 2);
@@ -706,33 +735,33 @@ static OVstatus PyMOL_InitAPI(CPyMOL * I)
   return_OVstatus_SUCCESS;
 }
 
-int PyMOL_NewG3DStream(CPyMOL * I, int **array_ptr)
+int PyMOL_NewG3DStream(CPyMOL* I, int** array_ptr)
 {
-  int *return_vla = ExecutiveGetG3d(I->G);
+  int* return_vla = ExecutiveGetG3d(I->G);
   int result = OVstatus_FAILURE;
-  if(return_vla) {
+  if (return_vla) {
     result = VLAGetSize(return_vla) * (sizeof(G3dPrimitive) / sizeof(int));
   }
-  if(array_ptr)
+  if (array_ptr)
     *array_ptr = return_vla;
   return result;
 }
 
-int PyMOL_DelG3DStream(CPyMOL * I, int *array_ptr)
+int PyMOL_DelG3DStream(CPyMOL* I, int* array_ptr)
 {
   VLAFreeP(array_ptr);
   return OVstatus_SUCCESS;
 }
 
-static OVstatus PyMOL_PurgeAPI(CPyMOL * I)
+static OVstatus PyMOL_PurgeAPI(CPyMOL* I)
 {
   OVLexicon_DEL_AUTO_NULL(I->Lex);
   return_OVstatus_SUCCESS;
 }
 
-int PyMOL_FreeResultArray(CPyMOL * I, void *array)
+int PyMOL_FreeResultArray(CPyMOL* I, void* array)
 {
-  if(array) {
+  if (array) {
     VLAFreeP(array);
     return PyMOLstatus_SUCCESS;
   } else {
@@ -740,45 +769,43 @@ int PyMOL_FreeResultArray(CPyMOL * I, void *array)
   }
 }
 
-PyMOLreturn_status PyMOL_CmdDraw(CPyMOL * I, int width, int height,
-                                 int antialias, int quiet)
+PyMOLreturn_status PyMOL_CmdDraw(
+    CPyMOL* I, int width, int height, int antialias, int quiet)
 {
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
-    result.status =
-    get_status_ok(ExecutiveDrawCmd(I->G, width, height, antialias, false, quiet));
+  result.status = get_status_ok(
+      ExecutiveDrawCmd(I->G, width, height, antialias, false, quiet));
   I->ImageRequestedFlag = true;
   I->ImageReadyFlag = false;
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_CmdCapture(CPyMOL * I, int quiet)
+PyMOLreturn_status PyMOL_CmdCapture(CPyMOL* I, int quiet)
 {
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
-    result.status = get_status_ok(ExecutiveDrawCmd(I->G, -1, -1, 0, true, quiet));
+  result.status = get_status_ok(ExecutiveDrawCmd(I->G, -1, -1, 0, true, quiet));
   I->ImageRequestedFlag = true;
   I->ImageReadyFlag = false;
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_CmdRay(CPyMOL * I, int width, int height, int antialias,
-                                float angle, float shift, int renderer, int defer,
-                                int quiet)
+PyMOLreturn_status PyMOL_CmdRay(CPyMOL* I, int width, int height, int antialias,
+    float angle, float shift, int renderer, int defer, int quiet)
 {
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
-  PYMOL_API_LOCK if(renderer < 0)
-    renderer = SettingGetGlobal_i(I->G, cSetting_ray_default_renderer);
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
+  PYMOL_API_LOCK if (renderer < 0) renderer =
+      SettingGetGlobal_i(I->G, cSetting_ray_default_renderer);
   SceneInvalidateCopy(I->G, true);
-  result.status =
-    get_status_ok(ExecutiveRay
-                  (I->G, width, height, renderer, angle, shift, quiet, defer, antialias));
-  if(defer) {
+  result.status = get_status_ok(ExecutiveRay(
+      I->G, width, height, renderer, angle, shift, quiet, defer, antialias));
+  if (defer) {
     I->ImageRequestedFlag = true;
     I->ImageReadyFlag = false;
   } else {
     I->ImageRequestedFlag = false;
-    if(SceneHasImage(I->G)) {
+    if (SceneHasImage(I->G)) {
       I->ImageReadyFlag = true;
     } else {
       I->ImageReadyFlag = false;
@@ -787,16 +814,17 @@ PyMOLreturn_status PyMOL_CmdRay(CPyMOL * I, int width, int height, int antialias
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_CmdSetView(CPyMOL * I, float *view, int view_len,
-                                    float animate, int quiet)
+PyMOLreturn_status PyMOL_CmdSetView(
+    CPyMOL* I, float* view, int view_len, float animate, int quiet)
 {
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   SceneViewType tmp;
-  PYMOL_API_LOCK if(view_len >= 18) {
+  PYMOL_API_LOCK if (view_len >= 18)
+  {
     int a;
     UtilZeroMem(tmp, sizeof(tmp));
     tmp[15] = 1.0F;
-    for(a = 0; a < 3; a++) {
+    for (a = 0; a < 3; a++) {
       tmp[a] = view[a];
       tmp[a + 4] = view[a + 3];
       tmp[a + 8] = view[a + 6];
@@ -804,24 +832,27 @@ PyMOLreturn_status PyMOL_CmdSetView(CPyMOL * I, float *view, int view_len,
       tmp[a + 19] = view[a + 12];
       tmp[a + 22] = view[a + 15];
     }
-    SceneSetView(I->G, tmp, quiet, animate, 0); /* TO DO -- add hand to the API */
+    SceneSetView(
+        I->G, tmp, quiet, animate, 0); /* TO DO -- add hand to the API */
     result.status = get_status_ok(true);
-  } else {
+  }
+  else
+  {
     result.status = get_status_ok(false);
   }
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_float_array PyMOL_CmdGetView(CPyMOL * I, int quiet)
+PyMOLreturn_float_array PyMOL_CmdGetView(CPyMOL* I, int quiet)
 {
-  PyMOLreturn_float_array result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_float_array result = {PyMOLstatus_FAILURE};
   SceneViewType tmp;
   PYMOL_API_LOCK result.size = 18;
   result.array = VLAlloc(float, result.size);
-  if(result.array) {
+  if (result.array) {
     int a;
     SceneGetView(I->G, tmp);
-    for(a = 0; a < 3; a++) {
+    for (a = 0; a < 3; a++) {
       result.array[a] = tmp[a];
       result.array[a + 3] = tmp[a + 4];
       result.array[a + 6] = tmp[a + 8];
@@ -836,32 +867,29 @@ PyMOLreturn_float_array PyMOL_CmdGetView(CPyMOL * I, int quiet)
   PYMOL_API_UNLOCK return result;
 }
 
-
-PyMOLreturn_float_array PyMOL_CmdAlign(CPyMOL * I, const char *source, const char *target,
-                                       float cutoff, int cycles, float gap, float extend,
-                                       int max_gap, const char *object, const char *matrix,
-                                       int source_state, int target_state, int quiet,
-                                       int max_skip, int transform, int reset)
+PyMOLreturn_float_array PyMOL_CmdAlign(CPyMOL* I, const char* source,
+    const char* target, float cutoff, int cycles, float gap, float extend,
+    int max_gap, const char* object, const char* matrix, int source_state,
+    int target_state, int quiet, int max_skip, int transform, int reset)
 {
-  PyMOLreturn_float_array result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_float_array result = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK OrthoLineType s2 = "", s3 = "";
   int ok = false;
   ExecutiveRMSInfo rms_info;
   result.size = 7;
   result.array = VLAlloc(float, result.size);
-  if(!result.array) {
+  if (!result.array) {
     ok = false;
   } else {
     ok = ((SelectorGetTmp(I->G, source, s2) >= 0) &&
           (SelectorGetTmp(I->G, target, s3) >= 0));
-    if(ok) {
-      const float _0 = 0.0F;    /* GCC compiler bug workaround */
+    if (ok) {
+      const float _0 = 0.0F; /* GCC compiler bug workaround */
       const float _m1 = -1.0F;
-      ok = ExecutiveAlign(I->G, s2, s3, matrix, gap, extend, max_gap,
-                          max_skip, cutoff, cycles, quiet, object,
-                          source_state - 1, target_state - 1,
-                          &rms_info, transform, reset, _m1, _0, _0, _0, _0, _0, 0, _0);
-      if(ok) {
+      ok = ExecutiveAlign(I->G, s2, s3, matrix, gap, extend, max_gap, max_skip,
+          cutoff, cycles, quiet, object, source_state - 1, target_state - 1,
+          &rms_info, transform, reset, _m1, _0, _0, _0, _0, _0, 0, _0);
+      if (ok) {
         result.array[0] = rms_info.final_rms;
         result.array[1] = rms_info.final_n_atom;
         result.array[2] = rms_info.n_cycles_run;
@@ -874,36 +902,37 @@ PyMOLreturn_float_array PyMOL_CmdAlign(CPyMOL * I, const char *source, const cha
   }
   SelectorFreeTmp(I->G, s2);
   SelectorFreeTmp(I->G, s3);
-  if(!ok) {
+  if (!ok) {
     VLAFreeP(result.array);
   }
   result.status = get_status_ok(ok);
 
   PYMOL_API_UNLOCK return result;
-
 }
 
-PyMOLreturn_status PyMOL_CmdDelete(CPyMOL * I, const char *name, int quiet)
+PyMOLreturn_status PyMOL_CmdDelete(CPyMOL* I, const char* name, int quiet)
 {
   PYMOL_API_LOCK ExecutiveDelete(I->G, name);
-  PyMOL_NeedRedisplay(I);  /* this should really only get called if ExecutiveDelete deletes something */
-  PYMOL_API_UNLOCK return return_status_ok(true);       /* TO DO: return a real result */
+  PyMOL_NeedRedisplay(I); /* this should really only get called if
+                             ExecutiveDelete deletes something */
+  PYMOL_API_UNLOCK return return_status_ok(
+      true); /* TO DO: return a real result */
 }
 
-PyMOLreturn_status PyMOL_CmdZoom(CPyMOL * I, const char *selection, float buffer,
-                                 int state, int complete, float animate, int quiet)
+PyMOLreturn_status PyMOL_CmdZoom(CPyMOL* I, const char* selection, float buffer,
+    int state, int complete, float animate, int quiet)
 {
   int ok = false;
   PYMOL_API_LOCK
-    SelectorTmp2 s1(I->G, selection);
-    auto result = ExecutiveWindowZoom(I->G, s1.getName(), buffer, state - 1,
-                             complete, animate, quiet);
-    ok = static_cast<bool>(result);
+  SelectorTmp2 s1(I->G, selection);
+  auto result = ExecutiveWindowZoom(
+      I->G, s1.getName(), buffer, state - 1, complete, animate, quiet);
+  ok = static_cast<bool>(result);
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdOrient(CPyMOL * I, const char *selection, float buffer,
-                                   int state, int complete, float animate, int quiet)
+PyMOLreturn_status PyMOL_CmdOrient(CPyMOL* I, const char* selection,
+    float buffer, int state, int complete, float animate, int quiet)
 {
   int ok = true;
   PYMOL_API_LOCK
@@ -913,28 +942,30 @@ PyMOLreturn_status PyMOL_CmdOrient(CPyMOL * I, const char *selection, float buff
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdCenter(CPyMOL * I, const char *selection, int state, int origin,
-                                   float animate, int quiet)
+PyMOLreturn_status PyMOL_CmdCenter(CPyMOL* I, const char* selection, int state,
+    int origin, float animate, int quiet)
 {
   int ok = false;
   PYMOL_API_LOCK
-  auto result = ExecutiveCenter(I->G, selection,
-      state - 1, origin, animate, nullptr, quiet);
+  auto result = ExecutiveCenter(
+      I->G, selection, state - 1, origin, animate, nullptr, quiet);
   ok = static_cast<bool>(result);
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdOrigin(CPyMOL * I, const char *selection, int state, int quiet)
+PyMOLreturn_status PyMOL_CmdOrigin(
+    CPyMOL* I, const char* selection, int state, int quiet)
 {
   int ok = true;
   PYMOL_API_LOCK
-  float v[3] = { 0.0F, 0.0F, 0.0F };
+  float v[3] = {0.0F, 0.0F, 0.0F};
   auto result = ExecutiveOrigin(I->G, selection, true, "", v, state - 1);
   ok = static_cast<bool>(result);
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdOriginAt(CPyMOL * I, float x, float y, float z, int quiet)
+PyMOLreturn_status PyMOL_CmdOriginAt(
+    CPyMOL* I, float x, float y, float z, int quiet)
 {
   int ok = true;
   PYMOL_API_LOCK float v[3];
@@ -946,28 +977,29 @@ PyMOLreturn_status PyMOL_CmdOriginAt(CPyMOL * I, float x, float y, float z, int 
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdClip(CPyMOL * I,
-                                 const char *mode, float amount,
-                                 const char *selection,
-                                 int state, int quiet)
+PyMOLreturn_status PyMOL_CmdClip(CPyMOL* I, const char* mode, float amount,
+    const char* selection, int state, int quiet)
 {
   int ok = true;
   PYMOL_API_LOCK
-    SelectorTmp2 s1(I->G, selection);
-    SceneClipFromMode(I->G, mode, amount, s1.getName(), state - 1);
+  SelectorTmp2 s1(I->G, selection);
+  SceneClipFromMode(I->G, mode, amount, s1.getName(), state - 1);
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdLabel(CPyMOL * I, const char *selection, const char *text, int quiet)
+PyMOLreturn_status PyMOL_CmdLabel(
+    CPyMOL* I, const char* selection, const char* text, int quiet)
 {
   int ok = true;
   PYMOL_API_LOCK
-  auto result = ExecutiveLabel(I->G, selection, text, quiet, cExecutiveLabelEvalAlt);
+  auto result =
+      ExecutiveLabel(I->G, selection, text, quiet, cExecutiveLabelEvalAlt);
   ok = static_cast<bool>(result);
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdSelect(CPyMOL * I, const char *name, const char *selection, int quiet)
+PyMOLreturn_status PyMOL_CmdSelect(
+    CPyMOL* I, const char* name, const char* selection, int quiet)
 {
   int ret = -1;
   PYMOL_API_LOCK
@@ -975,13 +1007,15 @@ PyMOLreturn_status PyMOL_CmdSelect(CPyMOL * I, const char *name, const char *sel
   auto res = SelectorCreate(I->G, name, selection, nullptr, quiet, nullptr);
   ret = res ? res.result() : -1;
 
-  PYMOL_API_UNLOCK return return_status_ok(ret >= 0); // if ret is negative it should fail
+  PYMOL_API_UNLOCK return return_status_ok(
+      ret >= 0); // if ret is negative it should fail
 }
 
-PyMOLreturn_status PyMOL_CmdSelectList(CPyMOL * I, const char *name, const char *object, int *list,
-                                       int list_len, int state, const char *mode, int quiet)
+PyMOLreturn_status PyMOL_CmdSelectList(CPyMOL* I, const char* name,
+    const char* object, int* list, int list_len, int state, const char* mode,
+    int quiet)
 {
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
 
   if (auto mode_id = get_select_list_mode(I, mode)) {
@@ -992,20 +1026,20 @@ PyMOLreturn_status PyMOL_CmdSelectList(CPyMOL * I, const char *name, const char 
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_CmdShow(CPyMOL * I,
-                                 const char *representation,
-                                 const char *selection,
-                                 int quiet)
+PyMOLreturn_status PyMOL_CmdShow(
+    CPyMOL* I, const char* representation, const char* selection, int quiet)
 {
   int ok = true;
   PYMOL_API_LOCK OrthoLineType s1;
   if (auto rep_id = get_rep_id(I, representation)) {
     SelectorGetTmp2(I->G, selection, s1);
-    if (!s1[0]){  /* This doesn't catch patterns that don't match, but everything else */
+    if (!s1[0]) { /* This doesn't catch patterns that don't match, but
+                     everything else */
       ok = false;
     } else {
       ExecutiveSetRepVisib(I->G, s1, *rep_id, true);
-      PyMOL_NeedRedisplay(I);  /* this should really only get called if ExecutiveSetRepVisib changes something */
+      PyMOL_NeedRedisplay(I); /* this should really only get called if
+                                 ExecutiveSetRepVisib changes something */
       SelectorFreeTmp(I->G, s1);
     }
   } else {
@@ -1014,16 +1048,15 @@ PyMOLreturn_status PyMOL_CmdShow(CPyMOL * I,
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdHide(CPyMOL * I,
-                                 const char *representation,
-                                 const char *selection,
-                                 int quiet)
+PyMOLreturn_status PyMOL_CmdHide(
+    CPyMOL* I, const char* representation, const char* selection, int quiet)
 {
   int ok = true;
   PYMOL_API_LOCK OrthoLineType s1;
   if (auto rep_id = get_rep_id(I, representation)) {
     SelectorGetTmp2(I->G, selection, s1);
-    if (!s1[0]){  /* This doesn't catch patterns that don't match, but everything else */
+    if (!s1[0]) { /* This doesn't catch patterns that don't match, but
+                     everything else */
       ok = false;
     } else {
       ExecutiveSetRepVisib(I->G, s1, *rep_id, false);
@@ -1035,13 +1068,16 @@ PyMOLreturn_status PyMOL_CmdHide(CPyMOL * I,
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdEnable(CPyMOL * I, const char *name, int quiet)
+PyMOLreturn_status PyMOL_CmdEnable(CPyMOL* I, const char* name, int quiet)
 {
   int ok = false;
-  PYMOL_API_LOCK if(name[0] == '(') {
+  PYMOL_API_LOCK if (name[0] == '(')
+  {
     auto result1 = ExecutiveSetOnOffBySele(I->G, name, true);
     ok = static_cast<bool>(result1);
-  } else {
+  }
+  else
+  {
     auto result2 =
         ExecutiveSetObjVisib(I->G, name, true, false); /* TO DO: parents */
     ok = static_cast<bool>(result2);
@@ -1049,142 +1085,156 @@ PyMOLreturn_status PyMOL_CmdEnable(CPyMOL * I, const char *name, int quiet)
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdDisable(CPyMOL * I, const char *name, int quiet)
+PyMOLreturn_status PyMOL_CmdDisable(CPyMOL* I, const char* name, int quiet)
 {
   int ok = false;
-  PYMOL_API_LOCK if(name[0] == '(') {
+  PYMOL_API_LOCK if (name[0] == '(')
+  {
     auto result = ExecutiveSetOnOffBySele(I->G, name, false);
     ok = static_cast<bool>(result);
-  } else {
+  }
+  else
+  {
     auto result = ExecutiveSetObjVisib(I->G, name, false, false);
     ok = static_cast<bool>(result);
   }
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdSetBond(CPyMOL * I, const char *setting, const char *value,
-                                    const char *selection1, const char *selection2,
-                                    int state, int quiet, int side_effects)
+PyMOLreturn_status PyMOL_CmdSetBond(CPyMOL* I, const char* setting,
+    const char* value, const char* selection1, const char* selection2,
+    int state, int quiet, int side_effects)
 {
   int ok = true;
-  PYMOL_API_LOCK {
+  PYMOL_API_LOCK
+  {
     OrthoLineType s1 = "";
     OrthoLineType s2 = "";
     auto setting_id = get_setting_id(I, setting);
-    if(ok) ok = static_cast<bool>(setting_id);
-    if(ok) ok = (SelectorGetTmp(I->G, selection1, s1) >= 0);
-    if(ok) {
-      if(selection2 && selection2[0]) {
+    if (ok)
+      ok = static_cast<bool>(setting_id);
+    if (ok)
+      ok = (SelectorGetTmp(I->G, selection1, s1) >= 0);
+    if (ok) {
+      if (selection2 && selection2[0]) {
         ok = (SelectorGetTmp(I->G, selection2, s2) >= 0);
       } else {
         ok = (SelectorGetTmp(I->G, selection1, s2) >= 0);
       }
     }
-    if(ok) {
-      ok = ExecutiveSetBondSettingFromString(I->G, *setting_id, value,
-                                             s1, s2,
-                                             state - 1, quiet, side_effects);
+    if (ok) {
+      ok = ExecutiveSetBondSettingFromString(
+          I->G, *setting_id, value, s1, s2, state - 1, quiet, side_effects);
     }
     SelectorFreeTmp(I->G, s1);
     SelectorFreeTmp(I->G, s2);
-  } PYMOL_API_UNLOCK 
-      return return_status_ok(ok);
+  }
+  PYMOL_API_UNLOCK
+  return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdUnsetBond(CPyMOL * I, const char *setting,
-                                      const char *selection1, const char *selection2,
-                                      int state, int quiet, int side_effects)
+PyMOLreturn_status PyMOL_CmdUnsetBond(CPyMOL* I, const char* setting,
+    const char* selection1, const char* selection2, int state, int quiet,
+    int side_effects)
 {
   int ok = true;
-  PYMOL_API_LOCK {
+  PYMOL_API_LOCK
+  {
     OrthoLineType s1 = "";
     OrthoLineType s2 = "";
     auto setting_id = get_setting_id(I, setting);
-    if(ok) ok = static_cast<bool>(setting_id);
-    if(ok) ok = (SelectorGetTmp(I->G, selection1, s1) >= 0);
-    if(ok) {
-      if(selection2 && selection2[0]) {
+    if (ok)
+      ok = static_cast<bool>(setting_id);
+    if (ok)
+      ok = (SelectorGetTmp(I->G, selection1, s1) >= 0);
+    if (ok) {
+      if (selection2 && selection2[0]) {
         ok = (SelectorGetTmp(I->G, selection2, s2) >= 0);
       } else {
         ok = (SelectorGetTmp(I->G, selection1, s2) >= 0);
       }
     }
-    if(ok) {
-      ok = ExecutiveUnsetBondSetting(I->G, *setting_id,
-                                     s1, s2,
-                                     state - 1, quiet, side_effects);
+    if (ok) {
+      ok = ExecutiveUnsetBondSetting(
+          I->G, *setting_id, s1, s2, state - 1, quiet, side_effects);
     }
     SelectorFreeTmp(I->G, s1);
     SelectorFreeTmp(I->G, s2);
-  } PYMOL_API_UNLOCK 
-      return return_status_ok(ok);
+  }
+  PYMOL_API_UNLOCK
+  return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdSet(CPyMOL * I,
-                                const char *setting,
-                                const char *value,
-                                const char *selection,
-                                int state, int quiet, int side_effects)
+PyMOLreturn_status PyMOL_CmdSet(CPyMOL* I, const char* setting,
+    const char* value, const char* selection, int state, int quiet,
+    int side_effects)
 {
   int ok = true;
-  PYMOL_API_LOCK {
+  PYMOL_API_LOCK
+  {
     OrthoLineType s1 = "";
     auto setting_id = get_setting_id(I, setting);
-    if(ok) ok = static_cast<bool>(setting_id);
-    if(ok) ok = (SelectorGetTmp2(I->G, selection, s1) >= 0);
-    
-    if(ok) {
-      ExecutiveSetSettingFromString(I->G, *setting_id, value, s1,
-                                    state - 1, quiet, side_effects);
+    if (ok)
+      ok = static_cast<bool>(setting_id);
+    if (ok)
+      ok = (SelectorGetTmp2(I->G, selection, s1) >= 0);
+
+    if (ok) {
+      ExecutiveSetSettingFromString(
+          I->G, *setting_id, value, s1, state - 1, quiet, side_effects);
     }
     SelectorFreeTmp(I->G, s1);
   }
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_value PyMOL_CmdGet(CPyMOL * I,
-                                const char *setting,
-                                const char *selection,
-                                int state, int quiet){
+PyMOLreturn_value PyMOL_CmdGet(
+    CPyMOL* I, const char* setting, const char* selection, int state, int quiet)
+{
   int ok = true;
-  PyMOLreturn_value result = { PyMOLstatus_SUCCESS };
+  PyMOLreturn_value result = {PyMOLstatus_SUCCESS};
 
-  PYMOL_API_LOCK {
+  PYMOL_API_LOCK
+  {
     OrthoLineType s1 = "";
     auto setting_id = get_setting_id(I, setting);
-    if(ok) ok = static_cast<bool>(setting_id);
-    if(ok) ok = (SelectorGetTmp2(I->G, selection, s1) >= 0);
-    
-    if(ok) {
-      ExecutiveGetSettingFromString(I->G, &result, *setting_id, s1,
-                                    state - 1, quiet);
+    if (ok)
+      ok = static_cast<bool>(setting_id);
+    if (ok)
+      ok = (SelectorGetTmp2(I->G, selection, s1) >= 0);
+
+    if (ok) {
+      ExecutiveGetSettingFromString(
+          I->G, &result, *setting_id, s1, state - 1, quiet);
     }
     SelectorFreeTmp(I->G, s1);
   }
   PYMOL_API_UNLOCK return result;
 }
 
-
-PyMOLreturn_status PyMOL_CmdUnset(CPyMOL * I, const char *setting, const char *selection,
-                                  int state, int quiet, int side_effects)
+PyMOLreturn_status PyMOL_CmdUnset(CPyMOL* I, const char* setting,
+    const char* selection, int state, int quiet, int side_effects)
 {
   int ok = true;
-  PYMOL_API_LOCK {
+  PYMOL_API_LOCK
+  {
     OrthoLineType s1 = "";
     auto setting_id = get_setting_id(I, setting);
-    if(ok) ok = static_cast<bool>(setting_id);
-    if(ok) ok = (SelectorGetTmp2(I->G, selection, s1) >= 0);
-    if(ok) {
-      ExecutiveUnsetSetting(I->G, *setting_id, s1,
-                            state - 1, quiet, side_effects);
+    if (ok)
+      ok = static_cast<bool>(setting_id);
+    if (ok)
+      ok = (SelectorGetTmp2(I->G, selection, s1) >= 0);
+    if (ok) {
+      ExecutiveUnsetSetting(
+          I->G, *setting_id, s1, state - 1, quiet, side_effects);
     }
     SelectorFreeTmp(I->G, s1);
   }
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdColor(CPyMOL * I, const char *color, const char *selection, int flags,
-                                  int quiet)
+PyMOLreturn_status PyMOL_CmdColor(
+    CPyMOL* I, const char* color, const char* selection, int flags, int quiet)
 {
   int ok = true;
   PYMOL_API_LOCK
@@ -1194,12 +1244,13 @@ PyMOLreturn_status PyMOL_CmdColor(CPyMOL * I, const char *color, const char *sel
 }
 
 /* -- JV */
-PyMOLreturn_status PyMOL_CmdBackgroundColor(CPyMOL * I, const char *value) {
+PyMOLreturn_status PyMOL_CmdBackgroundColor(CPyMOL* I, const char* value)
+{
   int ok = true;
   PYMOL_API_LOCK
 
   int idx = ColorGetIndex(I->G, value);
-  if(idx >= 0){
+  if (idx >= 0) {
     SettingSetGlobal_i(I->G, cSetting_bg_rgb, idx);
   } else {
     ErrMessage(I->G, "Color", "Bad color name.");
@@ -1207,9 +1258,8 @@ PyMOLreturn_status PyMOL_CmdBackgroundColor(CPyMOL * I, const char *value) {
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdReinitialize(CPyMOL * I,
-    const char *what,
-    const char *object_name)
+PyMOLreturn_status PyMOL_CmdReinitialize(
+    CPyMOL* I, const char* what, const char* object_name)
 {
   int ok = true;
   PYMOL_API_LOCK
@@ -1222,7 +1272,7 @@ PyMOLreturn_status PyMOL_CmdReinitialize(CPyMOL * I,
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_int PyMOL_CmdGetMovieLength(CPyMOL * I,int quiet)
+PyMOLreturn_int PyMOL_CmdGetMovieLength(CPyMOL* I, int quiet)
 {
   int ok = true;
   PyMOLreturn_int result;
@@ -1230,135 +1280,113 @@ PyMOLreturn_int PyMOL_CmdGetMovieLength(CPyMOL * I,int quiet)
   result.value = 0;
 
   PYMOL_API_LOCK
-  if(ok) {
+  if (ok) {
     result.value = MovieGetLength(I->G);
     result.status = get_status_ok(ok);
   };
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_float PyMOL_CmdGetDistance(CPyMOL * I,
-                                       const char *selection1,
-                                       const char *selection2, int state, int quiet)
+PyMOLreturn_float PyMOL_CmdGetDistance(CPyMOL* I, const char* selection1,
+    const char* selection2, int state, int quiet)
 {
   PyMOLreturn_float result;
-  PYMOL_API_LOCK {
-    result = return_result(ExecutiveGetDistance(I->G,
-        selection1,
-        selection2,
-        state));
+  PYMOL_API_LOCK
+  {
+    result = return_result(
+        ExecutiveGetDistance(I->G, selection1, selection2, state));
   }
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_float PyMOL_CmdDistance(CPyMOL * I,
-                                    const char *name,
-                                    const char *selection1,
-                                    const char *selection2,
-                                    int mode,
-                                    float cutoff,
-                                    int label, int reset, int zoom, int state, int quiet)
+PyMOLreturn_float PyMOL_CmdDistance(CPyMOL* I, const char* name,
+    const char* selection1, const char* selection2, int mode, float cutoff,
+    int label, int reset, int zoom, int state, int quiet)
 {
   PyMOLreturn_float result;
-  PYMOL_API_LOCK {
+  PYMOL_API_LOCK
+  {
     int defState1 = -4, defState2 = -4;
-    auto res = ExecutiveDistance(I->G, name,
-        selection1, selection2, mode, cutoff, label, quiet, reset, state, zoom, defState1, defState2);
+    auto res = ExecutiveDistance(I->G, name, selection1, selection2, mode,
+        cutoff, label, quiet, reset, state, zoom, defState1, defState2);
     result = return_result(res);
   }
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_float PyMOL_CmdGetAngle(CPyMOL * I,
-                                    const char *selection1,
-                                    const char *selection2,
-                                    const char *selection3, int state, int quiet)
+PyMOLreturn_float PyMOL_CmdGetAngle(CPyMOL* I, const char* selection1,
+    const char* selection2, const char* selection3, int state, int quiet)
 {
   PyMOLreturn_float result;
-  PYMOL_API_LOCK {
-    result = return_result(ExecutiveGetAngle(I->G,
-        selection1,
-        selection2,
-        selection3,
-        state));
+  PYMOL_API_LOCK
+  {
+    result = return_result(
+        ExecutiveGetAngle(I->G, selection1, selection2, selection3, state));
   }
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_float PyMOL_CmdAngle(CPyMOL * I,
-                                 const char *name,
-                                 const char *selection1,
-                                 const char *selection2,
-                                 const char *selection3,
-                                 int mode,
-                                 int label, int reset, int zoom, int state, int quiet)
+PyMOLreturn_float PyMOL_CmdAngle(CPyMOL* I, const char* name,
+    const char* selection1, const char* selection2, const char* selection3,
+    int mode, int label, int reset, int zoom, int state, int quiet)
 {
   PyMOLreturn_float result;
-  PYMOL_API_LOCK {
+  PYMOL_API_LOCK
+  {
     int defState1 = -4, defState2 = -4, defState3 = -3;
-    auto res = ExecutiveAngle(I->G, name,
-        selection1, selection2, selection3, mode, label, reset, zoom, quiet,
-        state, defState1, defState2, defState3);
+    auto res =
+        ExecutiveAngle(I->G, name, selection1, selection2, selection3, mode,
+            label, reset, zoom, quiet, state, defState1, defState2, defState3);
     result = return_result(res);
   }
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_float PyMOL_CmdGetDihedral(CPyMOL * I,
-                                       const char *selection1,
-                                       const char *selection2,
-                                       const char *selection3,
-                                       const char *selection4, int state, int quiet)
+PyMOLreturn_float PyMOL_CmdGetDihedral(CPyMOL* I, const char* selection1,
+    const char* selection2, const char* selection3, const char* selection4,
+    int state, int quiet)
 {
   PyMOLreturn_float result;
-  PYMOL_API_LOCK {
-    result = return_result(ExecutiveGetDihe(I->G,
-        selection1,
-        selection2,
-        selection3,
-        selection4,
-        state));
+  PYMOL_API_LOCK
+  {
+    result = return_result(ExecutiveGetDihe(
+        I->G, selection1, selection2, selection3, selection4, state));
   }
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_float PyMOL_CmdDihedral(CPyMOL * I,
-                                    const char *name,
-                                    const char *selection1,
-                                    const char *selection2,
-                                    const char *selection3,
-                                    const char *selection4,
-                                    int mode,
-                                    int label, int reset, int zoom, int state, int quiet)
+PyMOLreturn_float PyMOL_CmdDihedral(CPyMOL* I, const char* name,
+    const char* selection1, const char* selection2, const char* selection3,
+    const char* selection4, int mode, int label, int reset, int zoom, int state,
+    int quiet)
 {
   PyMOLreturn_float result;
-  PYMOL_API_LOCK {
-    auto res = ExecutiveDihedral(I->G,
-        name, selection1, selection2, selection3, selection4, mode, label,
-        reset, zoom, quiet, state);
+  PYMOL_API_LOCK
+  {
+    auto res = ExecutiveDihedral(I->G, name, selection1, selection2, selection3,
+        selection4, mode, label, reset, zoom, quiet, state);
     result = return_result(res);
   }
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_CmdIsodot(CPyMOL * I, const char *name, const char *map_name, float level,
-                                   const char *selection, float buffer, int state, float carve,
-                                   int source_state, int quiet)
+PyMOLreturn_status PyMOL_CmdIsodot(CPyMOL* I, const char* name,
+    const char* map_name, float level, const char* selection, float buffer,
+    int state, float carve, int source_state, int quiet)
 {
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
   auto res = ExecutiveIsomeshEtc(I->G, name, map_name, level, selection, buffer,
       state - 1, carve, source_state - 1, quiet, 1, level);
   result.status = get_status_ok(bool(res));
   PYMOL_API_UNLOCK return result;
-
 }
 
-PyMOLreturn_status PyMOL_CmdIsomesh(CPyMOL * I, const char *name, const char *map_name, float level,
-                                    const char *selection, float buffer, int state, float carve,
-                                    int source_state, int quiet)
+PyMOLreturn_status PyMOL_CmdIsomesh(CPyMOL* I, const char* name,
+    const char* map_name, float level, const char* selection, float buffer,
+    int state, float carve, int source_state, int quiet)
 {
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
   auto res = ExecutiveIsomeshEtc(I->G, name, map_name, level, selection, buffer,
       state - 1, carve, source_state - 1, quiet, 0, level);
@@ -1366,12 +1394,11 @@ PyMOLreturn_status PyMOL_CmdIsomesh(CPyMOL * I, const char *name, const char *ma
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_CmdIsosurface(CPyMOL * I, const char *name, const char *map_name,
-                                       float level, const char *selection, float buffer,
-                                       int state, float carve, int source_state, int side,
-                                       int mode, int quiet)
+PyMOLreturn_status PyMOL_CmdIsosurface(CPyMOL* I, const char* name,
+    const char* map_name, float level, const char* selection, float buffer,
+    int state, float carve, int source_state, int side, int mode, int quiet)
 {
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
   auto res = ExecutiveIsosurfaceEtc(I->G, name, map_name, level, selection,
       buffer, state - 1, carve, source_state - 1, side, quiet, mode);
@@ -1379,12 +1406,11 @@ PyMOLreturn_status PyMOL_CmdIsosurface(CPyMOL * I, const char *name, const char 
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_CmdGradient(CPyMOL * I, const char *name, const char *map_name,
-                                     float minimum, float maximum, const char *selection,
-                                     float buffer, int state, float carve,
-                                     int source_state, int quiet)
+PyMOLreturn_status PyMOL_CmdGradient(CPyMOL* I, const char* name,
+    const char* map_name, float minimum, float maximum, const char* selection,
+    float buffer, int state, float carve, int source_state, int quiet)
 {
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
   auto res = ExecutiveIsomeshEtc(I->G, name, map_name, minimum, selection,
       buffer, state - 1, carve, source_state - 1, quiet, 3, maximum);
@@ -1392,46 +1418,46 @@ PyMOLreturn_status PyMOL_CmdGradient(CPyMOL * I, const char *name, const char *m
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_float PyMOL_CmdIsolevel(CPyMOL * I, const char *name, float level, int state,
-                                    int query, int quiet)
+PyMOLreturn_float PyMOL_CmdIsolevel(
+    CPyMOL* I, const char* name, float level, int state, int query, int quiet)
 {
   PyMOLreturn_float result;
   PYMOL_API_LOCK
-    if(query) {
-      auto res = ExecutiveGetIsolevel(I->G, name, state - 1);
-      result = return_result(res);
+  if (query) {
+    auto res = ExecutiveGetIsolevel(I->G, name, state - 1);
+    result = return_result(res);
   } else {
-      auto res = ExecutiveIsolevel(I->G, name, level, state - 1, quiet);
-      result.status = get_status_ok(static_cast<bool>(res));
-      result.value = level;
+    auto res = ExecutiveIsolevel(I->G, name, level, state - 1, quiet);
+    result.status = get_status_ok(static_cast<bool>(res));
+    result.value = level;
   }
   PYMOL_API_UNLOCK return result;
 }
 
-static int word_count(const char *src)
-{                               /* only works for ascii */
+static int word_count(const char* src)
+{ /* only works for ascii */
   int cnt = 0;
-  while((*src) && ((*src) < 33))        /* skip leading whitespace */
+  while ((*src) && ((*src) < 33)) /* skip leading whitespace */
     src++;
-  while(*src) {
-    if((*src) > 32) {
+  while (*src) {
+    if ((*src) > 32) {
       cnt++;
-      while((*src) && ((*src) > 32))
+      while ((*src) && ((*src) > 32))
         src++;
     }
-    while((*src) && ((*src) < 33))
+    while ((*src) && ((*src) < 33))
       src++;
   }
   return cnt;
 }
 
-static const char *next_word(const char *src, char *dst, int buf_size)
-{                               /* only works for ascii */
-  while((*src) && ((*src) < 33))        /* skip leading whitespace */
+static const char* next_word(const char* src, char* dst, int buf_size)
+{                                 /* only works for ascii */
+  while ((*src) && ((*src) < 33)) /* skip leading whitespace */
     src++;
-  while(*src) {
-    if((*src) > 32) {
-      while((*src) && ((*src) > 32) && (buf_size > 1)) {
+  while (*src) {
+    if ((*src) > 32) {
+      while ((*src) && ((*src) > 32) && (buf_size > 1)) {
         *(dst++) = *(src++);
         buf_size--;
       }
@@ -1442,47 +1468,48 @@ static const char *next_word(const char *src, char *dst, int buf_size)
   return src;
 }
 
-PyMOLreturn_status PyMOL_CmdRampNew(CPyMOL * I, const char *name, const char *map, float *range,
-                                    int n_level, const char *color, int state, const char *selection,
-                                    float beyond, float within, float sigma,
-                                    int zero, int calc_mode, int quiet)
+PyMOLreturn_status PyMOL_CmdRampNew(CPyMOL* I, const char* name,
+    const char* map, float* range, int n_level, const char* color, int state,
+    const char* selection, float beyond, float within, float sigma, int zero,
+    int calc_mode, int quiet)
 {
   int ok = true;
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   OrthoLineType s1 = "";
-  float *color_vla = nullptr;
-  float *range_vla = nullptr;
-  PYMOL_API_LOCK if(selection && selection[0]) {
-    if(ok)
+  float* color_vla = nullptr;
+  float* range_vla = nullptr;
+  PYMOL_API_LOCK if (selection && selection[0])
+  {
+    if (ok)
       ok = (SelectorGetTmp(I->G, selection, s1) >= 0);
   }
-  if(ok) {
-    if(range && n_level) {
+  if (ok) {
+    if (range && n_level) {
       range_vla = VLAlloc(float, n_level);
       UtilCopyMem(range_vla, range, sizeof(float) * n_level);
     }
   }
 
-  if(ok && color) {
+  if (ok && color) {
     int n_color = word_count(color);
     /* to do */
-    if(color && n_color) {
+    if (color && n_color) {
       color_vla = VLAlloc(float, n_color * 3);
-      if(color_vla) {
+      if (color_vla) {
         WordType colorName;
         int a;
-        for(a = 0; a < n_color; a++) {
+        for (a = 0; a < n_color; a++) {
           color = next_word(color, colorName, sizeof(colorName));
           {
-            const float *src = ColorGetNamed(I->G, colorName);
-            float *dst = color_vla + 3 * a;
+            const float* src = ColorGetNamed(I->G, colorName);
+            float* dst = color_vla + 3 * a;
             copy3f(src, dst);
           }
         }
       }
     }
   }
-  if(ok) {
+  if (ok) {
     auto res =
         ExecutiveRampNew(I->G, name, map, pymol::vla_take_ownership(range_vla),
             pymol::vla_take_ownership(color_vla), state, s1, beyond, within,
@@ -1500,33 +1527,32 @@ PyMOLreturn_status PyMOL_CmdRampNew(CPyMOL * I, const char *name, const char *ma
  * Supported file formats and their internal codes
  */
 struct {
-  const char * name;
+  const char* name;
   cLoadType_t code_buffer;
   cLoadType_t code_filename;
 } const ContentTypeTable[] = {
-  // molecules
-  {"pdb",           cLoadTypePDBStr,    cLoadTypePDB},
-  {"vdb",           cLoadTypeVDBStr,    cLoadTypeUnknown},
-  {"cif",           cLoadTypeCIFStr,    cLoadTypeCIF},
-  {"mmtf",          cLoadTypeMMTFStr,   cLoadTypeMMTF},
-  {"mae",           cLoadTypeMAEStr,    cLoadTypeMAE},
-  {"sdf",           cLoadTypeSDF2Str,   cLoadTypeSDF2},
-  {"mol",           cLoadTypeMOLStr,    cLoadTypeMOL},
-  {"mol2",          cLoadTypeMOL2Str,   cLoadTypeMOL2},
-  {"xyz",           cLoadTypeXYZStr,    cLoadTypeXYZ},
-  {"pqr",           cLoadTypeUnknown,   cLoadTypePQR},
-  {"macromodel",    cLoadTypeMMDStr,    cLoadTypeMMD},
-  // maps
-  {"ccp4",          cLoadTypeCCP4Str,   cLoadTypeCCP4Map},
-  {"mrc",           cLoadTypeMRCStr,    cLoadTypeMRC},
-  {"map",           cLoadTypeCCP4UnspecifiedStr, cLoadTypeCCP4Unspecified},
-  {"xplor",         cLoadTypeXPLORStr,  cLoadTypeXPLORMap},
-  {"phi",           cLoadTypePHIStr,    cLoadTypePHIMap},
-  {"dx",            cLoadTypeDXStr,     cLoadTypeDXMap},
-  // special
-  {"cgo",           cLoadTypeCGO,       cLoadTypeUnknown},
-  {NULL,            cLoadTypeUnknown,   cLoadTypeUnknown}
-};
+    // molecules
+    {"pdb", cLoadTypePDBStr, cLoadTypePDB},
+    {"vdb", cLoadTypeVDBStr, cLoadTypeUnknown},
+    {"cif", cLoadTypeCIFStr, cLoadTypeCIF},
+    {"mmtf", cLoadTypeMMTFStr, cLoadTypeMMTF},
+    {"mae", cLoadTypeMAEStr, cLoadTypeMAE},
+    {"sdf", cLoadTypeSDF2Str, cLoadTypeSDF2},
+    {"mol", cLoadTypeMOLStr, cLoadTypeMOL},
+    {"mol2", cLoadTypeMOL2Str, cLoadTypeMOL2},
+    {"xyz", cLoadTypeXYZStr, cLoadTypeXYZ},
+    {"pqr", cLoadTypeUnknown, cLoadTypePQR},
+    {"macromodel", cLoadTypeMMDStr, cLoadTypeMMD},
+    // maps
+    {"ccp4", cLoadTypeCCP4Str, cLoadTypeCCP4Map},
+    {"mrc", cLoadTypeMRCStr, cLoadTypeMRC},
+    {"map", cLoadTypeCCP4UnspecifiedStr, cLoadTypeCCP4Unspecified},
+    {"xplor", cLoadTypeXPLORStr, cLoadTypeXPLORMap},
+    {"phi", cLoadTypePHIStr, cLoadTypePHIMap},
+    {"dx", cLoadTypeDXStr, cLoadTypeDXMap},
+    // special
+    {"cgo", cLoadTypeCGO, cLoadTypeUnknown},
+    {NULL, cLoadTypeUnknown, cLoadTypeUnknown}};
 
 /**
  * Proxy for "ExecutiveLoad" with string "content_format" (and "content_type")
@@ -1540,13 +1566,12 @@ struct {
  * object_name:         New object name. Can be empty if "content_type" is
  *                      "filename".
  */
-static PyMOLreturn_status Loader(CPyMOL * I, const char *content, const char *content_type,
-                                 int content_length, const char *content_format,
-                                 const char *object_name, int state,
-                                 int discrete, int finish,
-                                 int quiet, int multiplex, int zoom)
+static PyMOLreturn_status Loader(CPyMOL* I, const char* content,
+    const char* content_type, int content_length, const char* content_format,
+    const char* object_name, int state, int discrete, int finish, int quiet,
+    int multiplex, int zoom)
 {
-  PyMOLGlobals * G = I->G;
+  PyMOLGlobals* G = I->G;
   bool content_is_filename = false;
   int ok = true;
   WordType obj_name;
@@ -1557,39 +1582,38 @@ static PyMOLreturn_status Loader(CPyMOL * I, const char *content, const char *co
   } else if (strcmp(content_type, "string") == 0) {
     if (content_length < 0)
       content_length = strlen(content);
-  } else if (
-      strcmp(content_type, "raw") != 0 &&
-      strcmp(content_type, "cgo") != 0) {
+  } else if (strcmp(content_type, "raw") != 0 &&
+             strcmp(content_type, "cgo") != 0) {
     PRINTFB(G, FB_Executive, FB_Errors)
-      " Error: Unknown content type '%s'\n", content_type ENDFB(G);
+    " Error: Unknown content type '%s'\n", content_type ENDFB(G);
     ok = false;
   }
 
-  if(ok) {
-    {                           /* if object_name is blank and content is a filename, then 
-                                   compute the object_name from the file prefix */
-      if((!object_name[0]) && content_is_filename) {
+  if (ok) {
+    { /* if object_name is blank and content is a filename, then
+         compute the object_name from the file prefix */
+      if ((!object_name[0]) && content_is_filename) {
         const char *start, *stop;
         stop = start = content + strlen(content) - 1;
-        while(start > content) {        /* known path separators */
-          if((start[-1] == ':') || (start[-1] == '\'') || (start[-1] == '/'))
+        while (start > content) { /* known path separators */
+          if ((start[-1] == ':') || (start[-1] == '\'') || (start[-1] == '/'))
             break;
           start--;
         }
-        while(stop > start) {
-          if(*stop == '.')
+        while (stop > start) {
+          if (*stop == '.')
             break;
           stop--;
         }
-        if(stop == start)
+        if (stop == start)
           stop = content + strlen(content);
-        if((stop - start) >= sizeof(WordType))
+        if ((stop - start) >= sizeof(WordType))
           stop = start + sizeof(WordType) - 1;
         {
-          char *q;
-          const char *p = start;
+          char* q;
+          const char* p = start;
           q = obj_name;
-          while(p < stop) {
+          while (p < stop) {
             *(q++) = *(p++);
           }
           *q = 0;
@@ -1602,27 +1626,25 @@ static PyMOLreturn_status Loader(CPyMOL * I, const char *content, const char *co
 
       for (auto it = ContentTypeTable; it->name; ++it) {
         if (strcmp(it->name, content_format) == 0) {
-          pymol_content_type = content_is_filename ?
-            it->code_filename : it->code_buffer;
+          pymol_content_type =
+              content_is_filename ? it->code_filename : it->code_buffer;
           break;
         }
       }
 
       if (pymol_content_type == cLoadTypeUnknown) {
         PRINTFB(G, FB_Executive, FB_Errors)
-          " Error: Unknown content format '%s' with type '%s'\n",
-          content_format, content_type ENDFB(G);
+        " Error: Unknown content format '%s' with type '%s'\n", content_format,
+            content_type ENDFB(G);
         ok = false;
       }
 
-      if(ok) {
-        auto result = ExecutiveLoad(I->G,
-            content_is_filename ? content : nullptr,
-            content_is_filename ? nullptr : content,
-                           content_length,
-                           pymol_content_type,
-                           object_name,
-                           state - 1, zoom, discrete, finish, multiplex, quiet, nullptr, 0, nullptr);
+      if (ok) {
+        auto result =
+            ExecutiveLoad(I->G, content_is_filename ? content : nullptr,
+                content_is_filename ? nullptr : content, content_length,
+                pymol_content_type, object_name, state - 1, zoom, discrete,
+                finish, multiplex, quiet, nullptr, 0, nullptr);
         ok = static_cast<bool>(result);
       }
     }
@@ -1632,83 +1654,70 @@ static PyMOLreturn_status Loader(CPyMOL * I, const char *content, const char *co
   return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdLoad(CPyMOL * I,
-                                 const char *content,
-                                 const char *content_type,
-                                 const char *content_format,
-                                 const char *object_name, int state,
-                                 int discrete, int finish,
-                                 int quiet, int multiplex, int zoom)
+PyMOLreturn_status PyMOL_CmdLoad(CPyMOL* I, const char* content,
+    const char* content_type, const char* content_format,
+    const char* object_name, int state, int discrete, int finish, int quiet,
+    int multiplex, int zoom)
 {
-  PyMOLreturn_status status = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status status = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
-    status = Loader(I, content, content_type, -1, content_format, object_name,
-                    state, discrete, finish, quiet, multiplex, zoom);
+  status = Loader(I, content, content_type, -1, content_format, object_name,
+      state, discrete, finish, quiet, multiplex, zoom);
   PYMOL_API_UNLOCK return status;
 }
 
-PyMOLreturn_status PyMOL_CmdLoadRaw(CPyMOL * I,
-                                    const char *content,
-                                    int content_length,
-                                    const char *content_format,
-                                    const char *object_name, int state,
-                                    int discrete, int finish,
-                                    int quiet, int multiplex, int zoom)
+PyMOLreturn_status PyMOL_CmdLoadRaw(CPyMOL* I, const char* content,
+    int content_length, const char* content_format, const char* object_name,
+    int state, int discrete, int finish, int quiet, int multiplex, int zoom)
 {
-  PyMOLreturn_status status = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status status = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
-    status = Loader(I, content, "raw", content_length, content_format,
-                    object_name, state, discrete, finish, quiet, multiplex, zoom);
+  status = Loader(I, content, "raw", content_length, content_format,
+      object_name, state, discrete, finish, quiet, multiplex, zoom);
   PYMOL_API_UNLOCK return status;
 }
 
-PyMOLreturn_status PyMOL_CmdLoadCGO(CPyMOL * I,
-                                    const float *content,
-                                    int content_length,
-                                    const char *object_name, int state, int quiet, int zoom)
+PyMOLreturn_status PyMOL_CmdLoadCGO(CPyMOL* I, const float* content,
+    int content_length, const char* object_name, int state, int quiet, int zoom)
 {
-  PyMOLreturn_status status = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status status = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
-    status = Loader(I, (char *) content, "cgo", content_length, "cgo",
-                    object_name, state, 0, 1, quiet, 0, zoom);
+  status = Loader(I, (char*) content, "cgo", content_length, "cgo", object_name,
+      state, 0, 1, quiet, 0, zoom);
   PYMOL_API_UNLOCK return status;
 }
 
-PyMOLreturn_status PyMOL_CmdCreate(CPyMOL * I,  
-                                   const char *name,
-                                   const char *selection, int source_state,
-                                   int target_state, int discrete,
-                                   int zoom, int quiet, int singletons,
-                                   const char *extract, int copy_properties)
+PyMOLreturn_status PyMOL_CmdCreate(CPyMOL* I, const char* name,
+    const char* selection, int source_state, int target_state, int discrete,
+    int zoom, int quiet, int singletons, const char* extract,
+    int copy_properties)
 {
   int ok = true;
   PYMOL_API_LOCK
-  auto result = ExecutiveSeleToObject(I->G,
-      name, selection, source_state, target_state, discrete, zoom, quiet,
-      singletons, copy_properties);
+  auto result = ExecutiveSeleToObject(I->G, name, selection, source_state,
+      target_state, discrete, zoom, quiet, singletons, copy_properties);
   ok = static_cast<bool>(result);
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdPseudoatom(CPyMOL * I, const char *object_name, const char *selection,
-				       const char *name, const char *resn, const char *resi, const char *chain,
-				       const char *segi, const char *elem, float vdw, int hetatm,
-				       float b, float q, const char *color, const char *label, 
-				       int use_xyz, float x, float y, float z,
-				       int state, int mode, int quiet)
+PyMOLreturn_status PyMOL_CmdPseudoatom(CPyMOL* I, const char* object_name,
+    const char* selection, const char* name, const char* resn, const char* resi,
+    const char* chain, const char* segi, const char* elem, float vdw,
+    int hetatm, float b, float q, const char* color, const char* label,
+    int use_xyz, float x, float y, float z, int state, int mode, int quiet)
 {
   int ok = true;
   PYMOL_API_LOCK
-  if(ok) {
+  if (ok) {
     int color_index = ColorGetIndex(I->G, color);
-    if(ok) {
+    if (ok) {
       float pos_tmp[3], *pos = pos_tmp;
-      if(use_xyz) {
-	pos[0] = x;
-	pos[1] = y;
-	pos[2] = z;
+      if (use_xyz) {
+        pos[0] = x;
+        pos[1] = y;
+        pos[2] = z;
       } else {
-	pos = nullptr;
+        pos = nullptr;
       }
       auto pseudoatom_name = ExecutivePreparePseudoatomName(I->G, object_name);
       auto res = ExecutivePseudoatom(I->G, pseudoatom_name, selection, name,
@@ -1720,10 +1729,11 @@ PyMOLreturn_status PyMOL_CmdPseudoatom(CPyMOL * I, const char *object_name, cons
   PYMOL_API_UNLOCK return return_status_ok(ok);
 }
 
-PyMOLreturn_status PyMOL_CmdTurn(CPyMOL * I, char axis, float angle){
-  PyMOLreturn_status result = { PyMOLstatus_SUCCESS };
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
-  switch (axis){
+PyMOLreturn_status PyMOL_CmdTurn(CPyMOL* I, char axis, float angle)
+{
+  PyMOLreturn_status result = {PyMOLstatus_SUCCESS};
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
+  switch (axis) {
   case 'x':
     SceneRotate(G, angle, 1.0, 0.0, 0.0);
     break;
@@ -1740,17 +1750,20 @@ PyMOLreturn_status PyMOL_CmdTurn(CPyMOL * I, char axis, float angle){
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_CmdMPlay(CPyMOL * I, int cmd){
-  PyMOLreturn_status result = { PyMOLstatus_SUCCESS };
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
+PyMOLreturn_status PyMOL_CmdMPlay(CPyMOL* I, int cmd)
+{
+  PyMOLreturn_status result = {PyMOLstatus_SUCCESS};
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
   MoviePlay(G, cmd);
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_CmdSetFeedbackMask(CPyMOL * I, int action, int module, int mask){
-  PyMOLreturn_status result = { PyMOLstatus_SUCCESS };
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
-  switch (action){
+PyMOLreturn_status PyMOL_CmdSetFeedbackMask(
+    CPyMOL* I, int action, int module, int mask)
+{
+  PyMOLreturn_status result = {PyMOLstatus_SUCCESS};
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
+  switch (action) {
   case 0:
     G->Feedback->setMask(module, (uchar) mask);
     break;
@@ -1771,118 +1784,118 @@ PyMOLreturn_status PyMOL_CmdSetFeedbackMask(CPyMOL * I, int action, int module, 
 }
 
 static const CPyMOLOptions Defaults = {
-  true,                         /* pmgui */
+    true, /* pmgui */
 #ifndef _PYMOL_NOPY
-  true,                         /* internal_gui */
+    true, /* internal_gui */
 #else
-  false,
+    false,
 #endif
 #ifndef _PYMOL_NOPY
-  true,                         /* show_splash */
+    true, /* show_splash */
 #else
-  false,
+    false,
 #endif
 #ifndef _PYMOL_NOPY
-  1,                            /* internal_feedback */
+    1, /* internal_feedback */
 #else
-  0,
+    0,
 #endif
-  true,                         /* security */
-  false,                        /* game mode */
-  0,                            /* force_stereo */
-  640,                          /* winX */
-  480,                          /* winY */
-  false,                        /* blue_line */
-  0,                            /* winPX */
-  175,                          /* winPY */
-  true,                         /* external_gui */
-  true,                         /* siginthand */
-  false,                        /* reuse helper */
-  false,                        /* auto reinitialize */
-  false,                        /* keep thread alive */
-  false,                        /* quiet */
-  false,                        /* incentive product */
-  "",                           /* after_load_script */
-  0,                            /* multisample */
-  1,                            /* window_visible */
-  0,                            /* read_stdin */
-  0,                            /* presentation */
-  0,                            /* defer builds mode */
-  0,                            /* full screen mode */
-  -1,                           /* sphere mode */
-  0,                            /* stereo capable */
-  0,                            /* stereo mode */
-  -1,                           /* zoom mode */
-  0,                            /* launch_status */
-  0,                            /* no quit */
-  0,                            /* gldebug */
-  false,                        /* no openvr stub */
+    true,  /* security */
+    false, /* game mode */
+    0,     /* force_stereo */
+    640,   /* winX */
+    480,   /* winY */
+    false, /* blue_line */
+    0,     /* winPX */
+    175,   /* winPY */
+    true,  /* external_gui */
+    true,  /* siginthand */
+    false, /* reuse helper */
+    false, /* auto reinitialize */
+    false, /* keep thread alive */
+    false, /* quiet */
+    false, /* incentive product */
+    "",    /* after_load_script */
+    0,     /* multisample */
+    1,     /* window_visible */
+    0,     /* read_stdin */
+    0,     /* presentation */
+    0,     /* defer builds mode */
+    0,     /* full screen mode */
+    -1,    /* sphere mode */
+    0,     /* stereo capable */
+    0,     /* stereo mode */
+    -1,    /* zoom mode */
+    0,     /* launch_status */
+    0,     /* no quit */
+    0,     /* gldebug */
+    false, /* no openvr stub */
 };
 
-CPyMOLOptions *PyMOLOptions_New(void)
+CPyMOLOptions* PyMOLOptions_New(void)
 {
-  CPyMOLOptions *result = nullptr;
+  CPyMOLOptions* result = nullptr;
   result = pymol::calloc<CPyMOLOptions>(1);
-  if(result)
+  if (result)
     *result = Defaults;
   return result;
 }
 
-void PyMOLOptions_Free(CPyMOLOptions * options)
+void PyMOLOptions_Free(CPyMOLOptions* options)
 {
   FreeP(options);
 }
 
-void PyMOL_ResetProgress(CPyMOL * I)
+void PyMOL_ResetProgress(CPyMOL* I)
 {
   I->ProgressChanged = true;
   UtilZeroMem(I->Progress, sizeof(int) * 6);
 }
 
-void PyMOL_SetProgress(CPyMOL * I, int offset, int current, int range)
+void PyMOL_SetProgress(CPyMOL* I, int offset, int current, int range)
 {
   switch (offset) {
   case PYMOL_PROGRESS_SLOW:
   case PYMOL_PROGRESS_MED:
   case PYMOL_PROGRESS_FAST:
-    if(current != I->Progress[offset]) {
+    if (current != I->Progress[offset]) {
       I->Progress[offset] = current;
       I->ProgressChanged = true;
     }
-    if(range != I->Progress[offset + 1]) {
+    if (range != I->Progress[offset + 1]) {
       I->Progress[offset + 1] = range;
       I->ProgressChanged = true;
     }
   }
 }
 
-int PyMOL_GetProgress(CPyMOL * I, int *progress, int reset)
+int PyMOL_GetProgress(CPyMOL* I, int* progress, int reset)
 {
   int a;
   int result = I->ProgressChanged;
-  for(a = 0; a < PYMOL_PROGRESS_SIZE; a++) {
+  for (a = 0; a < PYMOL_PROGRESS_SIZE; a++) {
     progress[a] = I->Progress[a];
   }
-  if(reset)
+  if (reset)
     I->ProgressChanged = false;
   return result;
 }
 
-int PyMOL_GetProgressChanged(CPyMOL * I, int reset)
+int PyMOL_GetProgressChanged(CPyMOL* I, int reset)
 {
   int result = I->ProgressChanged;
-  if(reset)
+  if (reset)
     I->ProgressChanged = false;
   return result;
 }
 
-CPyMOL *PyMOL_New(void)
+CPyMOL* PyMOL_New(void)
 {
   assert(!Defaults.stereo_capable);
   return PyMOL_NewWithOptions(&Defaults);
 }
 
-CPyMOL *PyMOL_NewWithOptions(const CPyMOLOptions * option)
+CPyMOL* PyMOL_NewWithOptions(const CPyMOLOptions* option)
 {
   auto result = new CPyMOL();
   assert(result);
@@ -1911,9 +1924,9 @@ CPyMOL *PyMOL_NewWithOptions(const CPyMOLOptions * option)
   return result;
 }
 
-void PyMOL_Start(CPyMOL * I)
+void PyMOL_Start(CPyMOL* I)
 {
-  PyMOLGlobals *G = I->G;
+  PyMOLGlobals* G = I->G;
 
   // It's possible to change this from Python, functions which rely on
   // C locale should reset it before doing printf, atof, etc.
@@ -1922,7 +1935,7 @@ void PyMOL_Start(CPyMOL * I)
   G->Context = OVContext_New();
   G->Lexicon = OVLexicon_New(G->Context->heap);
 
-  if(OVreturn_IS_ERROR(PyMOL_InitAPI(I))) {
+  if (OVreturn_IS_ERROR(PyMOL_InitAPI(I))) {
     printf("ERROR: PyMOL internal C API initialization failed.\n");
   }
 
@@ -1939,7 +1952,8 @@ void PyMOL_Start(CPyMOL * I)
   G->GFXMgr = new GFXManager(G->ShaderMgr);
   SettingInitGlobal(G, true, true, false);
   SettingSetGlobal_i(G, cSetting_internal_gui, G->Option->internal_gui);
-  SettingSetGlobal_i(G, cSetting_internal_feedback, G->Option->internal_feedback);
+  SettingSetGlobal_i(
+      G, cSetting_internal_feedback, G->Option->internal_feedback);
   TextureInit(G);
   TypeInit(G);
   TextInit(G);
@@ -1950,7 +1964,7 @@ void PyMOL_Start(CPyMOL * I)
   OrthoInit(G, G->Option->show_splash);
   SceneInit(G);
   MovieScenesInit(G);
-  WizardInit(G);                /* must come after ortho & scene */
+  WizardInit(G); /* must come after ortho & scene */
   G->Movie = new CMovie(G);
   G->SelectorMgr = new CSelectorManager();
   G->Selector = new CSelector(G, G->SelectorMgr);
@@ -1977,22 +1991,24 @@ void PyMOL_Start(CPyMOL * I)
 /* This function is necessary to be called from PyMOL_StartWithPython
    which is called before the PYMOL_API is instantiated, thus
    it is not necessary (and you can't) lock the API */
-void PyMOL_ConfigureShadersGL_WithoutLock(CPyMOL * I){
-    I->done_ConfigureShaders = false;
-    // ShaderMgr->Config() moved to PyMOL_DrawWithoutLock
+void PyMOL_ConfigureShadersGL_WithoutLock(CPyMOL* I)
+{
+  I->done_ConfigureShaders = false;
+  // ShaderMgr->Config() moved to PyMOL_DrawWithoutLock
 }
 
-/* This function is called from CMol and needs to lock 
+/* This function is called from CMol and needs to lock
    the PYMOL_API */
-void PyMOL_ConfigureShadersGL(CPyMOL * I){
-  PYMOL_API_LOCK 
-    PyMOL_ConfigureShadersGL_WithoutLock(I);
+void PyMOL_ConfigureShadersGL(CPyMOL* I)
+{
+  PYMOL_API_LOCK
+  PyMOL_ConfigureShadersGL_WithoutLock(I);
   PYMOL_API_UNLOCK
 }
 
 #ifndef _PYMOL_NOPY
 
-void PyMOL_StartWithPython(CPyMOL * I)
+void PyMOL_StartWithPython(CPyMOL* I)
 {
   PyMOL_Start(I);
 
@@ -2007,9 +2023,9 @@ void PyMOL_StartWithPython(CPyMOL * I)
 
 #endif
 
-void PyMOL_Stop(CPyMOL * I)
+void PyMOL_Stop(CPyMOL* I)
 {
-  PyMOLGlobals *G = I->G;
+  PyMOLGlobals* G = I->G;
   G->Terminating = true;
   TetsurfFree(G);
   IsosurfFree(G);
@@ -2057,17 +2073,17 @@ void PyMOL_Stop(CPyMOL * I)
   OVContext_Del(G->Context);
 }
 
-void PyMOL_Free(CPyMOL * I)
+void PyMOL_Free(CPyMOL* I)
 {
 #if !defined(_PYMOL_ACTIVEX) && !defined(_MACPYMOL_XCODE)
   PYMOL_API_LOCK
 #endif
-    /* take PyMOL down gracefully */
-    PyMOLOptions_Free(I->G->Option);
+  /* take PyMOL down gracefully */
+  PyMOLOptions_Free(I->G->Option);
 
 #ifndef _PYMOL_NOPY
   FreeP(I->G->P_inst);
-  if(I->G == SingletonPyMOLGlobals)
+  if (I->G == SingletonPyMOLGlobals)
     SingletonPyMOLGlobals = nullptr;
 #endif
 
@@ -2079,51 +2095,54 @@ void PyMOL_Free(CPyMOL * I)
 #endif
 }
 
-struct PyMOLGlobals* PyMOL_GetGlobals(CPyMOL * I)
+struct PyMOLGlobals* PyMOL_GetGlobals(CPyMOL* I)
 {
   return I->G;
 }
 
-struct PyMOLGlobals** PyMOL_GetGlobalsHandle(CPyMOL * I)
+struct PyMOLGlobals** PyMOL_GetGlobalsHandle(CPyMOL* I)
 {
   return &(I->G);
 }
 
-void PyMOL_LockAPIAndUnblock(CPyMOL * I)
+void PyMOL_LockAPIAndUnblock(CPyMOL* I)
 {
-  PyMOLGlobals *G = I->G;
-  (void)G;
+  PyMOLGlobals* G = I->G;
+  (void) G;
   PLockAPIAndUnblock(G);
 }
 
-void PyMOL_BlockAndUnlockAPI(CPyMOL * I)
+void PyMOL_BlockAndUnlockAPI(CPyMOL* I)
 {
-  PyMOLGlobals *G = I->G;
-  (void)G;
+  PyMOLGlobals* G = I->G;
+  (void) G;
   PBlockAndUnlockAPI(G);
 }
 
-void PyMOL_AdaptToHardware(CPyMOL * I)
+void PyMOL_AdaptToHardware(CPyMOL* I)
 {
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
-  if(G->HaveGUI) {
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
+  if (G->HaveGUI) {
     PyMOL_PushValidContext(I);
     {
-      char *vendor = (char *) glGetString(GL_VENDOR);
-      char *renderer = (char *) glGetString(GL_RENDERER);
-      char *version = (char *) glGetString(GL_VERSION);
-      if(vendor && version) {
+      char* vendor = (char*) glGetString(GL_VENDOR);
+      char* renderer = (char*) glGetString(GL_RENDERER);
+      char* version = (char*) glGetString(GL_VERSION);
+      if (vendor && version) {
         /* work around broken lighting under Windows GDI Generic */
-        if((strcmp(vendor, "Microsoft Corporation") == 0) &&
-           (strcmp(renderer, "GDI Generic") == 0)) {
-          ExecutiveSetSettingFromString(I->G, cSetting_light_count, "1", "", 0, 1, 0);
-          ExecutiveSetSettingFromString(I->G, cSetting_spec_direct, "0.7", "", 0, 1, 0);
+        if ((strcmp(vendor, "Microsoft Corporation") == 0) &&
+            (strcmp(renderer, "GDI Generic") == 0)) {
+          ExecutiveSetSettingFromString(
+              I->G, cSetting_light_count, "1", "", 0, 1, 0);
+          ExecutiveSetSettingFromString(
+              I->G, cSetting_spec_direct, "0.7", "", 0, 1, 0);
         }
       }
     }
     PyMOL_PopValidContext(I);
   }
-PYMOL_API_UNLOCK}
+  PYMOL_API_UNLOCK
+}
 
 static void setup_gl_state(void)
 {
@@ -2155,30 +2174,31 @@ static void setup_gl_state(void)
   glDisable(GL_POLYGON_SMOOTH);
 #endif
 }
-void PyMOL_DrawWithoutLock(CPyMOL * I);
+void PyMOL_DrawWithoutLock(CPyMOL* I);
 
-void PyMOL_Draw(CPyMOL * I){
+void PyMOL_Draw(CPyMOL* I)
+{
   PYMOL_API_LOCK_MODAL
   PyMOL_DrawWithoutLock(I);
   PYMOL_API_UNLOCK
 }
 
-static void PyMOL_LaunchStatus_Feedback(PyMOLGlobals * G)
+static void PyMOL_LaunchStatus_Feedback(PyMOLGlobals* G)
 {
   G->LaunchStatus |= G->Option->launch_status;
 
-  if(G->StereoCapable) {
-    OrthoAddOutput(G,
-        " OpenGL quad-buffer stereo 3D detected and enabled.\n");;
+  if (G->StereoCapable) {
+    OrthoAddOutput(G, " OpenGL quad-buffer stereo 3D detected and enabled.\n");
+    ;
   } else {
-    if(G->LaunchStatus & cPyMOLGlobals_LaunchStatus_StereoFailed) {
-      G->Feedback->addColored(
-          "Error: The requested stereo 3D visualization mode is not available.\n",
+    if (G->LaunchStatus & cPyMOLGlobals_LaunchStatus_StereoFailed) {
+      G->Feedback->addColored("Error: The requested stereo 3D visualization "
+                              "mode is not available.\n",
           FB_Errors);
     }
   }
 
-  if(G->LaunchStatus & cPyMOLGlobals_LaunchStatus_MultisampleFailed) {
+  if (G->LaunchStatus & cPyMOLGlobals_LaunchStatus_MultisampleFailed) {
     G->Feedback->addColored(
         "Error: The requested multisampling mode is not available.\n",
         FB_Errors);
@@ -2186,7 +2206,7 @@ static void PyMOL_LaunchStatus_Feedback(PyMOLGlobals * G)
 }
 
 #ifndef PURE_OPENGL_ES_2
-static void check_gl_stereo_capable(PyMOLGlobals * G)
+static void check_gl_stereo_capable(PyMOLGlobals* G)
 {
   // quad buffer stereo available?
   GLboolean state;
@@ -2235,7 +2255,7 @@ static void check_gl_stereo_capable(PyMOLGlobals * G)
 }
 #endif
 
-void PyMOL_DrawWithoutLock(CPyMOL * I)
+void PyMOL_DrawWithoutLock(CPyMOL* I)
 {
   if (!I->done_ConfigureShaders) {
     I->done_ConfigureShaders = true;
@@ -2245,8 +2265,7 @@ void PyMOL_DrawWithoutLock(CPyMOL * I)
 #ifndef PURE_OPENGL_ES_2
     // stereo test with PyQt5 on Linux is broken (QTBUG-59636), so we
     // test for stereo here
-    if (I->G->HaveGUI)
-    {
+    if (I->G->HaveGUI) {
       check_gl_stereo_capable(I->G);
     }
 #endif
@@ -2270,51 +2289,49 @@ void PyMOL_DrawWithoutLock(CPyMOL * I)
     }
   }
 
-  PyMOLGlobals * G = I->G;
-  if(I->ModalDraw) {
-    if(G->HaveGUI) {
+  PyMOLGlobals* G = I->G;
+  if (I->ModalDraw) {
+    if (G->HaveGUI) {
       PyMOL_PushValidContext(I);
       setup_gl_state();
     }
     {
-      PyMOLModalDrawFn *fn = I->ModalDraw;
-      I->ModalDraw = nullptr;      /* always resets to nullptr! */
+      PyMOLModalDrawFn* fn = I->ModalDraw;
+      I->ModalDraw = nullptr; /* always resets to nullptr! */
       fn(G);
     }
 
-    if(G->HaveGUI) {
+    if (G->HaveGUI) {
       PyMOL_PopValidContext(I);
     }
   } else {
 
-    if(I->DraggedFlag) {
-      if(ControlIdling(I->G)) {
+    if (I->DraggedFlag) {
+      if (ControlIdling(I->G)) {
         ExecutiveSculptIterateAll(I->G);
       }
       I->DraggedFlag = false;
     }
 
-    if(G->HaveGUI) {
+    if (G->HaveGUI) {
       PyMOL_PushValidContext(I);
 
       setup_gl_state();
 
-      if(!I->DrawnFlag) {
-        SceneSetCardInfo(G, (char *) glGetString(GL_VENDOR),
-                         (char *) glGetString(GL_RENDERER),
-                         (char *) glGetString(GL_VERSION));
-        if(G->Option->show_splash && !G->Option->quiet) {
+      if (!I->DrawnFlag) {
+        SceneSetCardInfo(G, (char*) glGetString(GL_VENDOR),
+            (char*) glGetString(GL_RENDERER), (char*) glGetString(GL_VERSION));
+        if (G->Option->show_splash && !G->Option->quiet) {
 
           PRINTFB(G, FB_OpenGL, FB_Results)
-            " OpenGL graphics engine:\n"
-            "  GL_VENDOR:   %s\n"
-            "  GL_RENDERER: %s\n"
-            "  GL_VERSION:  %s\n",
-            (char *) glGetString(GL_VENDOR),
-            (char *) glGetString(GL_RENDERER),
-            (char *) glGetString(GL_VERSION) ENDFB(G);
-          if(Feedback(G, FB_OpenGL, FB_Blather)) {
-            printf("  GL_EXTENSIONS: %s\n", (char *) glGetString(GL_EXTENSIONS));
+          " OpenGL graphics engine:\n"
+          "  GL_VENDOR:   %s\n"
+          "  GL_RENDERER: %s\n"
+          "  GL_VERSION:  %s\n",
+              (char*) glGetString(GL_VENDOR), (char*) glGetString(GL_RENDERER),
+              (char*) glGetString(GL_VERSION) ENDFB(G);
+          if (Feedback(G, FB_OpenGL, FB_Blather)) {
+            printf("  GL_EXTENSIONS: %s\n", (char*) glGetString(GL_EXTENSIONS));
           }
         }
         I->DrawnFlag = true;
@@ -2328,39 +2345,40 @@ void PyMOL_DrawWithoutLock(CPyMOL * I)
     OrthoBusyPrime(G);
     ExecutiveDrawNow(G);
 
-    if(I->ImageRequestedFlag) {
-      if(SceneHasImage(G)) {
+    if (I->ImageRequestedFlag) {
+      if (SceneHasImage(G)) {
         I->ImageReadyFlag = true;
         I->ImageRequestedFlag = false;
       } else {
         I->ImageReadyFlag = false;
       }
-    } else if(I->ImageReadyFlag) {
-      if(!SceneHasImage(G))
+    } else if (I->ImageReadyFlag) {
+      if (!SceneHasImage(G))
         I->ImageReadyFlag = false;
     }
 
-    if(G->HaveGUI)
+    if (G->HaveGUI)
       PyMOL_PopValidContext(I);
   }
 }
 
-void PyMOL_Key(CPyMOL * I, unsigned char k, int x, int y, int modifiers)
+void PyMOL_Key(CPyMOL* I, unsigned char k, int x, int y, int modifiers)
 {
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
-  if(!WizardDoKey(G, k, x, y, modifiers))
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
+  if (!WizardDoKey(G, k, x, y, modifiers))
     OrthoKey(G, k, x, y, modifiers);
   PyMOL_NeedRedisplay(G->PyMOL);
-PYMOL_API_UNLOCK}
+  PYMOL_API_UNLOCK
+}
 
-void PyMOL_Special(CPyMOL * I, int k, int x, int y, int modifiers)
+void PyMOL_Special(CPyMOL* I, int k, int x, int y, int modifiers)
 {
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
 
   int grabbed = false;
   char buffer[255];
-  (void)buffer;
-  if(!grabbed)
+  (void) buffer;
+  if (!grabbed)
     grabbed = WizardDoSpecial(G, (unsigned char) k, x, y, modifiers);
 
   switch (k) {
@@ -2371,7 +2389,7 @@ void PyMOL_Special(CPyMOL * I, int k, int x, int y, int modifiers)
     break;
   case P_GLUT_KEY_LEFT:
   case P_GLUT_KEY_RIGHT:
-    if(OrthoArrowsGrabbed(G)) {
+    if (OrthoArrowsGrabbed(G)) {
       grabbed = 1;
       OrthoSpecial(G, k, x, y, modifiers);
     }
@@ -2379,7 +2397,7 @@ void PyMOL_Special(CPyMOL * I, int k, int x, int y, int modifiers)
   }
 
 #ifndef _PYMOL_NOPY
-  if(!grabbed) {
+  if (!grabbed) {
     sprintf(buffer, "_special %d,%d,%d,%d", k, x, y, modifiers);
     PLog(G, buffer, cPLog_pml);
     PParse(G, buffer);
@@ -2387,35 +2405,37 @@ void PyMOL_Special(CPyMOL * I, int k, int x, int y, int modifiers)
   }
 #endif
 
-PYMOL_API_UNLOCK}
+  PYMOL_API_UNLOCK
+}
 
-void PyMOL_Reshape(CPyMOL * I, int width, int height, int force)
+void PyMOL_Reshape(CPyMOL* I, int width, int height, int force)
 {
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
 
   G->Option->winX = width;
   G->Option->winY = height;
-  
-  OrthoReshape(G, width, height, force);
-PYMOL_API_UNLOCK}
 
-int PyMOL_Idle(CPyMOL * I)
+  OrthoReshape(G, width, height, force);
+  PYMOL_API_UNLOCK
+}
+
+int PyMOL_Idle(CPyMOL* I)
 {
   int did_work = false;
-  PYMOL_API_TRYLOCK PyMOLGlobals * G = I->G;
+  PYMOL_API_TRYLOCK PyMOLGlobals* G = I->G;
 
   I->DraggedFlag = false;
-  if(I->IdleAndReady < IDLE_AND_READY) {
-    if(I->DrawnFlag)
+  if (I->IdleAndReady < IDLE_AND_READY) {
+    if (I->DrawnFlag)
       I->IdleAndReady++;
   }
-  if(I->FakeDragFlag == 1) {
+  if (I->FakeDragFlag == 1) {
     I->FakeDragFlag = false;
     OrthoFakeDrag(G);
     did_work = true;
   }
 
-  if(ControlIdling(G)) {
+  if (ControlIdling(G)) {
     ExecutiveSculptIterateAll(G);
     ControlSdofIterate(G);
     did_work = true;
@@ -2423,31 +2443,32 @@ int PyMOL_Idle(CPyMOL * I)
 
   SceneIdle(G);
 
-  if(SceneRovingCheckDirty(G)) {
+  if (SceneRovingCheckDirty(G)) {
     SceneRovingUpdate(G);
     did_work = true;
   }
 #ifndef _PYMOL_NOPY
-  if(PFlush(G)) {
+  if (PFlush(G)) {
     did_work = true;
   }
 
-  if(I->PythonInitStage > 0) {
-    if(I->PythonInitStage < 2) {
+  if (I->PythonInitStage > 0) {
+    if (I->PythonInitStage < 2) {
       I->PythonInitStage++;
     } else {
       I->PythonInitStage = -1;
       PBlock(G);
 
-      PXDecRef(PYOBJECT_CALLMETHOD
-               (G->P_inst->obj, "adapt_to_hardware", "O", G->P_inst->obj));
-      
-      if(PyErr_Occurred())
+      PXDecRef(PYOBJECT_CALLMETHOD(
+          G->P_inst->obj, "adapt_to_hardware", "O", G->P_inst->obj));
+
+      if (PyErr_Occurred())
         PyErr_Print();
 
-      PXDecRef(PYOBJECT_CALLMETHOD(G->P_inst->obj, "exec_deferred", "O", G->P_inst->obj));
+      PXDecRef(PYOBJECT_CALLMETHOD(
+          G->P_inst->obj, "exec_deferred", "O", G->P_inst->obj));
 
-      if(PyErr_Occurred())
+      if (PyErr_Occurred())
         PyErr_Print();
 
       PUnblock(G);
@@ -2458,27 +2479,27 @@ int PyMOL_Idle(CPyMOL * I)
 
   /* reset the interrupt flag if we're not doing anything */
 
-  if(!(did_work || I->ModalDraw))
-    if(PyMOL_GetInterrupt(I, false))
+  if (!(did_work || I->ModalDraw))
+    if (PyMOL_GetInterrupt(I, false))
       PyMOL_SetInterrupt(I, false);
 
   PYMOL_API_UNLOCK_NO_FLUSH return (did_work || I->ModalDraw);
 }
 
-void PyMOL_ExpireIfIdle(CPyMOL * I)
+void PyMOL_ExpireIfIdle(CPyMOL* I)
 {
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
   int final_init_done = true;
 #ifndef _PYMOL_NOPY
   final_init_done = (I->PythonInitStage == -1);
 #endif
 
-  if(!G->HaveGUI) {
-    if(final_init_done) {
-      if(!OrthoCommandWaiting(G)) {
-        if((!G->Option->keep_thread_alive) && (!G->Option->read_stdin)) {
+  if (!G->HaveGUI) {
+    if (final_init_done) {
+      if (!OrthoCommandWaiting(G)) {
+        if ((!G->Option->keep_thread_alive) && (!G->Option->read_stdin)) {
           I->ExpireCount++;
-          if(I->ExpireCount == 10) {
+          if (I->ExpireCount == 10) {
             PParse(G, "_quit");
           }
         }
@@ -2488,49 +2509,50 @@ void PyMOL_ExpireIfIdle(CPyMOL * I)
   PYMOL_API_UNLOCK;
 }
 
-void PyMOL_NeedFakeDrag(CPyMOL * I)
+void PyMOL_NeedFakeDrag(CPyMOL* I)
 {
   I->FakeDragFlag = true;
 }
 
-void PyMOL_NeedRedisplay(CPyMOL * I)
+void PyMOL_NeedRedisplay(CPyMOL* I)
 {
   I->RedisplayFlag = true;
 }
 
-void PyMOL_NeedSwap(CPyMOL * I)
+void PyMOL_NeedSwap(CPyMOL* I)
 {
   I->SwapFlag = true;
 }
 
-void PyMOL_NeedReshape(CPyMOL * I, int mode, int x, int y, int width, int height)
-{ 
-  PyMOLGlobals *G = I->G;
-  if(width < 0) {
+void PyMOL_NeedReshape(CPyMOL* I, int mode, int x, int y, int width, int height)
+{
+  PyMOLGlobals* G = I->G;
+  if (width < 0) {
     if (!G->HaveGUI)
       return;
 
     width = SceneGetBlock(G)->getWidth();
-    if(SettingGetGlobal_b(G, cSetting_internal_gui))
-      width += DIP2PIXEL(SettingGetGlobal_i( G, cSetting_internal_gui_width));
+    if (SettingGetGlobal_b(G, cSetting_internal_gui))
+      width += DIP2PIXEL(SettingGetGlobal_i(G, cSetting_internal_gui_width));
   }
 
   /* if height is negative, force a reshape based on the current height */
 
-  if(height < 0) {
+  if (height < 0) {
     int internal_feedback;
     height = SceneGetBlock(G)->getHeight();
     internal_feedback = SettingGetGlobal_i(G, cSetting_internal_feedback);
-    if(internal_feedback)
-      height += (internal_feedback - 1) * cOrthoLineHeight + cOrthoBottomSceneMargin;
-    if(SettingGetGlobal_b(G, cSetting_seq_view)
-       && !SettingGetGlobal_b(G, cSetting_seq_view_overlay)) {
+    if (internal_feedback)
+      height +=
+          (internal_feedback - 1) * cOrthoLineHeight + cOrthoBottomSceneMargin;
+    if (SettingGetGlobal_b(G, cSetting_seq_view) &&
+        !SettingGetGlobal_b(G, cSetting_seq_view_overlay)) {
       height += SeqGetHeight(G);
     }
     height += MovieGetPanelHeight(G);
   }
 
-  if(G->HaveGUI) {
+  if (G->HaveGUI) {
     float sf = DIP2PIXEL(1);
 
     I->Reshape[1] = x / sf;
@@ -2543,7 +2565,7 @@ void PyMOL_NeedReshape(CPyMOL * I, int mode, int x, int y, int width, int height
     PyMOL_NeedRedisplay(I);
   } else {
     /* if no gui, then force immediate reshape */
-    PyMOLGlobals *G = I->G;
+    PyMOLGlobals* G = I->G;
 
     G->Option->winX = width;
     G->Option->winY = height;
@@ -2552,42 +2574,43 @@ void PyMOL_NeedReshape(CPyMOL * I, int mode, int x, int y, int width, int height
   }
 }
 
-int PyMOL_GetIdleAndReady(CPyMOL * I)
+int PyMOL_GetIdleAndReady(CPyMOL* I)
 {
   return (I->IdleAndReady == IDLE_AND_READY);
 }
 
-int PyMOL_GetReshape(CPyMOL * I)
+int PyMOL_GetReshape(CPyMOL* I)
 {
   return I->ReshapeFlag;
 }
 
-PyMOLreturn_int_array PyMOL_GetReshapeInfo(CPyMOL * I, int reset)
+PyMOLreturn_int_array PyMOL_GetReshapeInfo(CPyMOL* I, int reset)
 {
-  PyMOLreturn_int_array result = { PyMOLstatus_SUCCESS, PYMOL_RESHAPE_SIZE, nullptr };
+  PyMOLreturn_int_array result = {
+      PyMOLstatus_SUCCESS, PYMOL_RESHAPE_SIZE, nullptr};
   PYMOL_API_LOCK
-  if(reset)
+  if (reset)
     I->ReshapeFlag = false;
   result.array = VLAlloc(int, PYMOL_RESHAPE_SIZE);
-  if(!result.array) {
+  if (!result.array) {
     result.status = PyMOLstatus_FAILURE;
   } else {
     int a;
-    for(a = 0; a < PYMOL_RESHAPE_SIZE; a++)
+    for (a = 0; a < PYMOL_RESHAPE_SIZE; a++)
       result.array[a] = I->Reshape[a];
   }
 
- PYMOL_API_UNLOCK
-   return result;
+  PYMOL_API_UNLOCK
+  return result;
 }
 
-void PyMOL_SetPassive(CPyMOL * I, int onOff)
+void PyMOL_SetPassive(CPyMOL* I, int onOff)
 {
   I->PassiveFlag = onOff;
 }
 
-void PyMOL_SetClickReady(CPyMOL * I, const char *name, int index, int button, int mod, int x,
-                         int y, const float *pos, int state, int bond)
+void PyMOL_SetClickReady(CPyMOL* I, const char* name, int index, int button,
+    int mod, int x, int y, const float* pos, int state, int bond)
 {
   I->ClickReadyFlag = true;
   I->ClickedIndex = index;
@@ -2607,25 +2630,25 @@ void PyMOL_SetClickReady(CPyMOL * I, const char *name, int index, int button, in
   }
 }
 
-int PyMOL_GetClickReady(CPyMOL * I, int reset)
+int PyMOL_GetClickReady(CPyMOL* I, int reset)
 {
   int result = I->ClickReadyFlag;
-  if(reset) {
+  if (reset) {
     I->ClickReadyFlag = false;
   }
   return result;
 }
 
-char *PyMOL_GetClickString(CPyMOL * I, int reset)
+char* PyMOL_GetClickString(CPyMOL* I, int reset)
 {
-  char *result = nullptr;
+  char* result = nullptr;
   PYMOL_API_LOCK int ready = I->ClickReadyFlag;
-  if(reset)
+  if (reset)
     I->ClickReadyFlag = false;
-  if(ready) {
+  if (ready) {
     size_t result_size = OrthoLineLength + 1;
     result = pymol::malloc<char>(result_size);
-    if(result) {
+    if (result) {
       const char* butstr = "left";
       switch (I->ClickedButton) {
       case P_GLUT_SINGLE_LEFT:
@@ -2649,18 +2672,18 @@ char *PyMOL_GetClickString(CPyMOL * I, int reset)
       }
 
       WordType modstr = "";
-      if(cOrthoCTRL & I->ClickedModifiers) {
+      if (cOrthoCTRL & I->ClickedModifiers) {
         strcat(modstr, " ctrl");
       }
-      if(cOrthoALT & I->ClickedModifiers) {
+      if (cOrthoALT & I->ClickedModifiers) {
         strcat(modstr, " alt");
       }
-      if(cOrthoSHIFT & I->ClickedModifiers) {
+      if (cOrthoSHIFT & I->ClickedModifiers) {
         strcat(modstr, " shift");
       }
 
       result[0] = 0;
-      if(!I->ClickedObject[0]) {
+      if (!I->ClickedObject[0]) {
         strcat(result, "type=none\n");
       } else if (auto cobj =
                      ExecutiveFindObjectByName(I->G, I->ClickedObject)) {
@@ -2685,9 +2708,9 @@ char *PyMOL_GetClickString(CPyMOL * I, int reset)
             I->ClickedBondIndex /* 0-based or cPickable_t */);
 
         auto obj = dynamic_cast<ObjectMolecule const*>(cobj);
-        if(obj && (I->ClickedIndex < obj->NAtom)) {
+        if (obj && (I->ClickedIndex < obj->NAtom)) {
           const AtomInfoType* ai = obj->AtomInfo + I->ClickedIndex;
-          char inscode_str[2] = { ai->inscode, '\0' };
+          char inscode_str[2] = {ai->inscode, '\0'};
           snprintf(result + strlen(result), result_size - strlen(result),
               "rank=%d\n"
               "id=%d\n"
@@ -2697,14 +2720,9 @@ char *PyMOL_GetClickString(CPyMOL * I, int reset)
               "resi=%d%s\n"
               "name=%s\n"
               "alt=%s\n",
-                  ai->rank,
-                  ai->id,
-                  LexStr(I->G, ai->segi),
-                  LexStr(I->G, ai->chain),
-                  LexStr(I->G, ai->resn),
-                  ai->resv, inscode_str,
-                  LexStr(I->G, ai->name),
-                  ai->alt);
+              ai->rank, ai->id, LexStr(I->G, ai->segi), LexStr(I->G, ai->chain),
+              LexStr(I->G, ai->resn), ai->resv, inscode_str,
+              LexStr(I->G, ai->name), ai->alt);
         }
       }
 
@@ -2734,20 +2752,20 @@ char *PyMOL_GetClickString(CPyMOL * I, int reset)
   PYMOL_API_UNLOCK return (result);
 }
 
-int PyMOL_GetImageReady(CPyMOL * I, int reset)
+int PyMOL_GetImageReady(CPyMOL* I, int reset)
 {
   int result = I->ImageReadyFlag;
-  if(reset) {
+  if (reset) {
     I->ImageReadyFlag = false;
   }
   return result;
 }
 
-PyMOLreturn_int_array PyMOL_GetImageInfo(CPyMOL * I)
+PyMOLreturn_int_array PyMOL_GetImageInfo(CPyMOL* I)
 {
-  PyMOLreturn_int_array result = { PyMOLstatus_SUCCESS, 2, nullptr };
+  PyMOLreturn_int_array result = {PyMOLstatus_SUCCESS, 2, nullptr};
   PYMOL_API_LOCK result.array = VLAlloc(int, 2);
-  if(!result.array) {
+  if (!result.array) {
     result.status = PyMOLstatus_FAILURE;
   } else {
     std::tie(result.array[0], result.array[1]) = SceneGetImageSize(I->G);
@@ -2755,138 +2773,139 @@ PyMOLreturn_int_array PyMOL_GetImageInfo(CPyMOL * I)
   PYMOL_API_UNLOCK return result;
 }
 
-int PyMOL_GetImageData(CPyMOL * I,
-                       int width, int height,
-                       int row_bytes, void *buffer, int mode, int reset)
+int PyMOL_GetImageData(CPyMOL* I, int width, int height, int row_bytes,
+    void* buffer, int mode, int reset)
 {
   int ok = true;
-  PYMOL_API_LOCK if(reset)
-    I->ImageReadyFlag = false;
-  ok = SceneCopyExternal(I->G, width, height, row_bytes, (unsigned char *) buffer, mode);
+  PYMOL_API_LOCK if (reset) I->ImageReadyFlag = false;
+  ok = SceneCopyExternal(
+      I->G, width, height, row_bytes, (unsigned char*) buffer, mode);
   PYMOL_API_UNLOCK return get_status_ok(ok);
 }
 
-PyMOLreturn_int_array PyMOL_GetImageDataReturned(CPyMOL * I,
-                       int width, int height,
-                       int row_bytes, int mode, int reset)
+PyMOLreturn_int_array PyMOL_GetImageDataReturned(
+    CPyMOL* I, int width, int height, int row_bytes, int mode, int reset)
 {
-  PyMOLreturn_int_array result = { PyMOLstatus_SUCCESS, 0, nullptr };
+  PyMOLreturn_int_array result = {PyMOLstatus_SUCCESS, 0, nullptr};
   int ok = true;
   int size;
-  void *buffer;
+  void* buffer;
   PYMOL_API_LOCK
-    if(reset){
-      I->ImageReadyFlag = false;
-    }
-  size = width*height;
+  if (reset) {
+    I->ImageReadyFlag = false;
+  }
+  size = width * height;
   buffer = VLAlloc(int, size);
-  ((int*)buffer)[0] = ('A'<<24)|('B'<<16)|('G'<<8)|'R';
-  ok = SceneCopyExternal(I->G, width, height, row_bytes, (unsigned char *) buffer, mode);
-  if(ok) {
+  ((int*) buffer)[0] = ('A' << 24) | ('B' << 16) | ('G' << 8) | 'R';
+  ok = SceneCopyExternal(
+      I->G, width, height, row_bytes, (unsigned char*) buffer, mode);
+  if (ok) {
     result.array = (int*) buffer;
     result.size = size;
   } else {
     result.status = PyMOLstatus_FAILURE;
   }
-  
+
   PYMOL_API_UNLOCK return result;
 }
 
-int PyMOL_FreeResultString(CPyMOL * I, char *st)
+int PyMOL_FreeResultString(CPyMOL* I, char* st)
 {
   PYMOL_API_LOCK FreeP(st);
   PYMOL_API_UNLOCK return get_status_ok((st != nullptr));
 }
 
-int PyMOL_GetRedisplay(CPyMOL * I, int reset)
+int PyMOL_GetRedisplay(CPyMOL* I, int reset)
 {
   int result = false;
 
-  PYMOL_API_TRYLOCK PyMOLGlobals * G = I->G;
+  PYMOL_API_TRYLOCK PyMOLGlobals* G = I->G;
   result = I->RedisplayFlag;
 
-  if(result) {
-    if(SettingGet_b(G, nullptr, nullptr, cSetting_defer_updates)) {
+  if (result) {
+    if (SettingGet_b(G, nullptr, nullptr, cSetting_defer_updates)) {
       result = false;
     } else {
-      if(reset)
+      if (reset)
         I->RedisplayFlag = false;
     }
   }
-  PYMOL_API_UNLOCK_NO_FLUSH return (result || I->ModalDraw);    /* always true when ModalDraw is set */
+  PYMOL_API_UNLOCK_NO_FLUSH return (
+      result || I->ModalDraw); /* always true when ModalDraw is set */
 }
 
-int PyMOL_GetPassive(CPyMOL * I, int reset)
-{                               /* lock intentionally omitted */
+int PyMOL_GetPassive(CPyMOL* I, int reset)
+{ /* lock intentionally omitted */
   int result = I->PassiveFlag;
-  if(reset)
+  if (reset)
     I->PassiveFlag = false;
   return result;
 }
 
-int PyMOL_GetModalDraw(CPyMOL * I)
+int PyMOL_GetModalDraw(CPyMOL* I)
 {
-  if(I)
+  if (I)
     return (I->ModalDraw != nullptr);
   return false;
 }
 
-void PyMOL_SetModalDraw(CPyMOL * I, PyMOLModalDrawFn * fn)
+void PyMOL_SetModalDraw(CPyMOL* I, PyMOLModalDrawFn* fn)
 {
   I->ModalDraw = fn;
 }
 
-int PyMOL_GetSwap(CPyMOL * I, int reset)
-{                               /* lock intentionally omitted */
+int PyMOL_GetSwap(CPyMOL* I, int reset)
+{ /* lock intentionally omitted */
   int result = I->SwapFlag;
-  if(reset)
+  if (reset)
     I->SwapFlag = false;
   return result;
 }
 
-int PyMOL_GetBusy(CPyMOL * I, int reset)
-{                               /* lock intentionally omitted */
+int PyMOL_GetBusy(CPyMOL* I, int reset)
+{ /* lock intentionally omitted */
   int result = I->BusyFlag;
-  if(reset)
+  if (reset)
     PyMOL_SetBusy(I, false);
   return result;
 }
 
-void PyMOL_SetBusy(CPyMOL * I, int value)
-{                               /* lock intentionally omitted */
-  if(!I->BusyFlag)
+void PyMOL_SetBusy(CPyMOL* I, int value)
+{ /* lock intentionally omitted */
+  if (!I->BusyFlag)
     /* if we weren't busy before, then reset the progress indicators */
     PyMOL_ResetProgress(I);
 
   I->BusyFlag = value;
 }
 
-int PyMOL_GetInterrupt(CPyMOL * I, int reset)
-{                               /* lock intentionally omitted */
-  if(I) {
+int PyMOL_GetInterrupt(CPyMOL* I, int reset)
+{ /* lock intentionally omitted */
+  if (I) {
     int result = I->InterruptFlag;
 
-    if(reset)
+    if (reset)
       PyMOL_SetInterrupt(I, false);
     return result;
   } else
     return false;
 }
 
-void PyMOL_SetInterrupt(CPyMOL * I, int value)
-{                               /* lock intentionally omitted */
-  if(I) {
+void PyMOL_SetInterrupt(CPyMOL* I, int value)
+{ /* lock intentionally omitted */
+  if (I) {
     I->InterruptFlag = value;
-    if(I->G)
+    if (I->G)
       I->G->Interrupt = value;
   }
 }
 
-void PyMOL_Drag(CPyMOL * I, int x, int y, int modifiers)
+void PyMOL_Drag(CPyMOL* I, int x, int y, int modifiers)
 {
   PYMOL_API_LOCK OrthoDrag(I->G, x, y, modifiers);
   I->DraggedFlag = true;
-PYMOL_API_UNLOCK}
+  PYMOL_API_UNLOCK
+}
 
 /**
  * Mouse button and keyboard press handler
@@ -2900,26 +2919,27 @@ PYMOL_API_UNLOCK}
  * x, y: mouse pointer position
  * modifiers: SHIFT/CTRL/ALT bitmask
  */
-void PyMOL_Button(CPyMOL * I, int button, int state, int x, int y, int modifiers)
+void PyMOL_Button(CPyMOL* I, int button, int state, int x, int y, int modifiers)
 {
   PYMOL_API_LOCK
-    if (state == -1) {
-      PyMOL_Key(I, (unsigned char)button, x, y, modifiers);
-    } else if (state == -2) {
-      PyMOL_Special(I, button, x, y, modifiers);
-    } else {
-      OrthoButton(I->G, button, state, x, y, modifiers);
-    }
-PYMOL_API_UNLOCK}
+  if (state == -1) {
+    PyMOL_Key(I, (unsigned char) button, x, y, modifiers);
+  } else if (state == -2) {
+    PyMOL_Special(I, button, x, y, modifiers);
+  } else {
+    OrthoButton(I->G, button, state, x, y, modifiers);
+  }
+  PYMOL_API_UNLOCK
+}
 
-void PyMOL_SetSwapBuffersFn(CPyMOL * I, PyMOLSwapBuffersFn * fn)
+void PyMOL_SetSwapBuffersFn(CPyMOL* I, PyMOLSwapBuffersFn* fn)
 {
   I->SwapFn = fn;
 }
 
-void PyMOL_SwapBuffers(CPyMOL * I)
+void PyMOL_SwapBuffers(CPyMOL* I)
 {
-  if(I->SwapFn && I->G->ValidContext) {
+  if (I->SwapFn && I->G->ValidContext) {
     I->SwapFn();
     I->SwapFlag = false;
   } else {
@@ -2927,42 +2947,48 @@ void PyMOL_SwapBuffers(CPyMOL * I)
   }
 }
 
-void PyMOL_RunTest(CPyMOL * I, int group, int test)
+void PyMOL_RunTest(CPyMOL* I, int group, int test)
 {
   PYMOL_API_LOCK TestPyMOLRun(I->G, group, test);
-PYMOL_API_UNLOCK}
+  PYMOL_API_UNLOCK
+}
 
-void PyMOL_PushValidContext(CPyMOL * I)
+void PyMOL_PushValidContext(CPyMOL* I)
 {
-  if(I && I->G)
+  if (I && I->G)
     I->G->ValidContext++;
 }
 
-void PyMOL_PopValidContext(CPyMOL * I)
+void PyMOL_PopValidContext(CPyMOL* I)
 {
-  if(I && I->G && (I->G->ValidContext > 0))
+  if (I && I->G && (I->G->ValidContext > 0))
     I->G->ValidContext--;
 }
 
-void PyMOL_SetStereoCapable(CPyMOL * I, int stereoCapable){
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
+void PyMOL_SetStereoCapable(CPyMOL* I, int stereoCapable)
+{
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
   G->StereoCapable = stereoCapable;
-  if (SettingGetGlobal_b(I->G, cSetting_stereo_mode)==0){
+  if (SettingGetGlobal_b(I->G, cSetting_stereo_mode) == 0) {
     /* if users haven't set stereo_mode, then set it to default */
-    if (G->StereoCapable){
-      SettingSetGlobal_i(I->G, cSetting_stereo_mode, cStereo_quadbuffer);      /* quadbuffer if we can */
+    if (G->StereoCapable) {
+      SettingSetGlobal_i(I->G, cSetting_stereo_mode,
+          cStereo_quadbuffer); /* quadbuffer if we can */
     } else {
-      SettingSetGlobal_i(I->G, cSetting_stereo_mode, cStereo_crosseye);      /* otherwise crosseye by default */
+      SettingSetGlobal_i(I->G, cSetting_stereo_mode,
+          cStereo_crosseye); /* otherwise crosseye by default */
     }
-  } else if (G->StereoCapable && SettingGetGlobal_b(G, cSetting_stereo)){
-    SettingSetGlobal_i(I->G, cSetting_stereo_mode, SettingGetGlobal_b(I->G, cSetting_stereo_mode));
+  } else if (G->StereoCapable && SettingGetGlobal_b(G, cSetting_stereo)) {
+    SettingSetGlobal_i(I->G, cSetting_stereo_mode,
+        SettingGetGlobal_b(I->G, cSetting_stereo_mode));
   }
   SceneUpdateStereo(I->G);
   PYMOL_API_UNLOCK
 }
 
-void PyMOL_InitializeCMol(CPyMOL * I){
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
+void PyMOL_InitializeCMol(CPyMOL* I)
+{
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
   /* Set stereo_mode to 0, so that PyMOL_SetStereoCapable()
      can determine whether user has changed the stereo_mode.  If
      users have not changed it, then set to quadbuffer if we can,
@@ -2971,9 +2997,9 @@ void PyMOL_InitializeCMol(CPyMOL * I){
   PYMOL_API_UNLOCK
 }
 
-void PyMOL_SetDefaultMouse(CPyMOL * I)
+void PyMOL_SetDefaultMouse(CPyMOL* I)
 {
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
 
   ButModeSet(G, cButModeLeftNone, cButModeRotXYZ);
   ButModeSet(G, cButModeMiddleNone, cButModeTransXY);
@@ -3007,67 +3033,73 @@ void PyMOL_SetDefaultMouse(CPyMOL * I)
 
   {
     int a;
-    for(a = cButModeLeftShftDouble; a <= cButModeRightCtrlAltShftSingle; a++) {
+    for (a = cButModeLeftShftDouble; a <= cButModeRightCtrlAltShftSingle; a++) {
       ButModeSet(G, a, cButModeSimpleClick);
     }
-    for(a = cButModeLeftAlt; a <= cButModeRightCtrlAltShft; a++) {
+    for (a = cButModeLeftAlt; a <= cButModeRightCtrlAltShft; a++) {
       ButModeSet(G, a, cButModePotentialClick);
     }
-
   }
-  G->Feedback->currentMask(FB_Scene) &= ~(FB_Results); /* suppress click messages */
-PYMOL_API_UNLOCK}
+  G->Feedback->currentMask(FB_Scene) &=
+      ~(FB_Results); /* suppress click messages */
+  PYMOL_API_UNLOCK
+}
 
-PyMOLreturn_status PyMOL_CmdRock(CPyMOL * I, int mode){
-  PyMOLreturn_status result = { PyMOLstatus_SUCCESS };
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
+PyMOLreturn_status PyMOL_CmdRock(CPyMOL* I, int mode)
+{
+  PyMOLreturn_status result = {PyMOLstatus_SUCCESS};
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
   ControlRock(G, mode);
   PYMOL_API_UNLOCK return result;
 }
 
-
-PyMOLreturn_string_array PyMOL_CmdGetNames(CPyMOL * I, int mode, const char *s0, int enabled_only){
-  PyMOLreturn_string_array result = { PyMOLstatus_FAILURE };
-  PYMOL_API_LOCK PyMOLGlobals * G = I->G;
+PyMOLreturn_string_array PyMOL_CmdGetNames(
+    CPyMOL* I, int mode, const char* s0, int enabled_only)
+{
+  PyMOLreturn_string_array result = {PyMOLstatus_FAILURE};
+  PYMOL_API_LOCK PyMOLGlobals* G = I->G;
   result = return_result(ExecutiveGetNames(G, mode, enabled_only, s0));
-  PYMOL_API_UNLOCK 
+  PYMOL_API_UNLOCK
   return (result);
 }
 
-PyMOLreturn_status PyMOL_CmdMapNew(CPyMOL * I, const char *name, int type, float grid_spacing, 
-				   const char *selection, int state, int normalize,
-				   int zoom, int quiet){
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+PyMOLreturn_status PyMOL_CmdMapNew(CPyMOL* I, const char* name, int type,
+    float grid_spacing, const char* selection, int state, int normalize,
+    int zoom, int quiet)
+{
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   float minCorner[3], maxCorner[3];
-  PYMOL_API_LOCK 
+  PYMOL_API_LOCK
 
   minCorner[0] = minCorner[1] = minCorner[2] = 0.;
   maxCorner[0] = maxCorner[1] = maxCorner[2] = 1.;
-  auto res = ExecutiveMapNew(I->G, name, type, grid_spacing,
-      selection, -1., minCorner, maxCorner, state, 0, quiet, 0, normalize, 1.,
-      -1., 0.);
+  auto res = ExecutiveMapNew(I->G, name, type, grid_spacing, selection, -1.,
+      minCorner, maxCorner, state, 0, quiet, 0, normalize, 1., -1., 0.);
   result.status = get_status_ok(static_cast<bool>(res));
 
   PYMOL_API_UNLOCK return result;
 }
 
 #ifdef _PYMOL_LIB
-PyMOLreturn_status PyMOL_SetIsEnabledCallback(CPyMOL * I, void *CallbackObject, void (*enabledCallback)(void *, const char *, int )){
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
-  PYMOL_API_LOCK 
-    I->G->CallbackObject = CallbackObject;
-    I->G->enabledCallback = enabledCallback;
-  result.status =  PyMOLstatus_SUCCESS;
-  PYMOL_API_UNLOCK 
+PyMOLreturn_status PyMOL_SetIsEnabledCallback(CPyMOL* I, void* CallbackObject,
+    void (*enabledCallback)(void*, const char*, int))
+{
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
+  PYMOL_API_LOCK
+  I->G->CallbackObject = CallbackObject;
+  I->G->enabledCallback = enabledCallback;
+  result.status = PyMOLstatus_SUCCESS;
+  PYMOL_API_UNLOCK
   return result;
 }
 
-PyMOLreturn_int_array PyMOL_GetRepsInSceneForObject(CPyMOL * I, const char *name){
-  PyMOLreturn_int_array result = { PyMOLstatus_SUCCESS, 0, nullptr };
-  int *retarr = 0;
+PyMOLreturn_int_array PyMOL_GetRepsInSceneForObject(CPyMOL* I, const char* name)
+{
+  PyMOLreturn_int_array result = {PyMOLstatus_SUCCESS, 0, nullptr};
+  int* retarr = 0;
   PYMOL_API_LOCK
-    retarr = ExecutiveGetRepsInSceneForObject(I->G, name);
-  if(!retarr) {
+  retarr = ExecutiveGetRepsInSceneForObject(I->G, name);
+  if (!retarr) {
     result.status = PyMOLstatus_FAILURE;
   } else {
     result.size = VLAGetSize(retarr);
@@ -3076,12 +3108,13 @@ PyMOLreturn_int_array PyMOL_GetRepsInSceneForObject(CPyMOL * I, const char *name
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_int_array PyMOL_GetRepsForObject(CPyMOL * I, const char *name){
-  PyMOLreturn_int_array result = { PyMOLstatus_SUCCESS, 0, nullptr };
-  int *retarr = 0;
+PyMOLreturn_int_array PyMOL_GetRepsForObject(CPyMOL* I, const char* name)
+{
+  PyMOLreturn_int_array result = {PyMOLstatus_SUCCESS, 0, nullptr};
+  int* retarr = 0;
   PYMOL_API_LOCK
-    retarr = ExecutiveGetRepsForObject(I->G, name);
-  if(!retarr) {
+  retarr = ExecutiveGetRepsForObject(I->G, name);
+  if (!retarr) {
     result.status = PyMOLstatus_FAILURE;
   } else {
     result.size = VLAGetSize(retarr);
@@ -3090,106 +3123,114 @@ PyMOLreturn_int_array PyMOL_GetRepsForObject(CPyMOL * I, const char *name){
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_SetButton(CPyMOL * I, const char *buttonarg, const char *modifierarg, const char *actionarg){
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+PyMOLreturn_status PyMOL_SetButton(CPyMOL* I, const char* buttonarg,
+    const char* modifierarg, const char* actionarg)
+{
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
   OrthoLineType button, modifier, action;
   PYMOL_API_LOCK
-    UtilNCopyToLower(button, buttonarg, strlen(buttonarg)+1);
-    UtilNCopyToLower(modifier, modifierarg, strlen(modifierarg)+1);
-    UtilNCopyToLower(action, actionarg, strlen(actionarg)+1);
-    auto button_num = get_button_code(I, button);
-    auto but_mod_num = get_button_mod_code(I, modifier);
-    auto act_code = get_button_action_code(I, action);
-    auto ok = static_cast<bool>(button_num) && static_cast<bool>(but_mod_num) &&
-         static_cast<bool>(act_code);
+  UtilNCopyToLower(button, buttonarg, strlen(buttonarg) + 1);
+  UtilNCopyToLower(modifier, modifierarg, strlen(modifierarg) + 1);
+  UtilNCopyToLower(action, actionarg, strlen(actionarg) + 1);
+  auto button_num = get_button_code(I, button);
+  auto but_mod_num = get_button_mod_code(I, modifier);
+  auto act_code = get_button_action_code(I, action);
+  auto ok = static_cast<bool>(button_num) && static_cast<bool>(but_mod_num) &&
+            static_cast<bool>(act_code);
 
-    if (ok) {
-      int but_code;
-      /* This is directly from the button() function in controlling.py */
-      if (*button_num < 3) { // normal button (L,M,R)
-        if (*but_mod_num < 4) {
-          // none, shft, ctrl, ctsh
-          but_code = *button_num + 3 * *but_mod_num;
-        } else {
-          // alt, alsh, alct, alcs
-          but_code = *button_num + 68 + 3 * (*but_mod_num - 4);
-        }
-      } else if (*button_num < 4) { // wheel
-        if (*but_mod_num < 4) {
-          // none, shft, ctrl, ctsh
-          but_code = 12 + *but_mod_num;
-        } else {
-          but_code = 64 + *but_mod_num - 4;
-        }
+  if (ok) {
+    int but_code;
+    /* This is directly from the button() function in controlling.py */
+    if (*button_num < 3) { // normal button (L,M,R)
+      if (*but_mod_num < 4) {
+        // none, shft, ctrl, ctsh
+        but_code = *button_num + 3 * *but_mod_num;
       } else {
-        // single and double clicks
-        but_code = (16 + *button_num - 4) + *but_mod_num * 6;
+        // alt, alsh, alct, alcs
+        but_code = *button_num + 68 + 3 * (*but_mod_num - 4);
       }
-      ButModeSet(I->G, but_code, *act_code);
-      result.status = PyMOLstatus_SUCCESS;
+    } else if (*button_num < 4) { // wheel
+      if (*but_mod_num < 4) {
+        // none, shft, ctrl, ctsh
+        but_code = 12 + *but_mod_num;
+      } else {
+        but_code = 64 + *but_mod_num - 4;
+      }
+    } else {
+      // single and double clicks
+      but_code = (16 + *button_num - 4) + *but_mod_num * 6;
+    }
+    ButModeSet(I->G, but_code, *act_code);
+    result.status = PyMOLstatus_SUCCESS;
   }
   PYMOL_API_UNLOCK return result;
 }
 #include "buttonmodes.h"
 
-PyMOLreturn_status PyMOL_SetMouseButtonMode(CPyMOL * I, const char *modename){
+PyMOLreturn_status PyMOL_SetMouseButtonMode(CPyMOL* I, const char* modename)
+{
   int ok = true, start;
   pymol::Result<int> mode;
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
 
   PYMOL_API_LOCK
+  {
+    char* nmodename = (char*) malloc(strlen(modename) + 1);
+    UtilNCopyToLower((char*) nmodename, modename, strlen(modename) + 1);
+    mode = get_mouse_mode(I, (char*) nmodename);
+    ok = static_cast<bool>(mode);
+    free(nmodename);
+  }
+  if (ok) {
+    result.status = PyMOLstatus_SUCCESS;
     {
-        char *nmodename = (char*)malloc(strlen(modename)+1);
-        UtilNCopyToLower((char*)nmodename, modename, strlen(modename)+1);
-        mode = get_mouse_mode(I, (char*)nmodename);
-        ok = static_cast<bool>(mode);
-        free(nmodename);
-    }
-  if (ok){
-    result.status =  PyMOLstatus_SUCCESS;
-    {
-      /* for Button modes, first initialize all buttons, so that 
-	 previous functionality does not linger */
+      /* for Button modes, first initialize all buttons, so that
+         previous functionality does not linger */
       for (int a = 0; a < cButModeInputCount; a++) {
-	ButModeSet(I->G, a, initial_button_modes[a]);
+        ButModeSet(I->G, a, initial_button_modes[a]);
       }
     }
     start = button_mode_start[*mode];
     for (int i = 0; i < n_button_mode[*mode]; i++, start += 2) {
-      ButModeSet(I->G, all_buttons[start], all_buttons[start+1]);
+      ButModeSet(I->G, all_buttons[start], all_buttons[start + 1]);
     }
   }
-  PYMOL_API_UNLOCK return result;  
-}
-
-PyMOLreturn_status PyMOL_ZoomScene(CPyMOL * I, float scale){
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
-  PYMOL_API_LOCK  
-    SceneZoom(I->G, scale);
-    PyMOL_NeedRedisplay(I);
-  result.status =  PyMOLstatus_SUCCESS;
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_status PyMOL_TranslateScene(CPyMOL * I, float x, float y, float z){
-  PyMOLreturn_status result = { PyMOLstatus_FAILURE };
-  PYMOL_API_LOCK  
-    SceneTranslate(I->G, x, y, z);
-  result.status =  PyMOLstatus_SUCCESS;
+PyMOLreturn_status PyMOL_ZoomScene(CPyMOL* I, float scale)
+{
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
+  PYMOL_API_LOCK
+  SceneZoom(I->G, scale);
+  PyMOL_NeedRedisplay(I);
+  result.status = PyMOLstatus_SUCCESS;
   PYMOL_API_UNLOCK return result;
 }
 
-PyMOLreturn_float_array PyMOL_Spectrum(CPyMOL * I, const char *expression, const char *pal, const char *selection, float minimum, float maximum, int byres, int quiet){
-  PyMOLreturn_float_array result = { PyMOLstatus_FAILURE };
+PyMOLreturn_status PyMOL_TranslateScene(CPyMOL* I, float x, float y, float z)
+{
+  PyMOLreturn_status result = {PyMOLstatus_FAILURE};
+  PYMOL_API_LOCK
+  SceneTranslate(I->G, x, y, z);
+  result.status = PyMOLstatus_SUCCESS;
+  PYMOL_API_UNLOCK return result;
+}
+
+PyMOLreturn_float_array PyMOL_Spectrum(CPyMOL* I, const char* expression,
+    const char* pal, const char* selection, float minimum, float maximum,
+    int byres, int quiet)
+{
+  PyMOLreturn_float_array result = {PyMOLstatus_FAILURE};
   PYMOL_API_LOCK
   int ok = true;
   int digits, first, last, array_pl, ret;
   float min_ret, max_ret;
   char prefix[2];
-  char *palette = (char*)malloc(strlen(pal)+1);
-    UtilNCopyToLower((char*)palette, pal, strlen(pal)+1);
-  
-  auto pal_word = get_palette(I, (char*)palette);
+  char* palette = (char*) malloc(strlen(pal) + 1);
+  UtilNCopyToLower((char*) palette, pal, strlen(pal) + 1);
+
+  auto pal_word = get_palette(I, (char*) palette);
   free(palette);
   if (ok)
     ok = static_cast<bool>(pal_word);
@@ -3219,13 +3260,14 @@ PyMOLreturn_float_array PyMOL_Spectrum(CPyMOL * I, const char *expression, const
 
 #endif
 
-PyMOLreturn_value PyMOL_GetVersion(CPyMOL * I){
+PyMOLreturn_value PyMOL_GetVersion(CPyMOL* I)
+{
   int ok = true;
   PyMOLreturn_value result;
   result.status = PyMOLstatus_FAILURE;
 
   PYMOL_API_LOCK
-  if(ok) {
+  if (ok) {
     result.type = PYMOL_RETURN_VALUE_IS_STRING;
     result.string = mstrdup(_PyMOL_VERSION);
     result.status = PyMOLstatus_SUCCESS;

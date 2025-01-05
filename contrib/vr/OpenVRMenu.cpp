@@ -38,39 +38,39 @@ SOFTWARE.
 #include "OpenVRUtils.h"
 
 OpenVRMenu::OpenVRMenu()
-  : m_width(640)
-  , m_height(480)
-  , m_visibleX(0)
-  , m_visibleY(0)
-  , m_visibleWidth(640)
-  , m_visibleHeight(480)
-  , m_alpha(1.0f)
-  , m_sceneColor(0.2f)
-  , m_sceneAlpha(0.75f)
-  , m_backdropColor(0.2f)
-  , m_backdropAlpha(0.75f)
-  , m_distance(3.0f)
-  , m_fovTangent(0.75f)
-  , m_valid(false)
-  , m_visible(false)
-  , m_backdrop(false)
-  , m_overlay(false)
-  , m_worldHalfWidth(2.0f)
-  , m_worldHalfHeight(1.5f)
-  , m_frameBufferID(0)
-  , m_guiTextureID(0)
-  , m_vertexArrayID(0)
-  , m_vertexBufferID(0)
-  , m_vertexCount(0)
-  , m_programID(0)
-  , m_guiTransformUniform(-1)
-  , m_hotspotTransformUniform(-1)
-  , m_hotspotColorUniform(-1)
-  , m_factorsUniform(-1)
-  , m_guiTextureUniform(-1)
-  , m_sceneTextureUniform(-1)
-  , m_backdropProgramID(0)
-  , m_backdropColorUniform(-1)
+    : m_width(640)
+    , m_height(480)
+    , m_visibleX(0)
+    , m_visibleY(0)
+    , m_visibleWidth(640)
+    , m_visibleHeight(480)
+    , m_alpha(1.0f)
+    , m_sceneColor(0.2f)
+    , m_sceneAlpha(0.75f)
+    , m_backdropColor(0.2f)
+    , m_backdropAlpha(0.75f)
+    , m_distance(3.0f)
+    , m_fovTangent(0.75f)
+    , m_valid(false)
+    , m_visible(false)
+    , m_backdrop(false)
+    , m_overlay(false)
+    , m_worldHalfWidth(2.0f)
+    , m_worldHalfHeight(1.5f)
+    , m_frameBufferID(0)
+    , m_guiTextureID(0)
+    , m_vertexArrayID(0)
+    , m_vertexBufferID(0)
+    , m_vertexCount(0)
+    , m_programID(0)
+    , m_guiTransformUniform(-1)
+    , m_hotspotTransformUniform(-1)
+    , m_hotspotColorUniform(-1)
+    , m_factorsUniform(-1)
+    , m_guiTextureUniform(-1)
+    , m_sceneTextureUniform(-1)
+    , m_backdropProgramID(0)
+    , m_backdropColorUniform(-1)
 {
   memset(m_matrix, 0, sizeof(m_matrix));
   m_matrix[0] = m_matrix[5] = m_matrix[10] = m_matrix[15] = 1.0f;
@@ -98,10 +98,10 @@ void OpenVRMenu::InitGeometry()
     Vector3f position;
     Vector3f texcoord;
   } vertices[] = {
-    {{-1.0f, +1.0f}, {0.0f, 1.0f}},
-    {{+1.0f, +1.0f}, {1.0f, 1.0f}},
-    {{-1.0f, -1.0f}, {0.0f, 0.0f}},
-    {{+1.0f, -1.0f}, {1.0f, 0.0f}},
+      {{-1.0f, +1.0f}, {0.0f, 1.0f}},
+      {{+1.0f, +1.0f}, {1.0f, 1.0f}},
+      {{-1.0f, -1.0f}, {0.0f, 0.0f}},
+      {{+1.0f, -1.0f}, {1.0f, 0.0f}},
   };
 
   m_vertexCount = sizeof(vertices) / sizeof(vertices[0]);
@@ -117,9 +117,11 @@ void OpenVRMenu::InitGeometry()
 
   // Identify the components in the vertex buffer
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_t), (void *)offsetof(Vertex_t, position));
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_t),
+      (void*) offsetof(Vertex_t, position));
   glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_t), (void *)offsetof(Vertex_t, texcoord));
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex_t),
+      (void*) offsetof(Vertex_t, texcoord));
 
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
@@ -138,49 +140,54 @@ void OpenVRMenu::FreeGeometry()
 bool OpenVRMenu::InitShaders()
 {
   const char* vs =
-    "attribute vec2 position;\n"
-    "attribute vec2 texcoords_in;\n\n"
-    "varying vec2 texcoords;\n\n"
-    "void main() {\n"
+      "attribute vec2 position;\n"
+      "attribute vec2 texcoords_in;\n\n"
+      "varying vec2 texcoords;\n\n"
+      "void main() {\n"
       "texcoords = texcoords_in;\n"
       "gl_Position = gl_ModelViewProjectionMatrix * vec4(position, 0.0, 1.0);\n"
-    "}\n";
+      "}\n";
   const char* fs =
-    "uniform vec4 guiTransform;\n"
-    "uniform sampler2D guiTexture;\n"
-    "uniform sampler2D sceneTexture;\n"
-    "uniform vec4 hotspotTransform;\n"
-    "uniform vec4 hotspotColor;\n"
-    "uniform vec4 factors;\n"
-    "varying vec2 texcoords;\n"
-    "void main() {\n"
+      "uniform vec4 guiTransform;\n"
+      "uniform sampler2D guiTexture;\n"
+      "uniform sampler2D sceneTexture;\n"
+      "uniform vec4 hotspotTransform;\n"
+      "uniform vec4 hotspotColor;\n"
+      "uniform vec4 factors;\n"
+      "varying vec2 texcoords;\n"
+      "void main() {\n"
       "vec2 delta = hotspotTransform.xy * texcoords + hotspotTransform.zw;\n"
       "float spotFactor = step(dot(delta, delta), 1.0);\n"
       "vec2 guiTexcoords = guiTransform.xy * texcoords + guiTransform.zw;\n"
       "vec4 guiColor = texture2D(guiTexture, guiTexcoords);\n"
       "vec4 sceneColor = texture2D(sceneTexture, guiTexcoords);\n"
-      "sceneColor = vec4(mix(sceneColor.rgb, vec3(1.0, 1.0, 1.0), factors.x), factors.y);\n"
-      "vec4 color = vec4(mix(sceneColor.rgb, guiColor.rgb, guiColor.a), mix(sceneColor.a, 1.0, guiColor.a) * factors.a);\n"
-      "gl_FragColor = color + spotFactor * hotspotColor.a * vec4(hotspotColor.rgb, factors.a);\n"
-    "}\n";
-  const char* fsBackdrop =
-    "uniform vec4 backdropColor;\n"
-    "void main() {\n"
-      "gl_FragColor = backdropColor;\n"
-    "}\n";
+      "sceneColor = vec4(mix(sceneColor.rgb, vec3(1.0, 1.0, 1.0), factors.x), "
+      "factors.y);\n"
+      "vec4 color = vec4(mix(sceneColor.rgb, guiColor.rgb, guiColor.a), "
+      "mix(sceneColor.a, 1.0, guiColor.a) * factors.a);\n"
+      "gl_FragColor = color + spotFactor * hotspotColor.a * "
+      "vec4(hotspotColor.rgb, factors.a);\n"
+      "}\n";
+  const char* fsBackdrop = "uniform vec4 backdropColor;\n"
+                           "void main() {\n"
+                           "gl_FragColor = backdropColor;\n"
+                           "}\n";
 
   m_programID = OpenVRUtils::CompileProgram(vs, fs);
   m_guiTransformUniform = glGetUniformLocation(m_programID, "guiTransform");
-  m_hotspotTransformUniform = glGetUniformLocation(m_programID, "hotspotTransform");
+  m_hotspotTransformUniform =
+      glGetUniformLocation(m_programID, "hotspotTransform");
   m_hotspotColorUniform = glGetUniformLocation(m_programID, "hotspotColor");
   m_factorsUniform = glGetUniformLocation(m_programID, "factors");
   m_guiTextureUniform = glGetUniformLocation(m_programID, "guiTexture");
   m_sceneTextureUniform = glGetUniformLocation(m_programID, "sceneTexture");
 
   m_backdropProgramID = OpenVRUtils::CompileProgram(vs, fsBackdrop);
-  m_backdropColorUniform = glGetUniformLocation(m_backdropProgramID, "backdropColor");
+  m_backdropColorUniform =
+      glGetUniformLocation(m_backdropProgramID, "backdropColor");
 
-  return m_programID && m_hotspotTransformUniform != -1 && m_hotspotColorUniform != -1;
+  return m_programID && m_hotspotTransformUniform != -1 &&
+         m_hotspotColorUniform != -1;
 }
 
 void OpenVRMenu::FreeShaders()
@@ -208,8 +215,10 @@ void OpenVRMenu::InitBuffers(unsigned width, unsigned height)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-  glFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_guiTextureID, 0);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA,
+      GL_UNSIGNED_BYTE, NULL);
+  glFramebufferTexture2DEXT(
+      GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_guiTextureID, 0);
 
   glBindTexture(GL_TEXTURE_2D, 0);
   glBindFramebufferEXT(GL_FRAMEBUFFER, 0);
@@ -312,7 +321,8 @@ void OpenVRMenu::DrawBackdrop()
   glBindVertexArray(m_vertexArrayID);
 
   if (m_backdropColorUniform != -1) {
-    float backdropColor[4] = {m_backdropColor, m_backdropColor, m_backdropColor, m_backdropAlpha};
+    float backdropColor[4] = {
+        m_backdropColor, m_backdropColor, m_backdropColor, m_backdropAlpha};
     glUniform4fv(m_backdropColorUniform, 1, backdropColor);
   }
 
@@ -342,8 +352,8 @@ void OpenVRMenu::Draw(GLuint sceneTextureID /* = 0 */)
   m_worldHalfHeight = m_worldHalfWidth * m_height / m_width;
 
   // take copping into account if requested
-  float m_visibleWidthScale = (float)m_visibleWidth / m_width;
-  float m_visibleHeightScale = (float)m_visibleHeight / m_height;
+  float m_visibleWidthScale = (float) m_visibleWidth / m_width;
+  float m_visibleHeightScale = (float) m_visibleHeight / m_height;
   m_worldHalfWidth *= m_visibleWidthScale;
   m_worldHalfHeight *= m_visibleHeightScale;
 
@@ -362,14 +372,16 @@ void OpenVRMenu::Draw(GLuint sceneTextureID /* = 0 */)
   glBindTexture(GL_TEXTURE_2D, sceneTextureID);
 
   float guiTransform[4] = {
-    m_visibleWidthScale, m_visibleHeightScale,
-    1.0f - m_visibleWidthScale, 1.0f - m_visibleHeightScale,
+      m_visibleWidthScale,
+      m_visibleHeightScale,
+      1.0f - m_visibleWidthScale,
+      1.0f - m_visibleHeightScale,
   };
   float hotspotTransform[4] = {
-    (float)m_visibleWidth / m_hotspot.radius,
-    (float)m_visibleHeight / m_hotspot.radius,
-    -(float)(m_hotspot.x - m_visibleX) / m_hotspot.radius,
-    -(float)(m_hotspot.y - m_visibleY) / m_hotspot.radius,
+      (float) m_visibleWidth / m_hotspot.radius,
+      (float) m_visibleHeight / m_hotspot.radius,
+      -(float) (m_hotspot.x - m_visibleX) / m_hotspot.radius,
+      -(float) (m_hotspot.y - m_visibleY) / m_hotspot.radius,
   };
   float factors[4] = {m_sceneColor, m_sceneAlpha, 0.0f, m_alpha};
 
@@ -394,7 +406,8 @@ void OpenVRMenu::Draw(GLuint sceneTextureID /* = 0 */)
   glPopMatrix();
 }
 
-bool OpenVRMenu::IntersectRay(GLfloat const* origin, GLfloat const* dir, int* x, int* y, float* out_distance /* = 0 */)
+bool OpenVRMenu::IntersectRay(GLfloat const* origin, GLfloat const* dir, int* x,
+    int* y, float* out_distance /* = 0 */)
 {
   GLfloat const* right = &m_matrix[0];  // head coordinates X-axis
   GLfloat const* up = &m_matrix[4];     // head coordinates Y-axis
@@ -408,8 +421,10 @@ bool OpenVRMenu::IntersectRay(GLfloat const* origin, GLfloat const* dir, int* x,
     return false; // no chance/need to intersect
 
   // check ray distance
-  float OtoP[3] = {pivot[0] - origin[0], pivot[1] - origin[1], pivot[2] - origin[2]};
-  float OtoPdotN = OtoP[0] * normal[0] + OtoP[1] * normal[1] + OtoP[2] * normal[2];
+  float OtoP[3] = {
+      pivot[0] - origin[0], pivot[1] - origin[1], pivot[2] - origin[2]};
+  float OtoPdotN =
+      OtoP[0] * normal[0] + OtoP[1] * normal[1] + OtoP[2] * normal[2];
   float distance = (OtoPdotN - m_distance) / DdotN;
   if (distance < 0.0f)
     return false;
@@ -423,9 +438,14 @@ bool OpenVRMenu::IntersectRay(GLfloat const* origin, GLfloat const* dir, int* x,
   float rawY = distance * DdotY - OtoPdotY;
 
   // check out of bounds
-  int pixelX = (int)((rawX + m_worldHalfWidth) * 0.5f * m_visibleWidth / m_worldHalfWidth + 0.5f);
-  int pixelY = (int)((rawY + m_worldHalfHeight) * 0.5f * m_visibleHeight / m_worldHalfHeight + 0.5f);
-  if (pixelX < 0 || pixelY < 0 || pixelX >= m_visibleWidth || pixelY >= m_visibleHeight)
+  int pixelX = (int) ((rawX + m_worldHalfWidth) * 0.5f * m_visibleWidth /
+                          m_worldHalfWidth +
+                      0.5f);
+  int pixelY = (int) ((rawY + m_worldHalfHeight) * 0.5f * m_visibleHeight /
+                          m_worldHalfHeight +
+                      0.5f);
+  if (pixelX < 0 || pixelY < 0 || pixelX >= m_visibleWidth ||
+      pixelY >= m_visibleHeight)
     return false;
 
   *x = pixelX + m_visibleX;
@@ -435,7 +455,8 @@ bool OpenVRMenu::IntersectRay(GLfloat const* origin, GLfloat const* dir, int* x,
   return true;
 }
 
-bool OpenVRMenu::LaserShoot(float const* origin, float const* dir, float const* color, float* distance /* = 0 */)
+bool OpenVRMenu::LaserShoot(float const* origin, float const* dir,
+    float const* color, float* distance /* = 0 */)
 {
   int x, y;
   bool hit = IntersectRay(origin, dir, &x, &y, distance);
@@ -450,8 +471,11 @@ bool OpenVRMenu::LaserShoot(float const* origin, float const* dir, float const* 
 
 void OpenVRMenu::LaserClick(int glutButton, int glutState)
 {
-  if (m_hotspot.x >= m_visibleX && m_hotspot.y >= m_visibleY && m_hotspot.x < m_visibleX + m_visibleWidth && m_hotspot.y < m_visibleY + m_visibleHeight) {
-    m_inputHandlers->MouseFunc(glutButton, glutState, m_hotspot.x, m_hotspot.y, 0);
+  if (m_hotspot.x >= m_visibleX && m_hotspot.y >= m_visibleY &&
+      m_hotspot.x < m_visibleX + m_visibleWidth &&
+      m_hotspot.y < m_visibleY + m_visibleHeight) {
+    m_inputHandlers->MouseFunc(
+        glutButton, glutState, m_hotspot.x, m_hotspot.y, 0);
   }
 }
 

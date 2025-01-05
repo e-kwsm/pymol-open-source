@@ -4,9 +4,9 @@
  * (c) 2015 Schrodinger, Inc.
  */
 
-#include <cstdio>
 #include <cctype>
 #include <cmath>
+#include <cstdio>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -19,7 +19,8 @@
  *
  * If `delim` is null, then do whitespace split.
  */
-std::vector<std::string> strsplit(const std::string &s, char delim) {
+std::vector<std::string> strsplit(const std::string& s, char delim)
+{
   std::vector<std::string> elems;
   std::istringstream iss(s);
   std::string item;
@@ -42,7 +43,8 @@ std::vector<std::string> strsplit(const std::string &s, char delim) {
  *
  * Return true if a < b
  */
-bool cstrlessnat(const char * a, const char * b) {
+bool cstrlessnat(const char* a, const char* b)
+{
   if (!b[0])
     return false;
   if (!a[0])
@@ -76,14 +78,16 @@ bool cstrlessnat(const char * a, const char * b) {
 /**
  * Natural string compare: F1 < F2 < F10
  */
-bool strlessnat(const std::string& a, const std::string& b) {
+bool strlessnat(const std::string& a, const std::string& b)
+{
   return cstrlessnat(a.c_str(), b.c_str());
 }
 
 /**
  * Return true if s starts with the specified prefix, false otherwise.
  */
-bool p_strstartswith(const char * s, const char * prefix) {
+bool p_strstartswith(const char* s, const char* prefix)
+{
   while (*prefix)
     if (*s++ != *prefix++)
       return false;
@@ -93,7 +97,8 @@ bool p_strstartswith(const char * s, const char * prefix) {
 /**
  * case-insensitive version of p_strstartswith
  */
-bool p_strcasestartswith(const char * s, const char * prefix) {
+bool p_strcasestartswith(const char* s, const char* prefix)
+{
   for (; *prefix; ++s, ++prefix)
     if (*s != *prefix && tolower(*s) != tolower(*prefix))
       return false;
@@ -121,11 +126,9 @@ double pretty_f2d(float f)
 bool string_equal_case(
     pymol::zstring_view str1, pymol::zstring_view str2, bool case_insensitive)
 {
-  return pymol::ranges::equal(str1, str2,
-      [case_insensitive](char c1, char c2) {
-        return case_insensitive ? std::tolower(c1) == std::tolower(c2)
-                                : c1 == c2;
-      });
+  return pymol::ranges::equal(str1, str2, [case_insensitive](char c1, char c2) {
+    return case_insensitive ? std::tolower(c1) == std::tolower(c2) : c1 == c2;
+  });
 }
 
 } // namespace pymol

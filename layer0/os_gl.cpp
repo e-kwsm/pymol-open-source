@@ -1,12 +1,10 @@
-#include"os_predef.h"
-#include"os_gl.h"
+#include "os_gl.h"
+#include "os_predef.h"
 
-#include<stdio.h>
+#include <stdio.h>
 
-void PyMOLReadPixels(GLint x,
-                     GLint y,
-                     GLsizei width,
-                     GLsizei height, GLenum format, GLenum type, GLvoid * pixels)
+void PyMOLReadPixels(GLint x, GLint y, GLsizei width, GLsizei height,
+    GLenum format, GLenum type, GLvoid* pixels)
 {
 
   /* special "safe" version of glReadPixels for buggy OpenGL implementations */
@@ -51,11 +49,10 @@ void PyMOLReadPixels(GLint x,
   glPixelStorei(GL_PACK_SKIP_ROWS, skiprows);
   glPixelStorei(GL_PACK_SKIP_PIXELS, skippixels);
   glPixelStorei(GL_PACK_ALIGNMENT, alignment);
-
 }
 
-void PyMOLDrawPixels(GLsizei width,
-                     GLsizei height, GLenum format, GLenum type, const GLvoid * pixels)
+void PyMOLDrawPixels(GLsizei width, GLsizei height, GLenum format, GLenum type,
+    const GLvoid* pixels)
 {
 
   /* special "safe" version of glDrawPixels for buggy OpenGL implementations */
@@ -88,14 +85,13 @@ void PyMOLDrawPixels(GLsizei width,
   glPixelStorei(GL_UNPACK_SKIP_ROWS, skiprows);
   glPixelStorei(GL_UNPACK_SKIP_PIXELS, skippixels);
   glPixelStorei(GL_UNPACK_ALIGNMENT, alignment);
-
 }
 
-int PyMOLCheckOpenGLErr(const char *pos)
+int PyMOLCheckOpenGLErr(const char* pos)
 {
   int flag = 0;
   GLenum glerr = glGetError();
-  while(glerr != GL_NO_ERROR) {
+  while (glerr != GL_NO_ERROR) {
     printf("OpenGL-Error: Where? %s: glerr=%d\n", pos, glerr);
     glerr = glGetError();
     flag = 1;

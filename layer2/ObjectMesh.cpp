@@ -709,7 +709,6 @@ void ObjectMesh::render(RenderInfo* info)
 static bool ObjectMeshStateRenderShader(
     ObjectMeshState* ms, ObjectMesh* I, RenderInfo* info);
 
-
 static CGO* ObjectMeshCGOGenerate(ObjectMesh* I, ObjectMeshState* ms,
     RenderInfo* info, bool returnCGO, bool mesh_as_cylinders)
 {
@@ -766,7 +765,7 @@ static CGO* ObjectMeshCGOGenerate(ObjectMesh* I, ObjectMeshState* ms,
   if (!mesh_as_cylinders) {
     if (ms->MeshMode == cIsomeshMode::isodot) {
       ok &= CGODotwidth(shaderCGO, SettingGet<float>(I->G, I->Setting.get(),
-                                        nullptr, cSetting_dot_width));
+                                       nullptr, cSetting_dot_width));
     } else {
       ok &= CGOSpecial(shaderCGO, LINEWIDTH_DYNAMIC_MESH);
     }
@@ -858,8 +857,8 @@ static CGO* ObjectMeshCGOGenerate(ObjectMesh* I, ObjectMeshState* ms,
   CGOEnable(tmpCGO, enableMode);
   if (mesh_as_cylinders) {
     CGOSpecial(tmpCGO, MESH_WIDTH_FOR_SURFACES);
-    convertcgo = CGOConvertShaderCylindersToCylinderShader(
-        ms->shaderCGO.get(), tmpCGO);
+    convertcgo =
+        CGOConvertShaderCylindersToCylinderShader(ms->shaderCGO.get(), tmpCGO);
     convertcgo->has_draw_cylinder_buffers = true;
   } else {
     CGODisable(tmpCGO, GL_LIGHTING);
@@ -1048,7 +1047,7 @@ static void ObjectMeshRenderImmediate(
   if (ms->UnitCellCGO) {
     const float* color = ColorGet(I->G, I->Color);
     CGORender(
-      ms->UnitCellCGO.get(), color, I->Setting.get(), nullptr, info, nullptr);
+        ms->UnitCellCGO.get(), color, I->Setting.get(), nullptr, info, nullptr);
   }
 }
 
@@ -1105,9 +1104,10 @@ static CGO* ObjectMeshRenderImpl(
     }
 
     if (use_shader) {
-      bool mesh_as_cylinders = SettingGet<bool>(G, cSetting_render_as_cylinders) &&
-                              SettingGet<bool>(G, cSetting_mesh_as_cylinders) &&
-                              ms->MeshMode != cIsomeshMode::isodot;
+      bool mesh_as_cylinders =
+          SettingGet<bool>(G, cSetting_render_as_cylinders) &&
+          SettingGet<bool>(G, cSetting_mesh_as_cylinders) &&
+          ms->MeshMode != cIsomeshMode::isodot;
       if (ms->shaderCGO &&
           (!use_shader ||
               (mesh_as_cylinders ^ ms->shaderCGO->has_draw_cylinder_buffers))) {
@@ -1116,7 +1116,8 @@ static CGO* ObjectMeshRenderImpl(
       }
 
       if (!ms->shaderCGO) {
-        auto cgo = ObjectMeshCGOGenerate(I, ms, info, returnCGO, mesh_as_cylinders);
+        auto cgo =
+            ObjectMeshCGOGenerate(I, ms, info, returnCGO, mesh_as_cylinders);
         if (returnCGO) {
           return cgo;
         }

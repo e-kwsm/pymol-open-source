@@ -1,7 +1,7 @@
 #include "PostProcess.h"
 
-#include "gl_def.h"
 #include "GenericBuffer.h"
+#include "gl_def.h"
 #include "os_gl.h"
 #include "pymol/memory.h"
 
@@ -46,8 +46,8 @@ void PostProcess::bindFBORBO(std::size_t idx)
   }
 }
 
-const renderTarget_t::shape_type PostProcess::size(std::size_t idx) const
-    noexcept
+const renderTarget_t::shape_type PostProcess::size(
+    std::size_t idx) const noexcept
 {
   return m_renderTargets[idx]->size();
 }
@@ -122,4 +122,3 @@ void OIT_PostProcess::activateRTAsTexture(std::size_t idx, GLuint textureUnit)
     }
   }
 }
-

@@ -20,16 +20,16 @@
  *
  ***************************************************************************/
 
-/* 
+/*
  * DSN6 format electron density maps.
  *
- * More info for format can be found at 
+ * More info for format can be found at
  * <http://www.uoxray.uoregon.edu/tnt/manual/node104.html>
  * TODO: Check byte-swapping and alignment issues in read_data()
  *
- * apparently there are some gotchas there, and mapman does some things to 
+ * apparently there are some gotchas there, and mapman does some things to
  * fix up some variants of DSN6:
- * Gerard "DVD" Kleywegt  gerard@xray.bmc.uu.se: 
+ * Gerard "DVD" Kleywegt  gerard@xray.bmc.uu.se:
  *   "dale's description is largely correct, but in elements 13 to 15
  *    the actual cell angles are stored (multiplied by a scale factor)
  *    rather than their cosines. also, turbo-frodo-style dsn6 maps
@@ -37,14 +37,14 @@
  *    of code (yes, fortran) from mapman that fills the header record"
  * See original email for mapman code snippet:
  *      http://o-info.bioxray.dk/pipermail/o-info/2002-June/005993.html
- * 
+ *
  *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #if defined(_AIX)
@@ -59,26 +59,26 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#include "molfile_plugin.h"
 #include "endianswap.h"
+#include "molfile_plugin.h"
 
 typedef struct {
-  FILE *fd;
+  FILE* fd;
   int nsets;
   float prod, plus;
-  molfile_volumetric_t *vol;
+  molfile_volumetric_t* vol;
 } dsn6_t;
 
-
-static void *open_dsn6_read(const char *filepath, const char *filetype,
-    int *natoms) {
-  FILE *fd;
-  dsn6_t *dsn6;
+static void* open_dsn6_read(
+    const char* filepath, const char* filetype, int* natoms)
+{
+  FILE* fd;
+  dsn6_t* dsn6;
   short fileHeader[19];
   int start_x, start_y, start_z, extent_x, extent_y, extent_z;
-  float scale, A, B, C, alpha, beta, gamma, 
-        xaxis[3], yaxis[3], zaxis[3], z1, z2, z3;
-  
+  float scale, A, B, C, alpha, beta, gamma, xaxis[3], yaxis[3], zaxis[3], z1,
+      z2, z3;
+
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "Error opening file.\n");
@@ -97,7 +97,7 @@ static void *open_dsn6_read(const char *filepath, const char *filetype,
     fprintf(stderr, "Error reading file header.\n");
     return NULL;
   }
-  // else fileHeader[18] is 100, byte-order is fine 
+  // else fileHeader[18] is 100, byte-order is fine
   // (this value is hard-coded into the file format)
 
   // Unit cell origin, in grid coordinates
@@ -147,29 +147,29 @@ static void *open_dsn6_read(const char *filepath, const char *filetype,
   yaxis[2] = 0;
 
   z1 = cos(beta);
-  z2 = (cos(alpha) - cos(beta)*cos(gamma)) / sin(gamma);
-  z3 = sqrt(1.0 - z1*z1 - z2*z2);
+  z2 = (cos(alpha) - cos(beta) * cos(gamma)) / sin(gamma);
+  z3 = sqrt(1.0 - z1 * z1 - z2 * z2);
   zaxis[0] = z1 * C;
   zaxis[1] = z2 * C;
   zaxis[2] = z3 * C;
 
   // Convert the origin from grid space to cartesian coordinates
-  dsn6->vol[0].origin[0] = xaxis[0] * start_x + yaxis[0] * start_y + 
-                           zaxis[0] * start_z;
+  dsn6->vol[0].origin[0] =
+      xaxis[0] * start_x + yaxis[0] * start_y + zaxis[0] * start_z;
   dsn6->vol[0].origin[1] = yaxis[1] * start_y + zaxis[1] * start_z;
   dsn6->vol[0].origin[2] = zaxis[2] * start_z;
 
-  dsn6->vol[0].xaxis[0] = xaxis[0] * (extent_x-1);
+  dsn6->vol[0].xaxis[0] = xaxis[0] * (extent_x - 1);
   dsn6->vol[0].xaxis[1] = 0;
   dsn6->vol[0].xaxis[2] = 0;
 
-  dsn6->vol[0].yaxis[0] = yaxis[0] * (extent_y-1);
-  dsn6->vol[0].yaxis[1] = yaxis[1] * (extent_y-1);
+  dsn6->vol[0].yaxis[0] = yaxis[0] * (extent_y - 1);
+  dsn6->vol[0].yaxis[1] = yaxis[1] * (extent_y - 1);
   dsn6->vol[0].yaxis[2] = 0;
 
-  dsn6->vol[0].zaxis[0] = zaxis[0] * (extent_z-1);
-  dsn6->vol[0].zaxis[1] = zaxis[1] * (extent_z-1);
-  dsn6->vol[0].zaxis[2] = zaxis[2] * (extent_z-1);
+  dsn6->vol[0].zaxis[0] = zaxis[0] * (extent_z - 1);
+  dsn6->vol[0].zaxis[1] = zaxis[1] * (extent_z - 1);
+  dsn6->vol[0].zaxis[2] = zaxis[2] * (extent_z - 1);
 
   dsn6->vol[0].xsize = extent_x;
   dsn6->vol[0].ysize = extent_y;
@@ -180,27 +180,28 @@ static void *open_dsn6_read(const char *filepath, const char *filetype,
   return dsn6;
 }
 
-static int read_dsn6_metadata(void *v, int *nsets, 
-  molfile_volumetric_t **metadata) {
-  dsn6_t *dsn6 = (dsn6_t *)v;
-  *nsets = dsn6->nsets; 
-  *metadata = dsn6->vol;  
+static int read_dsn6_metadata(
+    void* v, int* nsets, molfile_volumetric_t** metadata)
+{
+  dsn6_t* dsn6 = (dsn6_t*) v;
+  *nsets = dsn6->nsets;
+  *metadata = dsn6->vol;
 
   return MOLFILE_SUCCESS;
 }
 
-static int read_dsn6_data(void *v, int set, float *datablock,
-                         float *colorblock) {
-  dsn6_t *dsn6 = (dsn6_t *)v;
-  float * cell = datablock;
+static int read_dsn6_data(void* v, int set, float* datablock, float* colorblock)
+{
+  dsn6_t* dsn6 = (dsn6_t*) v;
+  float* cell = datablock;
   unsigned char brick[512];
   unsigned char* brickPtr = NULL;
   int xsize, ysize, zsize, xysize, xbrix, ybrix, zbrix, cellIndex;
   int x, y, z, xbrik, ybrik, zbrik;
-  FILE * fd = dsn6->fd;
+  FILE* fd = dsn6->fd;
   float div, plus;
 
-  // Read 512-byte "bricks" of data. Each brick contains data for 8*8*8 
+  // Read 512-byte "bricks" of data. Each brick contains data for 8*8*8
   // gridpoints.
   fseek(fd, 512, SEEK_SET);
 
@@ -231,24 +232,24 @@ static int read_dsn6_data(void *v, int set, float *datablock,
         }
 
         fread(brick, sizeof(char), 512, fd);
-        swap2_unaligned(brick, 512*sizeof(char));
+        swap2_unaligned(brick, 512 * sizeof(char));
         brickPtr = brick;
 
         for (z = 0; z < 8; z++) {
-          if ((z + zbrik*8) >= zsize) {
+          if ((z + zbrik * 8) >= zsize) {
             cellIndex += (8 - z) * xysize;
             break;
           }
 
           for (y = 0; y < 8; y++) {
-            if ((y + ybrik*8) >= ysize) {
+            if ((y + ybrik * 8) >= ysize) {
               cellIndex += (8 - y) * xsize;
               brickPtr += (8 - y) * 8;
               break;
             }
 
             for (x = 0; x < 8; x++) {
-              if ((x + xbrik*8) >= xsize) {
+              if ((x + xbrik * 8) >= xsize) {
                 cellIndex += 8 - x;
                 brickPtr += 8 - x;
                 break;
@@ -261,31 +262,32 @@ static int read_dsn6_data(void *v, int set, float *datablock,
               brickPtr++;
               cellIndex++;
             } // end for(x)
-           
+
             cellIndex += xsize - 8;
           } // end for(y)
-         
-          cellIndex += xysize - 8*xsize;
+
+          cellIndex += xysize - 8 * xsize;
         } // end for(z)
-      
-        cellIndex += 8 - 8*xysize; 
+
+        cellIndex += 8 - 8 * xysize;
       } // end for(xbrik)
 
       cellIndex += 8 * (xsize - xbrix);
     } // end for(ybrik)
 
-    cellIndex += 8 * (xysize - xsize*ybrik);
+    cellIndex += 8 * (xysize - xsize * ybrik);
   } // end for(zbrik)
- 
+
   return MOLFILE_SUCCESS;
 }
 
-static void close_dsn6_read(void *v) {
-  dsn6_t *dsn6 = (dsn6_t *)v;
+static void close_dsn6_read(void* v)
+{
+  dsn6_t* dsn6 = (dsn6_t*) v;
 
   fclose(dsn6->fd);
   if (dsn6->vol != NULL)
-    delete [] dsn6->vol; 
+    delete[] dsn6->vol;
   delete dsn6;
 }
 
@@ -294,7 +296,8 @@ static void close_dsn6_read(void *v) {
  */
 static molfile_plugin_t plugin;
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) { 
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -309,13 +312,16 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   plugin.read_volumetric_metadata = read_dsn6_metadata;
   plugin.read_volumetric_data = read_dsn6_data;
   plugin.close_file_read = close_dsn6_read;
-  return VMDPLUGIN_SUCCESS; 
-}
-
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
+  return VMDPLUGIN_SUCCESS;
+}
 
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}

@@ -5,10 +5,10 @@
 #include "os_std.h"
 
 #include "CoordSet.h"
+#include "Err.h"
+#include "HydrogenAdder.h"
 #include "ObjectMolecule.h"
 #include "Selector.h"
-#include "HydrogenAdder.h"
-#include "Err.h"
 
 #include <cassert>
 
@@ -20,8 +20,7 @@
  *
  * @pre `atm` doesn't have coordinates yet in given coord set
  */
-static
-void AppendAtomVertex(CoordSet* cs, unsigned atm, const float* v)
+static void AppendAtomVertex(CoordSet* cs, unsigned atm, const float* v)
 {
   assert(cs->atmToIdx(atm) == -1);
 
@@ -50,11 +49,8 @@ void AppendAtomVertex(CoordSet* cs, unsigned atm, const float* v)
  *
  * @pre Neighbors up-to-date
  */
-static
-bool get_planer_normal_cs(
-    const ObjectMolecule* I,
-    const CoordSet* cs, unsigned atm, float *normal,
-    bool h_fix)
+static bool get_planer_normal_cs(const ObjectMolecule* I, const CoordSet* cs,
+    unsigned atm, float* normal, bool h_fix)
 {
   int nOcc = 0;
   float occ[3 * 3];
@@ -181,64 +177,64 @@ int ObjectMoleculeSetMissingNeighborCoords(
   switch (ai->geom) {
     float t[3], z[3];
 
-    // Tetrahedral system: 109.5 degree angles
-    case cAtomInfoTetrahedral:
-      switch (n_system) {
-        case 1:
-          get_system1f3f(cbuf, t, z);
-          scale3f(cbuf, -0.334F, t);    // cos(-109.5)
-          scale3f(z, 0.943F, z);        // sin( 109.5)
-          add3f(z, t, cbuf + 3);
-          normalize3f(cbuf + 3);
-        case 2:
-          add3f(cbuf, cbuf + 3, t);
-          normalize3f(t);
-          scale3f(t, -1.0F, t);
-          cross_product3f(cbuf, cbuf + 3, z);
-          normalize3f(z);
-          scale3f(z, 1.41F, z);         // tan(109.5 / 2.0)
-          add3f(t, z, cbuf + 6);
-          normalize3f(cbuf + 6);
-        case 3:
-          add3f(cbuf, cbuf + 3, t);
-          add3f(cbuf + 6, t, t);
-          scale3f(t, -1.0F, cbuf + 9);
-          normalize3f(cbuf + 9);
-      }
-      n_system = 4;
-      break;
+  // Tetrahedral system: 109.5 degree angles
+  case cAtomInfoTetrahedral:
+    switch (n_system) {
+    case 1:
+      get_system1f3f(cbuf, t, z);
+      scale3f(cbuf, -0.334F, t); // cos(-109.5)
+      scale3f(z, 0.943F, z);     // sin( 109.5)
+      add3f(z, t, cbuf + 3);
+      normalize3f(cbuf + 3);
+    case 2:
+      add3f(cbuf, cbuf + 3, t);
+      normalize3f(t);
+      scale3f(t, -1.0F, t);
+      cross_product3f(cbuf, cbuf + 3, z);
+      normalize3f(z);
+      scale3f(z, 1.41F, z); // tan(109.5 / 2.0)
+      add3f(t, z, cbuf + 6);
+      normalize3f(cbuf + 6);
+    case 3:
+      add3f(cbuf, cbuf + 3, t);
+      add3f(cbuf + 6, t, t);
+      scale3f(t, -1.0F, cbuf + 9);
+      normalize3f(cbuf + 9);
+    }
+    n_system = 4;
+    break;
 
-    // Planar system: 120.0 degree angles
-    case cAtomInfoPlanar:
-      switch (n_system) {
-        case 1:
-          if (present_atm >= 0 &&
-              get_planer_normal_cs(I, cs, present_atm, t, h_fix)) {
-            get_system2f3f(cbuf, t, z);
-          } else {
-            get_system1f3f(cbuf, t, z);
-          }
-          scale3f(cbuf, -0.500F, t);
-          scale3f(z, 0.866F, z);        // sin( 120.0)
-          add3f(z, t, cbuf + 3);
-          normalize3f(cbuf + 3);
-        case 2:
-          add3f(cbuf, cbuf + 3, t);
-          scale3f(t, -1.0F, cbuf + 6);
-          normalize3f(cbuf + 6);
+  // Planar system: 120.0 degree angles
+  case cAtomInfoPlanar:
+    switch (n_system) {
+    case 1:
+      if (present_atm >= 0 &&
+          get_planer_normal_cs(I, cs, present_atm, t, h_fix)) {
+        get_system2f3f(cbuf, t, z);
+      } else {
+        get_system1f3f(cbuf, t, z);
       }
-      n_system = 3;
-      break;
+      scale3f(cbuf, -0.500F, t);
+      scale3f(z, 0.866F, z); // sin( 120.0)
+      add3f(z, t, cbuf + 3);
+      normalize3f(cbuf + 3);
+    case 2:
+      add3f(cbuf, cbuf + 3, t);
+      scale3f(t, -1.0F, cbuf + 6);
+      normalize3f(cbuf + 6);
+    }
+    n_system = 3;
+    break;
 
-    // Linear system: 180.0 degree angles
-    case cAtomInfoLinear:
-      switch (n_system) {
-        case 1:
-          scale3f(cbuf, -1.0F, cbuf + 3);
-          normalize3f(cbuf + 3);
-      }
-      n_system = 2;
-      break;
+  // Linear system: 180.0 degree angles
+  case cAtomInfoLinear:
+    switch (n_system) {
+    case 1:
+      scale3f(cbuf, -1.0F, cbuf + 3);
+      normalize3f(cbuf + 3);
+    }
+    n_system = 2;
+    break;
   }
 
   if (n_missing > n_system - n_present) {
@@ -251,9 +247,8 @@ int ObjectMoleculeSetMissingNeighborCoords(
   center_coord = nullptr;
 
   for (int i = 0; i < n_missing; ++i) {
-    float bondlength = AtomInfoGetBondLength(G,
-        I->AtomInfo + atm,
-        I->AtomInfo + missing_atm[i]);
+    float bondlength = AtomInfoGetBondLength(
+        G, I->AtomInfo + atm, I->AtomInfo + missing_atm[i]);
     float* coord = cbuf + (n_present + i) * 3;
     scale3f(coord, bondlength, coord);
     add3f(coord, center_coord_copy, coord);
@@ -277,7 +272,8 @@ int ObjectMoleculeSetMissingNeighborCoords(
  * @return False if `I` has no atoms in the selection or if the chemistry (atom
  * geometry and valence) can't be determined.
  */
-int ObjectMoleculeAddSeleHydrogensRefactored(ObjectMolecule* I, int sele, int state)
+int ObjectMoleculeAddSeleHydrogensRefactored(
+    ObjectMolecule* I, int sele, int state)
 {
   auto G = I->G;
   auto const n_atom_old = I->NAtom;
@@ -338,10 +334,8 @@ int ObjectMoleculeAddSeleHydrogensRefactored(ObjectMolecule* I, int sele, int st
 
   I->invalidate(cRepAll, cRepInvBonds, state);
 
-  AtomInfoUniquefyNames(G,
-      I->AtomInfo, n_atom_old,
-      I->AtomInfo + n_atom_old, nullptr,
-      I->NAtom - n_atom_old);
+  AtomInfoUniquefyNames(G, I->AtomInfo, n_atom_old, I->AtomInfo + n_atom_old,
+      nullptr, I->NAtom - n_atom_old);
 
   // fill coordinates
   for (StateIterator iter(I, state); iter.next();) {

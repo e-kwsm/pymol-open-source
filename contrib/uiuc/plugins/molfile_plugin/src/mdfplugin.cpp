@@ -43,10 +43,10 @@
 
 #include "hash.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if defined(_AIX)
 #include <strings.h>
@@ -56,23 +56,24 @@
 #define NAMESIZE 32
 
 typedef struct {
-  FILE *file;
+  FILE* file;
   int natoms, nmols, *from, *to;
   long mol_data_location;
 } mdfdata;
 
 // Read a line of atom data and store the values in the atom structure
 // Return 1 on success, 0 on error
-static int read_mdf_structure_line(molfile_atom_t *atom, const char *line) {
+static int read_mdf_structure_line(molfile_atom_t* atom, const char* line)
+{
   // Read pertinent structure information from the line
-  if ( sscanf(line, "%[^:]:%s %s %*s %*s %*d %*s %f %*d %*d %*d %f",
-              atom->resname, atom->name, atom->type, 
-              &atom->charge, &atom->occupancy) != 5 ) {
+  if (sscanf(line, "%[^:]:%s %s %*s %*s %*d %*s %f %*d %*d %*d %f",
+          atom->resname, atom->name, atom->type, &atom->charge,
+          &atom->occupancy) != 5) {
     return 0;
   }
 
   // Get the resid from the resname
-  if ( sscanf(atom->resname, "%*[^_]_%d", &atom->resid) != 1 ) {
+  if (sscanf(atom->resname, "%*[^_]_%d", &atom->resid) != 1) {
     return 0;
   }
 
@@ -86,37 +87,41 @@ static int read_mdf_structure_line(molfile_atom_t *atom, const char *line) {
 // Read the atom info from src and copy the connectivity record to dest.
 // Convert each record to resname_resnumber:atom form
 // Return 1 on success, 0 on error
-static int get_mdf_bonds(char *dest, const char *src) {
+static int get_mdf_bonds(char* dest, const char* src)
+{
   char resinfo[NAMESIZE], bond_records[LINESIZE], *curr, *next, *tmp;
   int retval;
 
   // Get the connectivity records
-  retval = sscanf(src, "%[^:]:%*s %*s %*s %*s %*d %*s %*f %*d %*d %*d %*f %*f %255c", resinfo, bond_records);
+  retval =
+      sscanf(src, "%[^:]:%*s %*s %*s %*s %*d %*s %*f %*d %*d %*d %*f %*f %255c",
+          resinfo, bond_records);
   if (retval < 1) {
     // parse error.
     return -1;
     // no bonds for this atom
-  } else if (retval == 1) return 0;
-  
+  } else if (retval == 1)
+    return 0;
+
   // Append the bonds to the destination string, converting then to the
   // correct format along the way.
   dest[0] = '\0';
-  for ( curr = bond_records; (next = strchr(curr, ' ')) != NULL;
-        curr = next + 1 ) {
+  for (curr = bond_records; (next = strchr(curr, ' ')) != NULL;
+       curr = next + 1) {
     *next = '\0';
 
     // Prepend the resname and resid to the destination atom name if it's
     // not already present.
-    if ( strchr(curr, ':') == NULL ) {
+    if (strchr(curr, ':') == NULL) {
       strcat(dest, resinfo);
       strcat(dest, ":");
     }
 
     // Remove cell/sympop/bondorder information from the bond
-    if ( ((tmp = strchr(curr, '%')) != NULL) ||
-         ((tmp = strchr(curr, '#')) != NULL) ||
-         ((tmp = strchr(curr, '/')) != NULL) ||
-         ((tmp = strchr(curr, '\n')) != NULL) ) {
+    if (((tmp = strchr(curr, '%')) != NULL) ||
+        ((tmp = strchr(curr, '#')) != NULL) ||
+        ((tmp = strchr(curr, '/')) != NULL) ||
+        ((tmp = strchr(curr, '\n')) != NULL)) {
       *tmp = '\0';
     }
     strcat(dest, curr);
@@ -127,18 +132,18 @@ static int get_mdf_bonds(char *dest, const char *src) {
 }
 
 // Return the number of bond records on a line
-static int count_mdf_bonds(const char *line) {
+static int count_mdf_bonds(const char* line)
+{
   char bond_records[LINESIZE];
   int bonds = 0;
-  char *tmp;
-  
+  char* tmp;
+
   // no bonds or parse error
-  if ( get_mdf_bonds(bond_records, line) < 1) {
+  if (get_mdf_bonds(bond_records, line) < 1) {
     return 0;
   }
-  
-  for ( tmp = bond_records; (tmp = strchr(tmp, ' ')) != NULL;
-        tmp++ ) {
+
+  for (tmp = bond_records; (tmp = strchr(tmp, ' ')) != NULL; tmp++) {
     bonds++;
   }
 
@@ -147,41 +152,42 @@ static int count_mdf_bonds(const char *line) {
 
 // Open the file and create the mdf struct used to pass data to the other
 // functions.
-static void *open_mdf_read(const char *path, const char *filetype, 
-    int *natoms) {
-  FILE *fd;
-  mdfdata *mdf;
+static void* open_mdf_read(const char* path, const char* filetype, int* natoms)
+{
+  FILE* fd;
+  mdfdata* mdf;
   long mol_data_location;
-  char line[LINESIZE]; 
+  char line[LINESIZE];
   int nmols = 0;
 
   fd = fopen(path, "r");
   if (!fd)
     return NULL;
-  
+
   // Find the first molecule record
   do {
     fgets(line, LINESIZE, fd);
-    if ( ferror(fd) || feof(fd) ) {
-      vmdcon_printf(VMDCON_ERROR, "mdfplugin) No molecule record found in file.\n");
+    if (ferror(fd) || feof(fd)) {
+      vmdcon_printf(
+          VMDCON_ERROR, "mdfplugin) No molecule record found in file.\n");
       return NULL;
     }
-  } while ( strncmp(line, "@molecule", 9) );
+  } while (strncmp(line, "@molecule", 9));
 
   // Remember the location of the beginning of the molecule data
   mol_data_location = ftell(fd);
 
   // Count the atoms in each molecule
-  while ( line[0] != '#' ) {
+  while (line[0] != '#') {
     fgets(line, LINESIZE, fd);
 
     // Count atoms until a new molecule or the end of the section is reached
-    while ( (line[0] != '@') && (line[0] != '#') ) {
+    while ((line[0] != '@') && (line[0] != '#')) {
       // Ignore blank and comment lines
-      if ( !isspace(line[0]) && (line[0] != '!') )
+      if (!isspace(line[0]) && (line[0] != '!'))
         *natoms = *natoms + 1;
       fgets(line, LINESIZE, fd);
-      if ( ferror(fd) || feof(fd) ) {
+      if (ferror(fd) || feof(fd)) {
         vmdcon_printf(VMDCON_ERROR, "mdfplugin) Error while counting atoms.\n");
         return NULL;
       }
@@ -190,14 +196,15 @@ static void *open_mdf_read(const char *path, const char *filetype,
   }
 
   // Allocate and initialize the mdf structure
-  vmdcon_printf(VMDCON_INFO, "mdfplugin) %d molecule records found in file.\n", nmols);
+  vmdcon_printf(
+      VMDCON_INFO, "mdfplugin) %d molecule records found in file.\n", nmols);
   mdf = new mdfdata;
   mdf->file = fd;
   mdf->natoms = *natoms;
   mdf->nmols = nmols;
   mdf->from = NULL;
   mdf->to = NULL;
-  mdf->mol_data_location = mol_data_location; 
+  mdf->mol_data_location = mol_data_location;
 
   return mdf;
 }
@@ -205,11 +212,12 @@ static void *open_mdf_read(const char *path, const char *filetype,
 // Read the atom information for each molecule, but not bonds.
 // XXX - this ignores the column records, which may cause the atom records
 // to be read incorrectly.
-static int read_mdf_structure(void *v, int *optflags, molfile_atom_t *atoms) {
-  mdfdata *mdf = (mdfdata *)v;
+static int read_mdf_structure(void* v, int* optflags, molfile_atom_t* atoms)
+{
+  mdfdata* mdf = (mdfdata*) v;
   char line[LINESIZE];
   int mol_num;
-  molfile_atom_t *atom = atoms;
+  molfile_atom_t* atom = atoms;
 
   *optflags = MOLFILE_OCCUPANCY | MOLFILE_CHARGE;
 
@@ -219,28 +227,31 @@ static int read_mdf_structure(void *v, int *optflags, molfile_atom_t *atoms) {
 
   // Read the atom structure for each molecule
   mol_num = 0;
-  while ( line[0] != '#' ) {
+  while (line[0] != '#') {
     fgets(line, LINESIZE, mdf->file);
 
     // Read atom structure for the current molecule
-    while ( (line[0] != '@') && (line[0] != '#') ) {
+    while ((line[0] != '@') && (line[0] != '#')) {
       // Ignore blank and comment lines
-      if ( !isspace(line[0]) && (line[0] != '!') ) {
-        if ( !read_mdf_structure_line(atom, line) ) {
-          vmdcon_printf(VMDCON_ERROR, "mdfplugin) Improperly formatted atom record encountered while reading structure.\n");
+      if (!isspace(line[0]) && (line[0] != '!')) {
+        if (!read_mdf_structure_line(atom, line)) {
+          vmdcon_printf(
+              VMDCON_ERROR, "mdfplugin) Improperly formatted atom record "
+                            "encountered while reading structure.\n");
           return MOLFILE_ERROR;
         }
 
         // use the chain name to flag different molecules by using
         // characters A-Z. NOTE: chain can only hold 1 char.
-        sprintf(atom->chain, "%c", ('A'+(mol_num % 26)));
+        sprintf(atom->chain, "%c", ('A' + (mol_num % 26)));
 
         atom++;
       }
 
       fgets(line, LINESIZE, mdf->file);
-      if ( ferror(mdf->file) || feof(mdf->file) ) {
-        vmdcon_printf(VMDCON_ERROR, "mdfplugin) File error while reading structure.\n");
+      if (ferror(mdf->file) || feof(mdf->file)) {
+        vmdcon_printf(
+            VMDCON_ERROR, "mdfplugin) File error while reading structure.\n");
         return MOLFILE_ERROR;
       }
     }
@@ -251,14 +262,14 @@ static int read_mdf_structure(void *v, int *optflags, molfile_atom_t *atoms) {
 }
 
 // Create arrays of one-based bond indicies.
-static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data, 
-                          float **bondorderptr, int **bondtype, 
-                          int *nbondtypes, char ***bondtypename) {
-  mdfdata *mdf = (mdfdata *)v;
+static int read_mdf_bonds(void* v, int* nbonds, int** from_data, int** to_data,
+    float** bondorderptr, int** bondtype, int* nbondtypes, char*** bondtypename)
+{
+  mdfdata* mdf = (mdfdata*) v;
   int mol, atom, bond_count, *fromptr, *toptr, tmp_to;
   char *curr, *next, line[LINESIZE], bond_records[LINESIZE];
-  char (*atomnames)[NAMESIZE]; // Dynamic array of cstrings
-  hash_t *hasharray;           // Array of hash tables
+  char(*atomnames)[NAMESIZE]; // Dynamic array of cstrings
+  hash_t* hasharray;          // Array of hash tables
 
   // Allocate and initialize the hash table for each molecule.
   hasharray = new hash_t[mdf->nmols];
@@ -274,19 +285,23 @@ static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data,
   atom = 1;
   mol = 0;
   bond_count = 0;
-  while ( line[0] != '#' ) {
+  while (line[0] != '#') {
     fgets(line, LINESIZE, mdf->file);
 
     // Read the atom names
-    while ( (line[0] != '@') && (line[0] != '#') ) {
+    while ((line[0] != '@') && (line[0] != '#')) {
       // Ignore blank and comment lines
-      if ( !isspace(line[0]) && (line[0] != '!') ) {
-        if ( sscanf(line, "%s %*s", atomnames[atom-1]) != 1 ) {
-          vmdcon_printf(VMDCON_ERROR, "mdfplugin) Improperly formatted atom record encountered while reading bonds.\n");
+      if (!isspace(line[0]) && (line[0] != '!')) {
+        if (sscanf(line, "%s %*s", atomnames[atom - 1]) != 1) {
+          vmdcon_printf(
+              VMDCON_ERROR, "mdfplugin) Improperly formatted atom record "
+                            "encountered while reading bonds.\n");
           return MOLFILE_ERROR;
         }
-        if ( hash_insert(&hasharray[mol], atomnames[atom-1], atom) != HASH_FAIL ) {
-          vmdcon_printf(VMDCON_ERROR, "mdfplugin) Could not add atom to hash table.\n");
+        if (hash_insert(&hasharray[mol], atomnames[atom - 1], atom) !=
+            HASH_FAIL) {
+          vmdcon_printf(
+              VMDCON_ERROR, "mdfplugin) Could not add atom to hash table.\n");
           return MOLFILE_ERROR;
         }
 
@@ -295,8 +310,9 @@ static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data,
       }
 
       fgets(line, LINESIZE, mdf->file);
-      if ( ferror(mdf->file) || feof(mdf->file) ) {
-        vmdcon_printf(VMDCON_ERROR, "mdfplugin) File error while reading bonds.\n");
+      if (ferror(mdf->file) || feof(mdf->file)) {
+        vmdcon_printf(
+            VMDCON_ERROR, "mdfplugin) File error while reading bonds.\n");
         return MOLFILE_ERROR;
       }
     }
@@ -315,32 +331,33 @@ static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data,
   line[0] = '\0';
   atom = 1;
   mol = 0;
-  while ( line[0] != '#' ) {
+  while (line[0] != '#') {
     fgets(line, LINESIZE, mdf->file);
 
     // Read the bonds
-    while ( (line[0] != '@') && (line[0] != '#') ) {
+    while ((line[0] != '@') && (line[0] != '#')) {
       int retval;
 
       // Ignore blank and comment lines
-      if ( !isspace(line[0]) && (line[0] != '!') ) {
+      if (!isspace(line[0]) && (line[0] != '!')) {
         retval = get_mdf_bonds(bond_records, line);
         if (retval < 0) {
-          vmdcon_printf(VMDCON_ERROR, "mdfplugin) Error reading bonds from atom data.\n");
+          vmdcon_printf(
+              VMDCON_ERROR, "mdfplugin) Error reading bonds from atom data.\n");
           return MOLFILE_ERROR;
         }
 
         if (retval > 0) {
           // Read each bond in the line
-          for ( curr = bond_records; (next = strchr(curr, ' ')) != NULL; 
-                curr = next+1 ) {
+          for (curr = bond_records; (next = strchr(curr, ' ')) != NULL;
+               curr = next + 1) {
             *next = '\0';
             tmp_to = hash_lookup(&hasharray[mol], curr);
             if (tmp_to == HASH_FAIL) {
-              vmdcon_printf(VMDCON_ERROR, "mdfplugin) Could not find atom '%s' in hash table.\n", curr);
+              vmdcon_printf(VMDCON_ERROR,
+                  "mdfplugin) Could not find atom '%s' in hash table.\n", curr);
               return MOLFILE_ERROR;
-            }
-            else if (tmp_to > atom) {
+            } else if (tmp_to > atom) {
               // Only count bonds to atoms greater than the current one, since
               // each bond is listed twice
               *fromptr = atom;
@@ -355,8 +372,9 @@ static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data,
       }
 
       fgets(line, LINESIZE, mdf->file);
-      if ( ferror(mdf->file) || feof(mdf->file) ) {
-        vmdcon_printf(VMDCON_ERROR, "mdfplugin) File error while reading bonds.\n");
+      if (ferror(mdf->file) || feof(mdf->file)) {
+        vmdcon_printf(
+            VMDCON_ERROR, "mdfplugin) File error while reading bonds.\n");
         return MOLFILE_ERROR;
       }
     }
@@ -367,8 +385,8 @@ static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data,
   for (mol = 0; mol < mdf->nmols; mol++) {
     hash_destroy(&hasharray[mol]);
   }
-  delete [] hasharray;
-  delete [] atomnames;
+  delete[] hasharray;
+  delete[] atomnames;
 
   *nbonds = bond_count;
   *from_data = mdf->from;
@@ -382,19 +400,24 @@ static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data,
 }
 
 // Free the memory used by the mdf structure
-static void close_mdf_read(void *v) {
-  mdfdata *mdf = (mdfdata *)v;
+static void close_mdf_read(void* v)
+{
+  mdfdata* mdf = (mdfdata*) v;
   if (mdf) {
-    if (mdf->file) fclose(mdf->file);
-    if (mdf->from) delete [] mdf->from;
-    if (mdf->to)   delete [] mdf->to;
+    if (mdf->file)
+      fclose(mdf->file);
+    if (mdf->from)
+      delete[] mdf->from;
+    if (mdf->to)
+      delete[] mdf->to;
     delete mdf;
   }
 }
 
 // Plugin Initialization
 
-VMDPLUGIN_API int VMDPLUGIN_init(void) { 
+VMDPLUGIN_API int VMDPLUGIN_init(void)
+{
   memset(&plugin, 0, sizeof(molfile_plugin_t));
   plugin.abiversion = vmdplugin_ABIVERSION;
   plugin.type = MOLFILE_PLUGIN_TYPE;
@@ -412,10 +435,13 @@ VMDPLUGIN_API int VMDPLUGIN_init(void) {
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_register(void *v, vmdplugin_register_cb cb) {
-  (*cb)(v, (vmdplugin_t *)&plugin);
+VMDPLUGIN_API int VMDPLUGIN_register(void* v, vmdplugin_register_cb cb)
+{
+  (*cb)(v, (vmdplugin_t*) &plugin);
   return VMDPLUGIN_SUCCESS;
 }
 
-VMDPLUGIN_API int VMDPLUGIN_fini(void) { return VMDPLUGIN_SUCCESS; }
-
+VMDPLUGIN_API int VMDPLUGIN_fini(void)
+{
+  return VMDPLUGIN_SUCCESS;
+}

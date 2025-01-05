@@ -43,11 +43,11 @@ SOFTWARE.
 #include "OpenVRUtils.h"
 
 OpenVRScenePicker::OpenVRScenePicker()
-: m_inputHandlers(0)
-, m_ownerID(~0u)
-, m_clickX(0)
-, m_clickY(0)
-, m_active(false)
+    : m_inputHandlers(0)
+    , m_ownerID(~0u)
+    , m_clickX(0)
+    , m_clickY(0)
+    , m_active(false)
 {
   memset(m_matrix, 0, sizeof(m_matrix));
   m_matrix[0] = m_matrix[5] = m_matrix[10] = m_matrix[15] = 1.0f;
@@ -58,9 +58,7 @@ void OpenVRScenePicker::Init(OpenVRInputHandlers* inputHandlers)
   m_inputHandlers = inputHandlers;
 }
 
-void OpenVRScenePicker::Free()
-{
-}
+void OpenVRScenePicker::Free() {}
 
 void OpenVRScenePicker::Activate(unsigned ownerID, int x, int y)
 {
@@ -81,7 +79,8 @@ bool OpenVRScenePicker::IsActive() const
   return m_active;
 }
 
-bool OpenVRScenePicker::LaserShoot(float const* origin, float const* dir, float const* color, float* distance /* = 0 */)
+bool OpenVRScenePicker::LaserShoot(float const* origin, float const* dir,
+    float const* color, float* distance /* = 0 */)
 {
   float matrix[16];
   float* right = &matrix[0];  // head coordinates X-axis

@@ -1,44 +1,44 @@
 
-/* 
+/*
 A* -------------------------------------------------------------------
 B* This file contains source code for the PyMOL computer program
-C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific. 
+C* copyright 1998-2000 by Warren Lyford Delano of DeLano Scientific.
 D* -------------------------------------------------------------------
 E* It is unlawful to modify or remove this copyright notice.
 F* -------------------------------------------------------------------
-G* Please see the accompanying LICENSE file for further information. 
+G* Please see the accompanying LICENSE file for further information.
 H* -------------------------------------------------------------------
 I* Additional authors of this source file include:
--* 
--* 
+-*
+-*
 -*
 Z* -------------------------------------------------------------------
 */
-#include"os_python.h"
+#include "os_python.h"
 
-#include"os_predef.h"
-#include"os_std.h"
-#include"os_gl.h"
+#include "os_gl.h"
+#include "os_predef.h"
+#include "os_std.h"
 
-#include"Base.h"
-#include"Err.h"
-#include"RepDot.h"
-#include"Color.h"
-#include"Sphere.h"
-#include"Map.h"
-#include"Setting.h"
-#include"main.h"
-#include"ObjectMolecule.h"
-#include"Scene.h"
-#include"ShaderMgr.h"
-#include"CGO.h"
+#include "Base.h"
+#include "CGO.h"
+#include "Color.h"
+#include "Err.h"
+#include "Map.h"
+#include "ObjectMolecule.h"
+#include "RepDot.h"
+#include "Scene.h"
+#include "Setting.h"
+#include "ShaderMgr.h"
+#include "Sphere.h"
+#include "main.h"
 
 #include "pymol/algorithm.h"
 
 RepDot::~RepDot()
 {
   auto I = this;
-  if (I->shaderCGO){
+  if (I->shaderCGO) {
     CGOFree(I->shaderCGO);
     I->shaderCGO = 0;
   }
@@ -51,51 +51,51 @@ RepDot::~RepDot()
   FreeP(I->Atom);
 }
 
-static int RepDotCGOGenerate(RepDot * I)
+static int RepDotCGOGenerate(RepDot* I)
 {
-  PyMOLGlobals *G = I->G;
-  float *v = I->V;
+  PyMOLGlobals* G = I->G;
+  float* v = I->V;
   int c = I->N;
   int cc = 0;
   int ok = true;
-  CGO *cgo = nullptr;
+  CGO* cgo = nullptr;
 
-  int normals =
-    SettingGet_i(G, I->cs->Setting.get(), I->obj->Setting.get(), cSetting_dot_normals);
+  int normals = SettingGet_i(
+      G, I->cs->Setting.get(), I->obj->Setting.get(), cSetting_dot_normals);
   bool const dot_as_spheres = SettingGet<bool>(
       G, I->cs->Setting.get(), I->obj->Setting.get(), cSetting_dot_as_spheres);
 
   cgo = CGONew(G);
   CHECKOK(ok, cgo);
-  if (dot_as_spheres){
-    while(ok && c--) {
-      if(!cc) {             /* load up the current vertex color */
-	cc = (int) (*(v++));
-	ok &= CGOColorv(cgo, v);
-	v += 3;
+  if (dot_as_spheres) {
+    while (ok && c--) {
+      if (!cc) { /* load up the current vertex color */
+        cc = (int) (*(v++));
+        ok &= CGOColorv(cgo, v);
+        v += 3;
       }
-      if(ok && normals)
-	ok &= CGONormalv(cgo, v);
+      if (ok && normals)
+        ok &= CGONormalv(cgo, v);
       v += 3;
       if (ok)
-	ok &= CGOSphere(cgo, v, 1.f);
+        ok &= CGOSphere(cgo, v, 1.f);
       v += 3;
       cc--;
     }
   } else {
     if (ok)
       ok &= CGOBegin(cgo, GL_POINTS);
-    while(ok && c--) {
-      if(!cc) {             /* load up the current vertex color */
-	cc = (int) (*(v++));
-	ok &= CGOColorv(cgo, v);
-	v += 3;
+    while (ok && c--) {
+      if (!cc) { /* load up the current vertex color */
+        cc = (int) (*(v++));
+        ok &= CGOColorv(cgo, v);
+        v += 3;
       }
-      if(normals)
-	CGONormalv(cgo, v);
+      if (normals)
+        CGONormalv(cgo, v);
       v += 3;
       if (ok)
-	ok &= CGOVertexv(cgo, v);
+        ok &= CGOVertexv(cgo, v);
       v += 3;
       cc--;
     }
@@ -105,63 +105,72 @@ static int RepDotCGOGenerate(RepDot * I)
   if (ok)
     ok &= CGOStop(cgo);
   if (ok) {
-    if (dot_as_spheres){
-      CGO *tmpCGO = CGONew(G);
-      if (ok) ok &= CGOEnable(tmpCGO, GL_SPHERE_SHADER);
-      if (ok) ok &= CGOEnable(tmpCGO, GL_DOT_LIGHTING);
-      if (ok) ok &= CGOSpecial(tmpCGO, DOT_WIDTH_FOR_DOT_SPHERES);
+    if (dot_as_spheres) {
+      CGO* tmpCGO = CGONew(G);
+      if (ok)
+        ok &= CGOEnable(tmpCGO, GL_SPHERE_SHADER);
+      if (ok)
+        ok &= CGOEnable(tmpCGO, GL_DOT_LIGHTING);
+      if (ok)
+        ok &= CGOSpecial(tmpCGO, DOT_WIDTH_FOR_DOT_SPHERES);
       if (ok) {
         tmpCGO->free_append(CGOOptimizeSpheresToVBONonIndexedNoShader(cgo,
             CGO_BOUNDING_BOX_SZ + fsizeof<cgo::draw::sphere_buffers>() + 2));
       }
-      if (ok) ok &= CGODisable(tmpCGO, GL_SPHERE_SHADER);
-      if (ok) ok &= CGOStop(tmpCGO);
+      if (ok)
+        ok &= CGODisable(tmpCGO, GL_SPHERE_SHADER);
+      if (ok)
+        ok &= CGOStop(tmpCGO);
       I->shaderCGO = tmpCGO;
     } else {
-      CGO *tmpCGO = CGONew(G);
-      if (ok) ok &= CGOEnable(tmpCGO, GL_DEFAULT_SHADER);
-      if (ok) ok &= CGOEnable(tmpCGO, GL_DOT_LIGHTING);
-      if (ok) ok &= CGOSpecial(tmpCGO, DOT_WIDTH_FOR_DOTS);
+      CGO* tmpCGO = CGONew(G);
+      if (ok)
+        ok &= CGOEnable(tmpCGO, GL_DEFAULT_SHADER);
+      if (ok)
+        ok &= CGOEnable(tmpCGO, GL_DOT_LIGHTING);
+      if (ok)
+        ok &= CGOSpecial(tmpCGO, DOT_WIDTH_FOR_DOTS);
       if (ok) {
         tmpCGO->free_append(CGOOptimizeToVBONotIndexedNoShader(cgo));
       }
-      if (ok) ok &= CGODisable(tmpCGO, GL_DEFAULT_SHADER);
-      if (ok) ok &= CGOStop(tmpCGO);
+      if (ok)
+        ok &= CGODisable(tmpCGO, GL_DEFAULT_SHADER);
+      if (ok)
+        ok &= CGOStop(tmpCGO);
       I->shaderCGO = tmpCGO;
     }
   }
-  if (ok){
+  if (ok) {
     I->shaderCGO->use_shader = true;
     I->shaderCGO_as_spheres = dot_as_spheres;
   }
   CGOFree(cgo);
 
   return ok;
-
 }
 
-void RepDot::render(RenderInfo * info)
+void RepDot::render(RenderInfo* info)
 {
   auto I = this;
-  CRay *ray = info->ray;
+  CRay* ray = info->ray;
   auto pick = info->pick;
-  float *v = I->V;
+  float* v = I->V;
   int c = I->N;
   int cc = 0;
   int ok = true;
 
-  if(ray) {
+  if (ray) {
 #ifndef _PYMOL_NO_RAY
     float radius;
 
-    if(I->dotSize <= 0.0F) {
+    if (I->dotSize <= 0.0F) {
       radius = ray->PixelRadius * I->Width / 1.4142F;
     } else {
       radius = I->dotSize;
     }
 
-    while(ok && c--) {
-      if(!cc) {                 /* load up the current vertex color */
+    while (ok && c--) {
+      if (!cc) { /* load up the current vertex color */
         cc = (int) (*(v++));
         ray->color3fv(v);
         v += 3;
@@ -172,58 +181,59 @@ void RepDot::render(RenderInfo * info)
       cc--;
     }
 #endif
-  } else if(G->HaveGUI && G->ValidContext) {
-    if(pick) {
+  } else if (G->HaveGUI && G->ValidContext) {
+    if (pick) {
     } else { /* else not pick, i.e., when rendering */
-      int normals =
-        SettingGet_i(G, I->cs->Setting.get(), I->obj->Setting.get(), cSetting_dot_normals);
+      int normals = SettingGet_i(
+          G, I->cs->Setting.get(), I->obj->Setting.get(), cSetting_dot_normals);
       bool const dot_as_spheres = SettingGet<bool>(
           G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_as_spheres);
 
       bool const use_shader = SettingGet<bool>(G, cSetting_dot_use_shader) &&
                               SettingGet<bool>(G, cSetting_use_shaders);
 
-      if (I->shaderCGO && ((!use_shader || CGOCheckWhetherToFree(G, I->shaderCGO)) ||
-			   I->shaderCGO_as_spheres!= dot_as_spheres)){
-	CGOFree(I->shaderCGO);
-	I->shaderCGO = 0;
+      if (I->shaderCGO &&
+          ((!use_shader || CGOCheckWhetherToFree(G, I->shaderCGO)) ||
+              I->shaderCGO_as_spheres != dot_as_spheres)) {
+        CGOFree(I->shaderCGO);
+        I->shaderCGO = 0;
       }
 
-      if (use_shader){
-	if (!I->shaderCGO){
-	  ok &= RepDotCGOGenerate(I);
-	}
+      if (use_shader) {
+        if (!I->shaderCGO) {
+          ok &= RepDotCGOGenerate(I);
+        }
 
-	if (ok) {
-	  const float *color;
-	  color = ColorGet(G, I->obj->Color);
-	  CGORender(I->shaderCGO, color, nullptr, nullptr, info, I);
-	  return; /* should not do any other rendering after shaderCGO has
-		    been rendered */
-	}
+        if (ok) {
+          const float* color;
+          color = ColorGet(G, I->obj->Color);
+          CGORender(I->shaderCGO, color, nullptr, nullptr, info, I);
+          return; /* should not do any other rendering after shaderCGO has
+                    been rendered */
+        }
       } else {
-	if(!normals)
-	  SceneResetNormal(G, true);
-        int lighting =
-          SettingGet_i(G, I->cs->Setting.get(), I->obj->Setting.get(), cSetting_dot_lighting);
-	if(!lighting) {
-	  if(!info->line_lighting)
-	    glDisable(GL_LIGHTING);
-	}
+        if (!normals)
+          SceneResetNormal(G, true);
+        int lighting = SettingGet_i(G, I->cs->Setting.get(),
+            I->obj->Setting.get(), cSetting_dot_lighting);
+        if (!lighting) {
+          if (!info->line_lighting)
+            glDisable(GL_LIGHTING);
+        }
 
-	if(info->width_scale_flag)
-	  glPointSize(I->Width * info->width_scale);
-	else
-	  glPointSize(I->Width);
+        if (info->width_scale_flag)
+          glPointSize(I->Width * info->width_scale);
+        else
+          glPointSize(I->Width);
 
         glBegin(GL_POINTS);
-        while(c--) {
-          if(!cc) {             /* load up the current vertex color */
+        while (c--) {
+          if (!cc) { /* load up the current vertex color */
             cc = (int) (*(v++));
             glColor3fv(v);
             v += 3;
           }
-          if(normals)
+          if (normals)
             glNormal3fv(v);
           v += 3;
           glVertex3fv(v);
@@ -232,19 +242,19 @@ void RepDot::render(RenderInfo * info)
         }
         glEnd();
 
-        if(!lighting)
+        if (!lighting)
           glEnable(GL_LIGHTING);
       }
     }
   }
-  if (!ok){
+  if (!ok) {
     CGOFree(I->shaderCGO);
     I->invalidate(cRepInvPurge);
     I->cs->Active[cRepDot] = false;
   }
 }
 
-Rep *RepDotNew(CoordSet * cs, int state)
+Rep* RepDotNew(CoordSet* cs, int state)
 {
   return (RepDotDoNew(cs, cRepDotNormal, state));
 }
@@ -257,14 +267,14 @@ Rep *RepDotNew(CoordSet * cs, int state)
  * `cmd.get_area()` computation.
  * @param state Object state for ramped coloring
  */
-Rep *RepDotDoNew(CoordSet * cs, cRepDot_t mode, int state)
+Rep* RepDotDoNew(CoordSet* cs, cRepDot_t mode, int state)
 {
-  PyMOLGlobals *G = cs->G;
+  PyMOLGlobals* G = cs->G;
   float *v, *vn;
-  float *aa = nullptr;
-  int *tp = nullptr;
-  int *tf = nullptr;
-  float *countPtr = nullptr;
+  float* aa = nullptr;
+  int* tp = nullptr;
+  int* tf = nullptr;
+  float* countPtr = nullptr;
   int* ati = nullptr;
   auto obj = cs->Obj;
 
@@ -274,19 +284,21 @@ Rep *RepDotDoNew(CoordSet * cs, cRepDot_t mode, int state)
   }
 
   // are we using flags 24 & 25
-  auto cullByFlag =
-      SettingGet<bool>(G, cs->Setting.get(), obj->Setting.get(), cSetting_trim_dots);
+  auto cullByFlag = SettingGet<bool>(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_trim_dots);
 
-  auto dot_color =
-      SettingGet_color(G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_color);
+  auto dot_color = SettingGet_color(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_color);
 
   // are we ignoring hydrogens?
-  auto inclH =
-      SettingGet<bool>(G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_hydrogens);
+  auto inclH = SettingGet<bool>(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_hydrogens);
 
   float solv_rad = 0.f;
-  if(SettingGet_b(G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_solvent)) {    /* are we generating a solvent surface? */
-    solv_rad = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_solvent_radius); /* if so, get solvent radius */
+  if (SettingGet_b(G, cs->Setting.get(), obj->Setting.get(),
+          cSetting_dot_solvent)) { /* are we generating a solvent surface? */
+    solv_rad = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(),
+        cSetting_solvent_radius); /* if so, get solvent radius */
   }
 
   std::unique_ptr<MapType> map(
@@ -297,7 +309,8 @@ Rep *RepDotDoNew(CoordSet * cs, cRepDot_t mode, int state)
 
   // get current dot sampling
   // Note: significantly affects the accuracy of our area comp.
-  auto ds = SettingGet<int>(G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_density);
+  auto ds = SettingGet<int>(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_density);
   SphereRec const* sp = G->Sphere->Sphere[std::clamp(ds, 0, 4)];
 
   int lastColor = cColorDefault;
@@ -305,8 +318,10 @@ Rep *RepDotDoNew(CoordSet * cs, cRepDot_t mode, int state)
 
   auto I = new RepDot(cs, state);
 
-  I->dotSize = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_radius);
-  I->Width = SettingGet_f(G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_width);
+  I->dotSize = SettingGet_f(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_radius);
+  I->Width = SettingGet_f(
+      G, cs->Setting.get(), obj->Setting.get(), cSetting_dot_width);
 
   I->V = pymol::malloc<float>(cs->NIndex * sp->nDot * 10);
   ok_assert(1, I->V);
@@ -429,8 +444,8 @@ Rep *RepDotDoNew(CoordSet * cs, cRepDot_t mode, int state)
         *(v++) = v1[1];
         *(v++) = v1[2];
         *(aa++) = vdw * vdw * sp->area[b]; /* area */
-        *(tp++) = ai1.customType;         /* numeric type */
-        *(tf++) = ai1.flags;              /* flags */
+        *(tp++) = ai1.customType;          /* numeric type */
+        *(tf++) = ai1.flags;               /* flags */
         *(vn++) = sp->dot[b][0];
         *(vn++) = sp->dot[b][1];
         *(vn++) = sp->dot[b][2];
