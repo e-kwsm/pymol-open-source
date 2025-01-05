@@ -41,13 +41,13 @@ static void *open_parm_read(const char *filename, const char *,
   if(!(parm = rp->open_parm_file(filename))) {
     fprintf(stderr, "parmplugin) Cannot open parm file '%s'\n", filename);
     delete rp;
-    return NULL;
+    return nullptr;
   }
   
   if (rp->readparm(parm) != 0) {
     delete rp;
     // XXX should we call close_parm_file???
-    return NULL; 
+    return nullptr; 
   }
   *natoms = rp->get_parm_natoms();
   
@@ -104,10 +104,10 @@ static int read_parm_bonds(void *v, int *nbonds, int **fromptr, int **toptr,
   *nbonds = j;
   *fromptr = p->from;
   *toptr = p->to;
-  *bondorderptr = NULL; // PARM files don't have bond order information
-  *bondtype = NULL;
+  *bondorderptr = nullptr; // PARM files don't have bond order information
+  *bondtype = nullptr;
   *nbondtypes = 0;
-  *bondtypename = NULL;
+  *bondtypename = nullptr;
 
   return MOLFILE_SUCCESS;
 }

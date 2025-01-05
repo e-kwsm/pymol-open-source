@@ -216,22 +216,22 @@ static pdbxParser* create_pdbxParser(const char* filepath) {
   pdbxParser* parser = new pdbxParser;
   char buffer[BUFFER_SIZE];
   int numberAtoms;
-  parser->xyz = NULL;
-  parser->hashMem = NULL;
-  parser->chain_auth = NULL;
-  parser->resid_auth = NULL;
-  parser->type_auth = NULL;
+  parser->xyz = nullptr;
+  parser->hashMem = nullptr;
+  parser->chain_auth = nullptr;
+  parser->resid_auth = nullptr;
+  parser->type_auth = nullptr;
   parser->error = false;
-  parser->bondsTo = NULL;
-  parser->bondsFrom = NULL;
+  parser->bondsTo = nullptr;
+  parser->bondsFrom = nullptr;
   parser->file = fopen(filepath, "r");
   if (!parser->file) {
     printf("pdbxplugin) cannot open file %s\n", filepath);
-    return NULL;
+    return nullptr;
   }
-  if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+  if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
     printf("pdbxplugin) cannot read file %s\n", filepath);
-    return NULL;
+    return nullptr;
   }
 
   /* Find the number of atoms */
@@ -239,7 +239,7 @@ static pdbxParser* create_pdbxParser(const char* filepath) {
   numberAtoms = parser->natoms;
   if (parser->natoms <= 0) {
     printf("pdbxplugin) Could not get atom number\n");
-    return NULL;
+    return nullptr;
   }
   initCharToNum();
   parser->xyz = new float[numberAtoms*3];
@@ -252,27 +252,27 @@ static pdbxParser* create_pdbxParser(const char* filepath) {
 
 void delete_pdbxParser(pdbxParser* parser) {
   fclose(parser->file);
-  if (parser->xyz != NULL) {
+  if (parser->xyz != nullptr) {
     delete [] parser->xyz;
-    parser->xyz = NULL;
+    parser->xyz = nullptr;
   }
-  if (parser->type_auth != NULL) {
+  if (parser->type_auth != nullptr) {
     delete [] parser->type_auth;
-    parser->type_auth = NULL;
+    parser->type_auth = nullptr;
   }
-  if (parser->resid_auth != NULL) {
+  if (parser->resid_auth != nullptr) {
     delete [] parser->resid_auth;
-    parser->resid_auth = NULL;
+    parser->resid_auth = nullptr;
   }
-  if (parser->hashMem != NULL) {
+  if (parser->hashMem != nullptr) {
     delete [] parser->hashMem;
-    parser->hashMem = NULL;
+    parser->hashMem = nullptr;
   }
-  if (parser->chain_auth != NULL) {
+  if (parser->chain_auth != nullptr) {
     delete [] parser->chain_auth;
-    parser->chain_auth = NULL;
+    parser->chain_auth = nullptr;
   }
-  if (parser->type_auth != NULL) {
+  if (parser->type_auth != nullptr) {
     inthash_destroy(&parser->bondHash);
   }
 }
@@ -343,13 +343,13 @@ static int parseNumberAtoms(pdbxParser* parser) {
   int tableSize = 0;
 
   // skip past junk at start of file, stop when we get to atomSite data
-  while (NULL == strstr(buffer, "_atom_site.")) {
+  while (nullptr == strstr(buffer, "_atom_site.")) {
     // if this is true then we couldnt find the numatoms
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file))
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file))
       return -1;
   }
 
-  while (!(NULL == strstr(buffer, "_atom_site."))) {
+  while (!(nullptr == strstr(buffer, "_atom_site."))) {
     sscanf(buffer+11, "%s", wordbuffer); // table is used in parseStructure too
     /* assign integer values to each column */
     if (0 == strcmp(wordbuffer, "id")) {
@@ -389,7 +389,7 @@ static int parseNumberAtoms(pdbxParser* parser) {
     }
 
     // if this is true then we couldnt find the numatoms
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file))
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file))
       return -1;
 
     tableSize++;
@@ -398,7 +398,7 @@ static int parseNumberAtoms(pdbxParser* parser) {
   // increment numatoms until we get to the end of the file
   while (buffer[0] != '#') {
     // if this is true then we couldnt find the numatoms
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file))
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file))
       return -1;
     ++numatoms;
   }
@@ -598,23 +598,23 @@ static int parseStructureFaster(molfile_atom_t * atoms, int * optflags, pdbxPars
   /* Start parsing     */
   /* Skip through junk */
   while (!atomdata) {
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) failure while reading file\n");
       parser->error = true;
       return -1;
     }
-    if (!(NULL == strstr(buffer, "_atom_site.")))
+    if (!(nullptr == strstr(buffer, "_atom_site.")))
       atomdata = 1;
   }
 
   /* Skip through the atomdata table declaration*/
   while (atomdata) {
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) failure while reading file\n");
       parser->error = true;
       return -1;
     }
-    if (NULL == strstr(buffer, "_atom_site."))
+    if (nullptr == strstr(buffer, "_atom_site."))
       atomdata = 0;
   }
 
@@ -725,7 +725,7 @@ static int parseStructureFaster(molfile_atom_t * atoms, int * optflags, pdbxPars
     else {
       ++badptecount;
     }
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) failure while reading file\n");
       parser->error = true;
       return -1;
@@ -823,17 +823,17 @@ static bool readAngleBonds(molfile_atom_t * atoms, pdbxParser* parser) {
 
   /* skip through the file until we find the bond information */
   do {
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       return false;
     }
-  } while (NULL == strstr(buffer,"_pdbx_validate_rmsd_angle."));
+  } while (nullptr == strstr(buffer,"_pdbx_validate_rmsd_angle."));
 
   fgetpos(parser->file, &filePos);
 
   //if (sscanf(  return if two words in one table definition line
 
   /* Parse table header data */
-  while (NULL != strstr(buffer,"_pdbx_validate_rmsd_angle.")) {
+  while (nullptr != strstr(buffer,"_pdbx_validate_rmsd_angle.")) {
     sscanf(buffer+26, "%s", wordbuffer); // table is used in parseStructure too
     /* assign integer values to each column */
     if (0 == strcmp(wordbuffer, "auth_atom_id_1")) {
@@ -865,7 +865,7 @@ static bool readAngleBonds(molfile_atom_t * atoms, pdbxParser* parser) {
     }
     ++bondTableSize;
 
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) could not read bond information.\n");
       return false;
     }
@@ -874,7 +874,7 @@ static bool readAngleBonds(molfile_atom_t * atoms, pdbxParser* parser) {
 
   /* figure out how many bonds are being defined */
   while (buffer[0] != '#') {
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) could not read bond information.\n");
       return false;
     }
@@ -882,22 +882,22 @@ static bool readAngleBonds(molfile_atom_t * atoms, pdbxParser* parser) {
   }
 
   int test = parser->nbonds + bnum;
-  if ((newBondsTo = (int*)realloc((void*)parser->bondsTo, (parser->nbonds + bnum) * sizeof(int))) == NULL)
+  if ((newBondsTo = (int*)realloc((void*)parser->bondsTo, (parser->nbonds + bnum) * sizeof(int))) == nullptr)
     return false;
-  if ((newBondsFrom = (int*)realloc((void*)parser->bondsFrom, (parser->nbonds + bnum) * sizeof(int))) == NULL)
+  if ((newBondsFrom = (int*)realloc((void*)parser->bondsFrom, (parser->nbonds + bnum) * sizeof(int))) == nullptr)
     return false;
   parser->bondsTo = newBondsTo;
   parser->bondsFrom = newBondsFrom;
 
   /* Skip back to the start of the bond info */
   fsetpos(parser->file, &filePos);
-  if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+  if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
     printf("pdbxplugin) could not read bond information.\n");
     return false;
   }
   /* Skip through the header */
-  while (NULL != strstr(buffer,"_pdbx_validate_rmsd_angle.")) {
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+  while (nullptr != strstr(buffer,"_pdbx_validate_rmsd_angle.")) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) could not read bond information.\n");
       return false;
     }
@@ -965,7 +965,7 @@ static bool readAngleBonds(molfile_atom_t * atoms, pdbxParser* parser) {
     }
 #endif
 
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) could not read RMSD bond deviation information.\n");
       return false;
     }
@@ -1003,7 +1003,7 @@ static bool readRMSDBonds(molfile_atom_t * atoms, pdbxParser* parser) {
 
   /* skip through the file until we find the bond information */
   do {
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       parser->nbonds = 0;
       return false;
     }
@@ -1046,7 +1046,7 @@ static bool readRMSDBonds(molfile_atom_t * atoms, pdbxParser* parser) {
     }
     ++bondTableSize;
 
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) could not read bond information.\n");
       return false;
     }
@@ -1055,7 +1055,7 @@ static bool readRMSDBonds(molfile_atom_t * atoms, pdbxParser* parser) {
 
   /* figure out how many bonds are being defined */
   while (buffer[0] != '#') {
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) could not read bond information.\n");
       return false;
     }
@@ -1068,13 +1068,13 @@ static bool readRMSDBonds(molfile_atom_t * atoms, pdbxParser* parser) {
 
   /* Skip back to the start of the bond info */
   fsetpos(parser->file, &filePos);
-  if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+  if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
     printf("pdbxplugin) could not read bond information.\n");
     return false;
   }
   /* Skip through the header */
   while (isValidateRMSDBond(buffer)) {
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) could not read bond information.\n");
       return false;
     }
@@ -1139,7 +1139,7 @@ static bool readRMSDBonds(molfile_atom_t * atoms, pdbxParser* parser) {
     }
 #endif
 
-    if (NULL == fgets(buffer, BUFFER_SIZE, parser->file)) {
+    if (nullptr == fgets(buffer, BUFFER_SIZE, parser->file)) {
       printf("pdbxplugin) could not read RMSD bond deviation information.\n");
       return false;
     }
@@ -1337,9 +1337,9 @@ static void * open_pdbx_read(const char *filepath, const char *filetype,
   data->natoms = data->parser->natoms;
   *natoms = data->natoms;
   if (*natoms == 0) //If no atoms were found this is not a pdb file
-    return NULL;
+    return nullptr;
   if (data->parser->error)
-    return NULL;
+    return nullptr;
   return data;
 }
 
@@ -1374,17 +1374,17 @@ static int read_bonds(void *v, int *nbonds, int **fromptr, int **toptr,
   pdbx_data * data = (pdbx_data *)v;
   if (data->parser->nbonds == 0) {
     *nbonds = 0;
-    *fromptr = NULL;
-    *toptr = NULL;
+    *fromptr = nullptr;
+    *toptr = nullptr;
   } else {
     *nbonds = data->parser->nbonds;
     *fromptr = data->parser->bondsFrom;
     *toptr = data->parser->bondsTo;
   }
-  *bondorder = NULL;
-  *bondtype = NULL;
+  *bondorder = nullptr;
+  *bondtype = nullptr;
   *nbondtypes = 0;
-  *bondtypename = NULL;
+  *bondtypename = nullptr;
 
   return MOLFILE_SUCCESS;
 }

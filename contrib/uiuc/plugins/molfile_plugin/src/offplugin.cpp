@@ -40,7 +40,7 @@ static void *open_file_read(const char *filepath, const char *filetype,
   f = fopen(filepath, "rb");
   if (!f) {
     fprintf(stderr, "offplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
   *natoms = 0;
   return f;
@@ -77,9 +77,9 @@ static int read_rawgraphics(void *v, int *nelem,
                             const molfile_graphics_t **data) {
   int i, k, n;
   int nVert, nFaces, nEdges;
-  float *vertices = NULL, *vertColors = NULL;
-  char *vertHasColor = NULL;
-  molfile_graphics_t *graphics = NULL;
+  float *vertices = nullptr, *vertColors = nullptr;
+  char *vertHasColor = nullptr;
+  molfile_graphics_t *graphics = nullptr;
   int j=0;
 
   char buff[BUFFLEN+1];

@@ -250,10 +250,10 @@ static void *open_file_read(const char *filepath, const char *filetype,
   
   fd = fopen(filepath, "rb");
   if (!fd) 
-    return NULL;
+    return nullptr;
   grasp = new grasp_t;
   grasp->fd = fd;
-  grasp->graphics = NULL;
+  grasp->graphics = nullptr;
   *natoms = 0;
   return grasp;
 }

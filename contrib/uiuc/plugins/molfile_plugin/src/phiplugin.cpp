@@ -64,15 +64,15 @@ static char *phigets(char *s, int n, FILE *stream) {
 
   if (feof(stream)) {
     fprintf(stderr, "phiplugin) Unexpected end-of-file.\n");
-    returnVal = NULL; 
+    returnVal = nullptr; 
   }
   else if (ferror(stream)) {
     fprintf(stderr, "phiplugin) Error reading file.\n");
-    return NULL;
+    return nullptr;
   }
   else {
     returnVal = fgets(s, n, stream);
-    if (returnVal == NULL) {
+    if (returnVal == nullptr) {
       fprintf(stderr, "phiplugin) Error reading line.\n");
     }
   }
@@ -93,31 +93,31 @@ static void *open_phi_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "phiplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* Skip the header */
-  if (phigets(inbuf, LINESIZE, fd) == NULL) {
-    return NULL;
+  if (phigets(inbuf, LINESIZE, fd) == nullptr) {
+    return nullptr;
   }
-  if (phigets(inbuf, LINESIZE, fd) == NULL) {
-    return NULL;
+  if (phigets(inbuf, LINESIZE, fd) == nullptr) {
+    return nullptr;
   }
-  if (phigets(inbuf, LINESIZE, fd) == NULL) {
-    return NULL;
+  if (phigets(inbuf, LINESIZE, fd) == nullptr) {
+    return nullptr;
   }
 
   /* Unit cell information is located at the *end* of the file. */
-  if (phigets(inbuf, LINESIZE, fd) == NULL) {
-    return NULL;
+  if (phigets(inbuf, LINESIZE, fd) == nullptr) {
+    return nullptr;
   }
   while (strncasecmp(inbuf, " end of phimap", 14) != 0) {
     /* use integer division so trailing whitespace isn't included in the
      * count */
     iGrid += strlen(inbuf) / 4; 
 
-    if (phigets(inbuf, LINESIZE, fd) == NULL) {
-      return NULL;
+    if (phigets(inbuf, LINESIZE, fd) == nullptr) {
+      return nullptr;
     }
   } 
 
@@ -126,19 +126,19 @@ static void *open_phi_read(const char *filepath, const char *filetype,
    */
   cellSize = pow((double) iGrid, (double) 1.0/3.0);
   if (fabs((double)(cellSize - floor(cellSize))) > 1e-8) {
-    return NULL;
+    return nullptr;
   }
 
   /* Read the unit cell information */
-  if (phigets(inbuf, LINESIZE, fd) == NULL) {
-    return NULL;
+  if (phigets(inbuf, LINESIZE, fd) == nullptr) {
+    return nullptr;
   }
   sscanf(inbuf, " %f %f %f %f", &scale, &midX, &midY, &midZ);
 
   /* Allocate and initialize the phi structure */
   phi = new phi_t;
   phi->fd = fd;
-  phi->vol = NULL;
+  phi->vol = nullptr;
   phi->ndata = (int) iGrid;
   *natoms = MOLFILE_NUMATOMS_NONE;
   phi->nsets = 1; /* this file contains only one data set */
@@ -195,19 +195,19 @@ static int read_phi_data(void *v, int set, float *datablock,
 
   /* Skip the header */
   rewind(fd);
-  if (phigets(inbuf, LINESIZE, fd) == NULL) {
+  if (phigets(inbuf, LINESIZE, fd) == nullptr) {
     return MOLFILE_ERROR;
   }
-  if (phigets(inbuf, LINESIZE, fd) == NULL) {
+  if (phigets(inbuf, LINESIZE, fd) == nullptr) {
     return MOLFILE_ERROR;
   }
-  if (phigets(inbuf, LINESIZE, fd) == NULL) {
+  if (phigets(inbuf, LINESIZE, fd) == nullptr) {
     return MOLFILE_ERROR;
   }
 
   /* Read the densities. Order for file is x fast, y medium, z slow */
   while (count < ndata) {
-    if (phigets(inbuf, LINESIZE, fd) == NULL) {
+    if (phigets(inbuf, LINESIZE, fd) == nullptr) {
       return MOLFILE_ERROR;
     }
 
@@ -229,7 +229,7 @@ static void close_phi_read(void *v) {
   phi_t *phi = (phi_t *)v;
 
   fclose(phi->fd);
-  if (phi->vol != NULL)
+  if (phi->vol != nullptr)
     delete [] phi->vol; 
   delete phi;
 }

@@ -78,20 +78,20 @@ static void *open_pbeq_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     printf("pbeqplugin) Error opening file %s.\n", filepath);
-    return NULL;
+    return nullptr;
   }
 
   // skip first Fortran length record for
   // WRITE(UNIT) NCLX,NCLY,NCLZ,DCEL,XBCEN,YBCEN,ZBCEN
   if (fread(&length, 4, 1, fd) != 1)
-    return NULL;
+    return nullptr;
 
   if (fread(&nclx, 4, 1, fd) != 1)
-    return NULL;
+    return nullptr;
   if (fread(&ncly, 4, 1, fd) != 1)
-    return NULL;
+    return nullptr;
   if (fread(&nclz, 4, 1, fd) != 1)
-    return NULL;
+    return nullptr;
 
   // test endianness first
   if (length != 44) {
@@ -99,7 +99,7 @@ static void *open_pbeq_read(const char *filepath, const char *filetype,
     swap4_aligned(&length, 1);
     if (length != 44) {
       printf("pbeqplugin) length record != 44, unrecognized format (length: %d)\n", length);
-      return NULL;
+      return nullptr;
     }
   }
 
@@ -116,46 +116,46 @@ static void *open_pbeq_read(const char *filepath, const char *filetype,
   if ((nclx > 4000 && ncly > 4000 && nclz > 4000) ||
       (nclx * ncly * nclz < 0)) {
     printf("pbeqplugin) inconclusive byte ordering, bailing out\n");
-    return NULL;
+    return nullptr;
   }
 
   // read the rest of the header
   if (fread(&dcel, 8, 1, fd) != 1) 
-    return NULL;
+    return nullptr;
   if (fread(&xbcen, 8, 1, fd) != 1) 
-    return NULL;
+    return nullptr;
   if (fread(&ybcen, 8, 1, fd) != 1) 
-    return NULL;
+    return nullptr;
   if (fread(&zbcen, 8, 1, fd) != 1) 
-    return NULL;
+    return nullptr;
 
   // skip second Fortran length record for
   // WRITE(UNIT) NCLX,NCLY,NCLZ,DCEL,XBCEN,YBCEN,ZBCEN
   if (fread(&trash, 4, 1, fd) != 1)
-    return NULL;
+    return nullptr;
 
   // skip first Fortran length record for 
   // WRITE(UNIT) EPSW,EPSP,CONC,TMEMB,ZMEMB,EPSM
   if (fread(&trash, 4, 1, fd) != 1)
-    return NULL;
+    return nullptr;
 
   if (fread(&epsw, 8, 1, fd) != 1) 
-    return NULL;
+    return nullptr;
   if (fread(&epsp, 8, 1, fd) != 1) 
-    return NULL;
+    return nullptr;
   if (fread(&conc, 8, 1, fd) != 1) 
-    return NULL;
+    return nullptr;
   if (fread(&tmemb, 8, 1, fd) != 1) 
-    return NULL;
+    return nullptr;
   if (fread(&zmemb, 8, 1, fd) != 1) 
-    return NULL;
+    return nullptr;
   if (fread(&epsm, 8, 1, fd) != 1) 
-    return NULL;
+    return nullptr;
 
   // skip second Fortran length record for 
   // WRITE(UNIT) EPSW,EPSP,CONC,TMEMB,ZMEMB,EPSM
   if (fread(&trash, 4, 1, fd) != 1)
-    return NULL;
+    return nullptr;
 
   // byte swap the header data if necessary
   if (swap) {
@@ -183,7 +183,7 @@ static void *open_pbeq_read(const char *filepath, const char *filetype,
   /* Allocate and initialize the pbeq structure */
   pbeq = new pbeq_t;
   pbeq->fd = fd;
-  pbeq->vol = NULL;
+  pbeq->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   pbeq->nsets = 1; /* this file contains only one data set */
   pbeq->ndata = nclx*ncly*nclz;
@@ -296,7 +296,7 @@ static void close_pbeq_read(void *v) {
   pbeq_t *pbeq = (pbeq_t *)v;
 
   fclose(pbeq->fd);
-  if (pbeq->vol != NULL)
+  if (pbeq->vol != nullptr)
     delete [] pbeq->vol; 
   delete pbeq;
 }

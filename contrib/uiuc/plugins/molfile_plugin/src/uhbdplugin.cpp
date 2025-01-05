@@ -65,14 +65,14 @@ static char *uhbdgets(char *s, int n, FILE *stream, const char *msg) {
   if (feof(stream)) {
     printf("%s", msg);
     printf("uhbdplugin) Unexpected end-of-file.\n");
-    return NULL;
+    return nullptr;
   } else if (ferror(stream)) {
     printf("%s", msg);
     printf("uhbdplugin) Error reading file.\n");
-    return NULL;
+    return nullptr;
   } else {
     returnVal = fgets(s, n, stream);
-    if (returnVal == NULL) {
+    if (returnVal == nullptr) {
       printf("%s", msg);
       printf("uhbdplugin) Encountered EOF or error reading line.\n");
     }
@@ -92,9 +92,9 @@ static void *open_uhbd_read(const char *filepath, const char *filetype,
   int doswap = 0; // true if byteswapping needed
   float scale=0;    // scale parameter in binary uhbd files
   
-  if ((fd = fopen(filepath, "rb")) == NULL) {
+  if ((fd = fopen(filepath, "rb")) == nullptr) {
     printf("uhbdplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   // check if the first part of file is a binary 160, which would indicate
@@ -121,7 +121,7 @@ static void *open_uhbd_read(const char *filepath, const char *filetype,
     if (fread(buf, 1, 160, fd) != 160) {
       fprintf(stderr, "uhbdplugin) Error: incomplete header in .grd file.\n");
       fclose(fd);
-      return NULL;
+      return nullptr;
     }
     // format of header is 72 character title, followed by:
     // scale dum2 grdflag, idum2 km one km im jm km h ox oy oz
@@ -146,33 +146,33 @@ static void *open_uhbd_read(const char *filepath, const char *filetype,
     rewind(fd);
     // Read the header
     if (uhbdgets(inbuf, LINESIZE, fd, 
-        "uhbdplugin) error while skipping header lines\n") == NULL) 
-      return NULL;
+        "uhbdplugin) error while skipping header lines\n") == nullptr) 
+      return nullptr;
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while skipping header lines\n") == NULL) 
-      return NULL;
+        "uhbdplugin) error while skipping header lines\n") == nullptr) 
+      return nullptr;
   
     /* get grid dimensions, spacing and origin */
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while getting grid dimensions\n") == NULL) {
-      return NULL;
+        "uhbdplugin) error while getting grid dimensions\n") == nullptr) {
+      return nullptr;
     }
     if (sscanf(inbuf, "%d %d %d %e %e %e %e", &xsize, &ysize, &zsize, &ra, orig, orig+1, orig+2)  != 7) {
       printf("uhbdplugin) Error reading grid dimensions, spacing and origin.\n");
-      return NULL;
+      return nullptr;
     }
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while skipping header lines\n") == NULL) 
-      return NULL;
+        "uhbdplugin) error while skipping header lines\n") == nullptr) 
+      return nullptr;
     if (uhbdgets(inbuf, LINESIZE, fd,
-        "uhbdplugin) error while skipping header lines\n") == NULL) 
-      return NULL;
+        "uhbdplugin) error while skipping header lines\n") == nullptr) 
+      return nullptr;
   }
 
   /* allocate and initialize the uhbd structure */
   uhbd = new uhbd_t;
   uhbd->fd = fd;
-  uhbd->vol = NULL;
+  uhbd->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   uhbd->nsets = 1; /* this file contains only one data set */
   uhbd->scale = scale; // set by binary files only
@@ -268,13 +268,13 @@ static int read_uhbd_data(void *v, int set, float *datablock,
   for (z = 0; z < zsize; z++) {
     // read header
     if (uhbdgets(inbuf, LINESIZE, fd, 
-        "uhbdplugin) error while getting density plane indices\n") == NULL)
+        "uhbdplugin) error while getting density plane indices\n") == nullptr)
       return MOLFILE_ERROR;
 
     // read data
     for (count = 0; count < xysize/6; count++) {
       if (uhbdgets(inbuf, LINESIZE, fd,
-          "uhbdplugin) error while getting density values\n") == NULL)
+          "uhbdplugin) error while getting density values\n") == nullptr)
         return MOLFILE_ERROR;
 
       if (sscanf(inbuf, "%e %e %e %e %e %e", &grid[0], &grid[1], &grid[2], &grid[3], &grid[4], &grid[5]) != 6) {
@@ -289,7 +289,7 @@ static int read_uhbd_data(void *v, int set, float *datablock,
 
     if ((xysize%6) != 0) {
       if (uhbdgets(inbuf, LINESIZE, fd, 
-          "uhbdplugin) error reading data elements modulo 6\n") == NULL)
+          "uhbdplugin) error reading data elements modulo 6\n") == nullptr)
         return MOLFILE_ERROR;
 
       count2 = sscanf(inbuf, "%e %e %e %e %e %e", &grid[0], &grid[1], &grid[2], &grid[3], &grid[4], &grid[5]);
@@ -312,7 +312,7 @@ static void close_uhbd_read(void *v) {
   uhbd_t *uhbd = (uhbd_t *)v;
   
   fclose(uhbd->fd);
-  if (uhbd->vol != NULL)
+  if (uhbd->vol != nullptr)
     delete [] uhbd->vol; 
   delete uhbd;
 }

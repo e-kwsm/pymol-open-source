@@ -67,14 +67,14 @@ static void *open_mol2_read(const char *path, const char *filetype,
 
   fd = fopen(path, "r");
   if (!fd)
-    return NULL;
+    return nullptr;
   
   // Find and read the MOLECULE record
   do {
     fgets(line, LINESIZE, fd);
     if ( ferror(fd) || feof(fd) ) {
       fprintf(stderr, "mol2plugin) No molecule record found in file.\n");
-      return NULL;
+      return nullptr;
     }
   } while ( strncmp(line, "@<TRIPOS>MOLECULE", 17) );
 
@@ -86,7 +86,7 @@ static void *open_mol2_read(const char *path, const char *filetype,
   }
   else if (match != 2) {
     fprintf(stderr, "mol2plugin) Cannot determine the number of atoms.\n");
-    return NULL;
+    return nullptr;
   }
   fgets(line, LINESIZE, fd);  // Read and ignore the mol_type
   fgets(line, LINESIZE, fd);  // Read the charge_type
@@ -105,9 +105,9 @@ static void *open_mol2_read(const char *path, const char *filetype,
   mol2->nbonds = nbonds;
   mol2->optflags = optflags;
   mol2->coords_read = 0;
-  mol2->from = NULL;
-  mol2->to = NULL;
-  mol2->bondorder = NULL;
+  mol2->from = nullptr;
+  mol2->to = nullptr;
+  mol2->bondorder = nullptr;
 
   return mol2;
 }
@@ -186,8 +186,8 @@ static int read_mol2_bonds_aux(void *v, int *nbonds, int **fromptr, int **toptr,
 
   if (mol2->nbonds == 0) {
     *nbonds = 0;
-    *fromptr = NULL;
-    *toptr = NULL;
+    *fromptr = nullptr;
+    *toptr = nullptr;
     return MOLFILE_SUCCESS;
   }
 
@@ -235,7 +235,7 @@ static int read_mol2_bonds_aux(void *v, int *nbonds, int **fromptr, int **toptr,
        bond_index++;
      } else {
       // Add the bond to the list
-      curr_order=strtod(bond_type,NULL);
+      curr_order=strtod(bond_type,nullptr);
       if (curr_order<1.0 || curr_order>4.0) curr_order=1;
       //fprintf(stdout,"mol2plugin: Bond from %d to %d of order %f\n", bond_from, bond_to, curr_order);
       fflush(stdout);
@@ -253,9 +253,9 @@ static int read_mol2_bonds_aux(void *v, int *nbonds, int **fromptr, int **toptr,
   } else {
     printf("mol2plugin) WARNING: no bonds defined in mol2 file\n");
     *nbonds = 0;
-    *fromptr = NULL;
-    *toptr = NULL;
-    *bondorderptr = NULL; 
+    *fromptr = nullptr;
+    *toptr = nullptr;
+    *bondorderptr = nullptr; 
   }
     
   rewind(mol2->file);
@@ -320,7 +320,7 @@ static void *open_mol2_write(const char *filename, const char *filetype,
   if (!fd) { 
     fprintf(stderr, "mol2plugin) Error: unable to open mol2 file %s for writing\n",
             filename);
-    return NULL;
+    return nullptr;
   }
   
   data = (mol2data *) malloc(sizeof(mol2data));
@@ -458,7 +458,7 @@ static int write_mol2_timestep(void *mydata, const molfile_timestep_t *ts) {
     // For mol2, only write bonds for fromptr[i]<toptr[i]
     // bondorder is either 1, 2, 3 or a textual representation: am,ar,du,un,nc
     // we don't have the info for the text, so we truncate to integer.
-    if (data->bondorder != NULL) {
+    if (data->bondorder != nullptr) {
       fprintf(data->file, "%5d %5d %5d %2d\n", l ,data->from[i], data->to[i],
               (int)data->bondorder[i]);
     } else {
@@ -491,7 +491,7 @@ static int write_mol2_bonds(void *v, int nbonds, int *fromptr, int *toptr,
   }
   printf("*** I THINK nbonds is %i\n", nbonds);
   data->nbonds = nbonds;
-  if (bondorderptr != NULL) {
+  if (bondorderptr != nullptr) {
     data->bondorder = (float *) malloc(nbonds * sizeof(float));
     for (int i=0;i<nbonds;i++) {
       data->bondorder[i]=bondorderptr[i];
@@ -506,14 +506,14 @@ static void close_mol2_write(void *mydata) {
   mol2data *data = (mol2data *)mydata;
   if (data) {
     if (data->file) fclose(data->file);
-    if (data->from != NULL) free(data->from);
-    data->from = NULL;
-    if (data->to != NULL)   free(data->to);
-    data->to = NULL;
-    if (data->bondorder != NULL)   free(data->bondorder);
-    data->bondorder = NULL;
-    if (data->atomlist != NULL) free(data->atomlist);
-    data->atomlist = NULL;
+    if (data->from != nullptr) free(data->from);
+    data->from = nullptr;
+    if (data->to != nullptr)   free(data->to);
+    data->to = nullptr;
+    if (data->bondorder != nullptr)   free(data->bondorder);
+    data->bondorder = nullptr;
+    if (data->atomlist != nullptr) free(data->atomlist);
+    data->atomlist = nullptr;
     free(data);
   }
 }
@@ -524,12 +524,12 @@ static void close_mol2_read(void *v) {
   mol2data *mol2 = (mol2data *)v;
   if (mol2) {
     if (mol2->file) fclose(mol2->file);
-    if (mol2->from != NULL) free(mol2->from);
-    mol2->from = NULL;
-    if (mol2->to != NULL)   free(mol2->to);
-    mol2->to = NULL;
-    if (mol2->bondorder != NULL)   free(mol2->bondorder);
-    mol2->bondorder = NULL;
+    if (mol2->from != nullptr) free(mol2->from);
+    mol2->from = nullptr;
+    if (mol2->to != nullptr)   free(mol2->to);
+    mol2->to = nullptr;
+    if (mol2->bondorder != nullptr)   free(mol2->bondorder);
+    mol2->bondorder = nullptr;
     free(mol2);
   }
 }
@@ -547,32 +547,32 @@ static int read_mol2_bonds(void *v, int *nbonds, int **fromptr, int **toptr,
     mol2->from = (int *) malloc(mol2->nbonds*sizeof(int));
     mol2->to = (int *) malloc(mol2->nbonds*sizeof(int));
     mol2->bondorder = (float *) malloc(mol2->nbonds*sizeof(float));
-    if (mol2->from == NULL || mol2->to == NULL || mol2->bondorder == NULL) {
+    if (mol2->from == nullptr || mol2->to == nullptr || mol2->bondorder == nullptr) {
       fprintf(stderr, "mol2plugin) ERROR: Failed to allocate memory for bonds\n");
       fclose(mol2->file);
-      mol2->file = NULL;
+      mol2->file = nullptr;
       return MOLFILE_ERROR;
     }
     if ((read_mol2_bonds_aux(mol2, nbonds, &(mol2->from), &(mol2->to), &(mol2->bondorder))) != MOLFILE_SUCCESS) {
       fclose(mol2->file);
-      mol2->file = NULL;
+      mol2->file = nullptr;
       return MOLFILE_ERROR;
     }
     *fromptr = mol2->from;
     *toptr = mol2->to;
     *bondorderptr = mol2->bondorder; 
-    *bondtype = NULL;
+    *bondtype = nullptr;
     *nbondtypes = 0;
-    *bondtypename = NULL;
+    *bondtypename = nullptr;
   } else {
     printf("mol2plugin) WARNING: zero bonds defined in mol2 file.\n");
     *nbonds = 0;
-    *fromptr=NULL;
-    *toptr=NULL;
-    *bondorderptr=NULL;
-    *bondtype = NULL;
+    *fromptr=nullptr;
+    *toptr=nullptr;
+    *bondorderptr=nullptr;
+    *bondtype = nullptr;
     *nbondtypes = 0;
-    *bondtypename = NULL;
+    *bondtypename = nullptr;
   }
   return MOLFILE_SUCCESS;
 }

@@ -70,7 +70,7 @@ static void *open_grd_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "grdplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* Check byte order. The first four bytes of the file always make up the
@@ -78,7 +78,7 @@ static void *open_grd_read(const char *filepath, const char *filetype,
    */
   if (fread(&recordSize, 4, 1, fd) != 1) {
     fprintf(stderr, "grdplugin) Error reading file header: uplbl.\n");
-    return NULL;
+    return nullptr;
   }
   if (recordSize == 20) {
     swap = 0;
@@ -90,7 +90,7 @@ static void *open_grd_read(const char *filepath, const char *filetype,
     }
     else {
       fprintf(stderr, "grdplugin) Improperly formatted file header: uplbl.\n");
-      return NULL;
+      return nullptr;
     }
   }
   
@@ -102,7 +102,7 @@ static void *open_grd_read(const char *filepath, const char *filetype,
   if ( (fread(uplbl, 1, 20, fd) != 20) ||
        (fread(&recordSize, 4, 1, fd) != 1) ) {
     fprintf(stderr, "grdplugin) Error: uplbl does not match.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* Read in the next record:
@@ -112,20 +112,20 @@ static void *open_grd_read(const char *filepath, const char *filetype,
    */ 
   if (fread(&recordSize, 4, 1, fd) != 1) {
     fprintf(stderr, "grdplugin) Error reading file header: nxtlbl.\n");
-    return NULL;
+    return nullptr;
   }
   if (swap) {
     swap4_aligned(&recordSize, 1);
   }
   if (recordSize != 70) {
     fprintf(stderr, "grdplugin) Improperly formatted file header: nxtlbl.\n");
-    return NULL;
+    return nullptr;
   }
   if ( (fread(nxtlbl, 1, 10, fd) != 10) ||
        (fread(toplbl, 1, 60, fd) != 60) ||
        (fread(&recordSize, 4, 1, fd) != 1) ) {
     fprintf(stderr, "grdplugin) Error reading nxtlbl.\n");
-    return NULL;
+    return nullptr;
   }
   
   /* Find the number of data points in the file
@@ -133,7 +133,7 @@ static void *open_grd_read(const char *filepath, const char *filetype,
    */
   if (fread(&recordSize, 4, 1, fd) != 1) {
     fprintf(stderr, "grdplugin) Error reading file header: grid.\n");
-    return NULL;
+    return nullptr;
   }
   if (swap) {
     swap4_aligned(&recordSize, 1);
@@ -146,7 +146,7 @@ static void *open_grd_read(const char *filepath, const char *filetype,
   gridSize = (int) (pow((double) iGrid, (double) 1.0/3.0) + 0.5);
   if ((gridSize*gridSize*gridSize) != iGrid) {
     fprintf(stderr, "grdplugin) Error: non-cube grid.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* Read the scale and midpoint coordinates from the end of the file.
@@ -157,7 +157,7 @@ static void *open_grd_read(const char *filepath, const char *filetype,
        (fread(&midY, sizeof(float), 1, fd) != 1) ||
        (fread(&midZ, sizeof(float), 1, fd) != 1) ) {
     fprintf(stderr, "grdplugin) Error reading scale and midpoint.\n");
-    return NULL;
+    return nullptr;
   }
   if (swap) {
     swap4_aligned(&scale, 1);
@@ -169,7 +169,7 @@ static void *open_grd_read(const char *filepath, const char *filetype,
   /* Allocate and initialize the grd structure */
   grd = new grd_t;
   grd->fd = fd;
-  grd->vol = NULL;
+  grd->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   grd->nsets = 1; /* this file contains only one data set */
   grd->ndata = iGrid;
@@ -239,7 +239,7 @@ static void close_grd_read(void *v) {
   grd_t *grd = (grd_t *)v;
 
   fclose(grd->fd);
-  if (grd->vol != NULL)
+  if (grd->vol != nullptr)
     delete [] grd->vol; 
   delete grd;
 }

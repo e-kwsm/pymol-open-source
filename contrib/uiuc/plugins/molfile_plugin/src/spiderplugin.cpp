@@ -95,13 +95,13 @@ static void *open_spider_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "spiderplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* allocate and initialize the spider structure */
   vol = new spider_t;
   vol->fd = fd;
-  vol->vol = NULL;
+  vol->vol = nullptr;
   vol->byteswap = 0;
   *natoms = MOLFILE_NUMATOMS_NONE;
   vol->nsets = 1; /* this file contains only one data set */
@@ -112,7 +112,7 @@ static void *open_spider_read(const char *filepath, const char *filetype,
   // read SPIDER file header
   if (fread(&h.cbuf, 1024, 1, fd) < 1) {
     printf("spiderplugin) failed to read file header\n");
-    return NULL; 
+    return nullptr; 
   } 
 
   // perform sanity checks on header values to see if we 
@@ -146,7 +146,7 @@ static void *open_spider_read(const char *filepath, const char *filetype,
       printf("spiderplugin) bad header values in file fail sanity checks\n");
       delete [] vol->vol;
       delete vol;
-      return NULL;
+      return nullptr;
     }
   }
   if (vol->byteswap) {
@@ -296,7 +296,7 @@ static void close_spider_read(void *v) {
   spider_t *vol = (spider_t *)v;
   
   fclose(vol->fd);
-  if (vol->vol != NULL)
+  if (vol->vol != nullptr)
     delete [] vol->vol; 
   delete vol;
 }

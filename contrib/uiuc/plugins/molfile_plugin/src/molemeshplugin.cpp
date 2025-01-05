@@ -69,16 +69,16 @@ static void *open_file_read(const char *filepath, const char *filetype, int *nat
    fd = fopen(filepath, "rb");
    if (!fd) {
      fprintf(stderr, "molemeshplugin) Error opening file.\n");
-     return NULL;
+     return nullptr;
    }
    pmesh = new pmesh_t;
    pmesh->fd = fd;
-   pmesh->graphics = NULL;
+   pmesh->graphics = nullptr;
    *natoms = 0;
    return pmesh;
 } 
 static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **data) {
-    molfile_graphics_list *gListPtr=NULL, *tmpPtr=NULL;
+    molfile_graphics_list *gListPtr=nullptr, *tmpPtr=nullptr;
     int i=0, ntriangles=0,j=0;
     int error=0, numVerts=0, numFacets=0, facetType=0, facet=0, tmpFacet[5];
     pmesh_t *pmesh = (pmesh_t *)v;
@@ -96,7 +96,7 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **data
       return MOLFILE_ERROR;
     } else {
      gListPtr = new molfile_graphics_list;
-     gListPtr->next = NULL;
+     gListPtr->next = nullptr;
      gListPtr->gItem.type = MOLFILE_TRIANGLE;
      ntriangles++;
      tmpPtr = gListPtr;
@@ -139,7 +139,7 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **data
     } else {
      gListPtr = new molfile_graphics_list;
 
-     gListPtr->next = NULL;
+     gListPtr->next = nullptr;
      gListPtr->gItem.type = MOLFILE_TRIANGLE;
      ntriangles++;
      tmpPtr = gListPtr;
@@ -162,7 +162,7 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **data
 // Create a new list item and initialize it for second triangle.
          tmpPtr->next = new molfile_graphics_list;
          tmpPtr = tmpPtr->next;
-         tmpPtr->next = NULL;
+         tmpPtr->next = nullptr;
          tmpPtr->gItem.type = MOLFILE_TRIANGLE;
          ntriangles++;
      } else if (facetType == 5 ) { 
@@ -187,7 +187,7 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **data
 // Create a new list item and initialize it for second triangle.
                 tmpPtr->next = new molfile_graphics_list;
                 tmpPtr = tmpPtr->next;
-                tmpPtr->next = NULL;
+                tmpPtr->next = nullptr;
                 tmpPtr->gItem.type = MOLFILE_TRIANGLE;
                 ntriangles++;
 
@@ -206,7 +206,7 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **data
 // Create a new list item and initialize it for first triangle of the second quadrilateral.
                 tmpPtr->next = new molfile_graphics_list;
                 tmpPtr = tmpPtr->next;
-                tmpPtr->next = NULL;
+                tmpPtr->next = nullptr;
                 tmpPtr->gItem.type = MOLFILE_TRIANGLE;
                 ntriangles++;
      } else if ( (facetType != 4 || facetType != 5) && facetType >= 6 ) {
@@ -266,7 +266,7 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **data
     }
     // If an error occurred, free the linked list and return MOLFILE_ERROR
     if (error != 0) {
-      while (gListPtr != NULL) {
+      while (gListPtr != nullptr) {
         tmpPtr = gListPtr->next;
         delete gListPtr;
         gListPtr = tmpPtr;
@@ -281,7 +281,7 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **data
     pmesh->graphics = new molfile_graphics_t[ntriangles-1];
 //    printf("ntriangles %d \n", ntriangles);
     i = 0;
-    while (gListPtr != NULL) {
+    while (gListPtr != nullptr) {
       pmesh->graphics[i] = gListPtr->gItem;
       tmpPtr = gListPtr->next;
       delete gListPtr;
@@ -299,7 +299,7 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **data
 static void close_file_read(void *v) {
   pmesh_t *pmesh = (pmesh_t *)v;
   fclose(pmesh->fd);
-  if (pmesh->graphics != NULL)
+  if (pmesh->graphics != nullptr)
     delete [] pmesh->graphics;
   delete pmesh;
 }

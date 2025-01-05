@@ -70,30 +70,30 @@ static void *open_situs_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "r");
   if (!fd) {
     printf("situsplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* get the scale */
   if (fscanf(fd, "%f", &scale) != 1) {;
     printf("situsplugin) Error reading voxel scale.\n");
-    return NULL;
+    return nullptr;
   }
 
   if (fscanf(fd, "%f %f %f", orig, orig+1, orig+2) != 3) {
     printf("situsplugin) Error reading grid origin.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* get the number of grid points */
   if (fscanf(fd, "%d %d %d", &xsize, &ysize, &zsize) != 3) {
     printf("situsplugin) Error reading grid dimensions.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* allocate and initialize the situs structure */
   situs = new situs_t;
   situs->fd = fd;
-  situs->vol = NULL;
+  situs->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   situs->nsets = 1; /* this file contains only one data set */
 
@@ -156,7 +156,7 @@ static void close_situs_read(void *v) {
   situs_t *situs = (situs_t *)v;
   
   fclose(situs->fd);
-  if (situs->vol != NULL)
+  if (situs->vol != nullptr)
     delete [] situs->vol; 
   delete situs;
 }

@@ -61,7 +61,7 @@ static void *open_plt_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "pltplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   // Integer header info: rank (always 3), surface type, z length, y length, 
@@ -74,7 +74,7 @@ static void *open_plt_read(const char *filepath, const char *filetype,
       swap = 1;
     else {
       fprintf(stderr, "pltplugin) Incorrect header.\n");
-      return NULL;
+      return nullptr;
     }
   }
 
@@ -86,7 +86,7 @@ static void *open_plt_read(const char *filepath, const char *filetype,
   // Allocate and initialize the plt structure
   plt = new plt_t;
   plt->fd = fd;
-  plt->vol = NULL;
+  plt->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   plt->nsets = 1; // this file contains only one data set
   plt->swap = swap;
@@ -155,7 +155,7 @@ static void close_plt_read(void *v) {
   plt_t *plt = (plt_t *)v;
 
   fclose(plt->fd);
-  if (plt->vol != NULL)
+  if (plt->vol != nullptr)
     delete [] plt->vol; 
   delete plt;
 }

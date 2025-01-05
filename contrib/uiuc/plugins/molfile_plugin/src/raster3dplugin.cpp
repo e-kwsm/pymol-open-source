@@ -31,10 +31,10 @@ static void *open_file_read(const char *filepath, const char *filetype,
   
   fd = fopen(filepath, "rt");
   if (!fd) 
-    return NULL;
+    return nullptr;
   handle = new handle_t;
   handle->fd = fd;
-  handle->graphics = NULL;
+  handle->graphics = nullptr;
   *natoms = 0;
   return handle;
 }
@@ -104,7 +104,7 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **gdat
   int count, i;
   char buffer[200];
   float mat[16];
-  FILE *infile = NULL;
+  FILE *infile = nullptr;
   int futureVersion = 0;
   int line = 0;
 
@@ -486,9 +486,9 @@ static int read_rawgraphics(void *v, int *nelem, const molfile_graphics_t **gdat
 static void close_file_read(void *v) {
   handle_t *handle = (handle_t *)v;
   fclose(handle->fd);
-  handle->fd = NULL;
+  handle->fd = nullptr;
   free(handle->graphics);
-  handle->graphics = NULL;
+  handle->graphics = nullptr;
   delete handle;
 }
 

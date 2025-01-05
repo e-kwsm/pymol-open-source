@@ -101,22 +101,22 @@ static int get_mdf_bonds(char *dest, const char *src) {
   // Append the bonds to the destination string, converting then to the
   // correct format along the way.
   dest[0] = '\0';
-  for ( curr = bond_records; (next = strchr(curr, ' ')) != NULL;
+  for ( curr = bond_records; (next = strchr(curr, ' ')) != nullptr;
         curr = next + 1 ) {
     *next = '\0';
 
     // Prepend the resname and resid to the destination atom name if it's
     // not already present.
-    if ( strchr(curr, ':') == NULL ) {
+    if ( strchr(curr, ':') == nullptr ) {
       strcat(dest, resinfo);
       strcat(dest, ":");
     }
 
     // Remove cell/sympop/bondorder information from the bond
-    if ( ((tmp = strchr(curr, '%')) != NULL) ||
-         ((tmp = strchr(curr, '#')) != NULL) ||
-         ((tmp = strchr(curr, '/')) != NULL) ||
-         ((tmp = strchr(curr, '\n')) != NULL) ) {
+    if ( ((tmp = strchr(curr, '%')) != nullptr) ||
+         ((tmp = strchr(curr, '#')) != nullptr) ||
+         ((tmp = strchr(curr, '/')) != nullptr) ||
+         ((tmp = strchr(curr, '\n')) != nullptr) ) {
       *tmp = '\0';
     }
     strcat(dest, curr);
@@ -137,7 +137,7 @@ static int count_mdf_bonds(const char *line) {
     return 0;
   }
   
-  for ( tmp = bond_records; (tmp = strchr(tmp, ' ')) != NULL;
+  for ( tmp = bond_records; (tmp = strchr(tmp, ' ')) != nullptr;
         tmp++ ) {
     bonds++;
   }
@@ -157,14 +157,14 @@ static void *open_mdf_read(const char *path, const char *filetype,
 
   fd = fopen(path, "r");
   if (!fd)
-    return NULL;
+    return nullptr;
   
   // Find the first molecule record
   do {
     fgets(line, LINESIZE, fd);
     if ( ferror(fd) || feof(fd) ) {
       vmdcon_printf(VMDCON_ERROR, "mdfplugin) No molecule record found in file.\n");
-      return NULL;
+      return nullptr;
     }
   } while ( strncmp(line, "@molecule", 9) );
 
@@ -183,7 +183,7 @@ static void *open_mdf_read(const char *path, const char *filetype,
       fgets(line, LINESIZE, fd);
       if ( ferror(fd) || feof(fd) ) {
         vmdcon_printf(VMDCON_ERROR, "mdfplugin) Error while counting atoms.\n");
-        return NULL;
+        return nullptr;
       }
     }
     nmols++;
@@ -195,8 +195,8 @@ static void *open_mdf_read(const char *path, const char *filetype,
   mdf->file = fd;
   mdf->natoms = *natoms;
   mdf->nmols = nmols;
-  mdf->from = NULL;
-  mdf->to = NULL;
+  mdf->from = nullptr;
+  mdf->to = nullptr;
   mdf->mol_data_location = mol_data_location; 
 
   return mdf;
@@ -332,7 +332,7 @@ static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data,
 
         if (retval > 0) {
           // Read each bond in the line
-          for ( curr = bond_records; (next = strchr(curr, ' ')) != NULL; 
+          for ( curr = bond_records; (next = strchr(curr, ' ')) != nullptr; 
                 curr = next+1 ) {
             *next = '\0';
             tmp_to = hash_lookup(&hasharray[mol], curr);
@@ -373,10 +373,10 @@ static int read_mdf_bonds(void *v, int *nbonds, int **from_data, int **to_data,
   *nbonds = bond_count;
   *from_data = mdf->from;
   *to_data = mdf->to;
-  *bondorderptr = NULL; // not implemented yet
-  *bondtype = NULL;
+  *bondorderptr = nullptr; // not implemented yet
+  *bondtype = nullptr;
   *nbondtypes = 0;
-  *bondtypename = NULL;
+  *bondtypename = nullptr;
 
   return MOLFILE_SUCCESS;
 }

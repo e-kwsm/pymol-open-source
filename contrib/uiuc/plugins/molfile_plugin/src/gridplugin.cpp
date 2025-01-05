@@ -76,7 +76,7 @@ static void *open_grid_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "gridplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   // Use the first four-byte integer in the file to determine the file's
@@ -89,7 +89,7 @@ static void *open_grid_read(const char *filepath, const char *filetype,
       swap = 1;
     } else {
       fprintf(stderr, "gridplugin) Cannot read file: header block is too large.\n");
-      return NULL;
+      return nullptr;
     }
   }
   else {
@@ -102,7 +102,7 @@ static void *open_grid_read(const char *filepath, const char *filetype,
 
   if (blocksize != 40) {
     fprintf(stderr, "gridplugin) Incorrect header size.\n");
-    return NULL;
+    return nullptr;
   }
 
   // number of planes in each dimension
@@ -121,7 +121,7 @@ static void *open_grid_read(const char *filepath, const char *filetype,
   // Allocate and initialize the structure 
   grid = new grid_t;
   grid->fd = fd;
-  grid->vol = NULL;
+  grid->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   grid->swap = swap;
 
@@ -202,7 +202,7 @@ static void close_grid_read(void *v) {
   grid_t *grid = (grid_t *)v;
 
   fclose(grid->fd);
-  if (grid->vol != NULL)
+  if (grid->vol != nullptr)
     delete [] grid->vol; 
   delete grid;
 }

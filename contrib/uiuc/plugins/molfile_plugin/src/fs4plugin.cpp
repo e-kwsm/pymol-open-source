@@ -71,7 +71,7 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "fs4plugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   // Use the first four-byte integer in the file to determine the file's
@@ -84,7 +84,7 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
       swap = 1;
     } else {
       fprintf(stderr, "fs4plugin) Cannot read file: header block is too large.\n");
-      return NULL;
+      return nullptr;
     }
   }
 
@@ -101,7 +101,7 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
     blocksize = fortread_4(geom, 16, swap, fd);
     if (blocksize != 7) {
       fprintf(stderr, "fs4plugin) Incorrect size for geometry block.\n");
-      return NULL;
+      return nullptr;
     }
 
     fmsGridSize[0] = geom[0];
@@ -142,7 +142,7 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
     // Read the geometry block
     if (blocksize != 13) {
       fprintf(stderr, "fs4plugin) Incorrect size for geometry block.\n");
-      return NULL;
+      return nullptr;
     }
 
     fmsGridSize[0] = geom[0];
@@ -157,14 +157,14 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
     norn = geom[4];
     if ((norn < 0) || (norn > 2)) {
       fprintf(stderr, "fs4plugin) norn out of range.\n");
-      return NULL;
+      return nullptr;
     }
   }
 
   // Unrecognized format
   else {
     fprintf(stderr, "fs4plugin) Unrecognized map format.\n");
-    return NULL;
+    return nullptr;
   }
 
   // Convert degrees to radians
@@ -178,7 +178,7 @@ static void *open_fs4_read(const char *filepath, const char *filetype,
   // Allocate and initialize the fs4 structure
   fs4 = new fs4_t;
   fs4->fd = fd;
-  fs4->vol = NULL;
+  fs4->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   fs4->nsets = 1; // this file contains only one data set
   fs4->swap = swap;
@@ -304,7 +304,7 @@ static void close_fs4_read(void *v) {
   fs4_t *fs4 = (fs4_t *)v;
 
   fclose(fs4->fd);
-  if (fs4->vol != NULL)
+  if (fs4->vol != nullptr)
     delete [] fs4->vol; 
   delete fs4;
 }

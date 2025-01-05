@@ -58,11 +58,11 @@ static void *open_edm_read(const char *filepath, const char *filetype,
   
   fd = fopen(filepath, "rb");
   if (!fd) 
-    return NULL;
+    return nullptr;
 
   edm = new edm_t;
   edm->fd = fd;
-  edm->vol = NULL;
+  edm->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
 
   edm->vol = new molfile_volumetric_t[1];
@@ -78,7 +78,7 @@ static void *open_edm_read(const char *filepath, const char *filetype,
     fclose(edm->fd);
     delete [] edm->vol;
     delete edm;
-    return NULL;
+    return nullptr;
   }
     
   eatline(edm->fd);               // go on to next line
@@ -96,7 +96,7 @@ static void *open_edm_read(const char *filepath, const char *filetype,
     fclose(edm->fd);
     delete [] edm->vol;
     delete edm;
-    return NULL;
+    return nullptr;
   }
 
   eatline(edm->fd);               // go on to next line
@@ -118,7 +118,7 @@ static void *open_edm_read(const char *filepath, const char *filetype,
     fclose(edm->fd);
     delete [] edm->vol;
     delete edm;
-    return NULL;
+    return nullptr;
   }
   eatline(edm->fd);            // go on to next line
 
@@ -176,7 +176,7 @@ static void *open_edm_read(const char *filepath, const char *filetype,
     fclose(edm->fd);
     delete [] edm->vol;
     delete edm;
-    return NULL;
+    return nullptr;
   }
 
   if (strcmp(planeorder, "ZYX")) { 
@@ -184,7 +184,7 @@ static void *open_edm_read(const char *filepath, const char *filetype,
     fclose(edm->fd);
     delete [] edm->vol;
     delete edm;
-    return NULL;
+    return nullptr;
   }
   eatline(edm->fd);               // go on to next line
 

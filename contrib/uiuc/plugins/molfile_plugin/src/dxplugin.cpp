@@ -101,13 +101,13 @@ static char *dxgets(char *s, int n, FILE *stream) {
 
   if (feof(stream)) {
     vmdcon_printf(VMDCON_ERROR, "dxplugin) Unexpected end-of-file.\n");
-    return NULL;
+    return nullptr;
   } else if (ferror(stream)) {
     vmdcon_printf(VMDCON_ERROR, "dxplugin) Error reading file.\n");
-    return NULL;
+    return nullptr;
   } else {
     returnVal = fgets(s, n, stream);
-    if (returnVal == NULL) {
+    if (returnVal == nullptr) {
       vmdcon_printf(VMDCON_ERROR, "dxplugin) Error reading line.\n");
     }
   }
@@ -128,65 +128,65 @@ static void *open_dx_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     vmdcon_printf(VMDCON_ERROR, "dxplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* skip comments */
   do {
-    if (dxgets(inbuf, LINESIZE, fd) == NULL) 
-      return NULL;
+    if (dxgets(inbuf, LINESIZE, fd) == nullptr) 
+      return nullptr;
   } while (inbuf[0] == '#');
 
   /* get the number of grid points */
   if (sscanf(inbuf, "object 1 class gridpositions counts %d %d %d", &xsize, &ysize, &zsize) != 3) {
     vmdcon_printf(VMDCON_ERROR, "dxplugin) Error reading grid dimensions.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* get the cell origin */
-  if (dxgets(inbuf, LINESIZE, fd) == NULL) {
-    return NULL;
+  if (dxgets(inbuf, LINESIZE, fd) == nullptr) {
+    return nullptr;
   }
   if (sscanf(inbuf, "origin %e %e %e", orig, orig+1, orig+2) != 3) {
     vmdcon_printf(VMDCON_ERROR, "dxplugin) Error reading grid origin.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* get the cell dimensions */
-  if (dxgets(inbuf, LINESIZE, fd) == NULL) {
-    return NULL;
+  if (dxgets(inbuf, LINESIZE, fd) == nullptr) {
+    return nullptr;
   }
   if (sscanf(inbuf, "delta %e %e %e", xdelta, xdelta+1, xdelta+2) != 3) {
     vmdcon_printf(VMDCON_ERROR, "dxplugin) Error reading cell x-dimension.\n");
-    return NULL;
+    return nullptr;
   }
 
-  if (dxgets(inbuf, LINESIZE, fd) == NULL) {
-    return NULL;
+  if (dxgets(inbuf, LINESIZE, fd) == nullptr) {
+    return nullptr;
   }
   if (sscanf(inbuf, "delta %e %e %e", ydelta, ydelta+1, ydelta+2) != 3) {
     vmdcon_printf(VMDCON_ERROR, "dxplugin) Error reading cell y-dimension.\n");
-    return NULL;
+    return nullptr;
   }
 
-  if (dxgets(inbuf, LINESIZE, fd) == NULL) {
-    return NULL;
+  if (dxgets(inbuf, LINESIZE, fd) == nullptr) {
+    return nullptr;
   }
   if (sscanf(inbuf, "delta %e %e %e", zdelta, zdelta+1, zdelta+2) != 3) {
     vmdcon_printf(VMDCON_ERROR, "dxplugin) Error reading cell z-dimension.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* skip the next line of the header (described at the beginning of
    * the code), which aren't utilized by APBS-produced DX files.  */
-  if (dxgets(inbuf, LINESIZE, fd) == NULL) 
-    return NULL;
+  if (dxgets(inbuf, LINESIZE, fd) == nullptr) 
+    return nullptr;
   /* The next line tells us whether to expect ascii or binary format.
    * We scan for the word 'binary' somewhere in the line, and if it's found
    * we assume binary.
    */
-  if (dxgets(inbuf, LINESIZE, fd) == NULL)
-    return NULL;
+  if (dxgets(inbuf, LINESIZE, fd) == nullptr)
+    return nullptr;
   if (strstr(inbuf, "binary")) {
       isBinary = 1;
   }
@@ -194,7 +194,7 @@ static void *open_dx_read(const char *filepath, const char *filetype,
   /* allocate and initialize the dx structure */
   dx = new dx_t;
   dx->fd = fd;
-  dx->vol = NULL;
+  dx->vol = nullptr;
   dx->isBinary = isBinary;
   *natoms = MOLFILE_NUMATOMS_NONE;
   dx->nsets = 1; /* this file contains only one data set */
@@ -280,7 +280,7 @@ static int read_dx_data(void *v, int set, float *datablock,
   for (count = 0; count < total;) {
     ++line;
     p=dxgets(inbuf, LINESIZE, fd);
-    if (p == NULL) {
+    if (p == nullptr) {
       vmdcon_printf(VMDCON_ERROR, "dxplugin) Error reading grid data.\n");
       vmdcon_printf(VMDCON_ERROR, "dxplugin) line: %d. item: %d/%d. last data: %s\n", 
               line, count, total, inbuf);
@@ -337,7 +337,7 @@ static void close_dx_read(void *v) {
   dx_t *dx = (dx_t *)v;
   
   fclose(dx->fd);
-  if (dx->vol != NULL)
+  if (dx->vol != nullptr)
     delete [] dx->vol; 
   delete dx;
 }
@@ -408,7 +408,7 @@ static int write_dx_data(void *v, molfile_volumetric_t *metadata,
     fprintf(fd, "object 2 class gridconnections counts %d %d %d\n",
             xsize, ysize, zsize);
 
-    int useBinary = (getenv("VMDBINARYDX") != NULL);
+    int useBinary = (getenv("VMDBINARYDX") != nullptr);
     fprintf(fd, "object 3 class array type double rank 0 items %d %sdata follows\n", total, useBinary ? "binary " : "");
     count = 0;
     for (i=0; i<xsize; i++) {

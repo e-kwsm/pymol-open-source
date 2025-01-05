@@ -73,18 +73,18 @@ static void *open_file_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "stlplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
   stl = new stl_t;
   stl->fd = fd;
-  stl->graphics = NULL;
+  stl->graphics = nullptr;
   *natoms = 0;
   return stl;
 }
 
 static int read_rawgraphics(void *v, int *nelem, 
     const molfile_graphics_t **data) {
-    molfile_graphics_list *gListPtr=NULL, *tmpPtr=NULL;
+    molfile_graphics_list *gListPtr=nullptr, *tmpPtr=nullptr;
     int i=0, ntriangles=0;
     int error=0;
     stl_t *stl = (stl_t *)v;
@@ -108,7 +108,7 @@ static int read_rawgraphics(void *v, int *nelem,
       error = 1;
     } else {
       gListPtr = new molfile_graphics_list;
-      gListPtr->next = NULL;
+      gListPtr->next = nullptr;
       gListPtr->gItem.type = MOLFILE_TRIANGLE;
       ntriangles++;
       tmpPtr = gListPtr;
@@ -178,7 +178,7 @@ static int read_rawgraphics(void *v, int *nelem,
         // Create a new list item and initialize it.
         tmpPtr->next = new molfile_graphics_list;
         tmpPtr = tmpPtr->next;
-        tmpPtr->next = NULL;
+        tmpPtr->next = nullptr;
         tmpPtr->gItem.type = MOLFILE_TRIANGLE;
         ntriangles++;
       } else {
@@ -199,7 +199,7 @@ static int read_rawgraphics(void *v, int *nelem,
 
     // If an error occurred, free the linked list and return MOLFILE_ERROR
     if (error != 0) {
-      while (gListPtr != NULL) {
+      while (gListPtr != nullptr) {
         tmpPtr = gListPtr->next;
         delete gListPtr;
         gListPtr = tmpPtr;
@@ -211,7 +211,7 @@ static int read_rawgraphics(void *v, int *nelem,
     // linked list into it, deleting the list as you go.
     stl->graphics = new molfile_graphics_t[ntriangles];
     i = 0;
-    while (gListPtr != NULL) {
+    while (gListPtr != nullptr) {
       stl->graphics[i] = gListPtr->gItem;
       tmpPtr = gListPtr->next;
       delete gListPtr;
@@ -228,7 +228,7 @@ static int read_rawgraphics(void *v, int *nelem,
 static void close_file_read(void *v) {
   stl_t *stl = (stl_t *)v;
   fclose(stl->fd);
-  if (stl->graphics != NULL)
+  if (stl->graphics != nullptr)
     delete [] stl->graphics;
   delete stl;
 }

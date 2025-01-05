@@ -39,12 +39,12 @@ static void *open_parm7_read(const char *filename, const char *,int *natoms) {
   int popn = 0;
   if(!(fd = open_parm7_file(filename, &popn))) {
     fprintf(stderr, "parm7plugin) Cannot open parm file '%s'\n", filename);
-    return NULL;
+    return nullptr;
   }
   parm7struct *prm = read_parm7_header(fd);
   if (!prm) {
     close_parm7_file(fd, popn);
-    return NULL; 
+    return nullptr; 
   }
 
   *natoms = prm->Natom;
@@ -64,7 +64,7 @@ static int read_parm7_structure(void *mydata, int *optflags, molfile_atom_t *ato
   FILE *file = p->fd;
   char buf[85];
   char field[85];
-  char *resnames = NULL;
+  char *resnames = nullptr;
 
   *optflags = MOLFILE_NOOPTIONS; /* no optional data to start with */
 
@@ -131,10 +131,10 @@ static int read_parm7_bonds(void *v, int *nbonds, int **fromptr, int **toptr,
   *nbonds = p->nbonds;
   *fromptr = p->from;
   *toptr = p->to;
-  *bondorderptr = NULL; // parm files don't contain bond order information
-  *bondtype = NULL;
+  *bondorderptr = nullptr; // parm files don't contain bond order information
+  *bondtype = nullptr;
   *nbondtypes = 0;
-  *bondtypename = NULL;
+  *bondtypename = nullptr;
   return MOLFILE_SUCCESS;
 }
 

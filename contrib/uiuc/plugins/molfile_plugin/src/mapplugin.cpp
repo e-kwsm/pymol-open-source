@@ -52,15 +52,15 @@ static char *mapgets(char *s, int n, FILE *stream) {
 
   if (feof(stream)) {
     fprintf(stderr, "mapplugin) Unexpected end-of-file.\n");
-    returnVal = NULL;
+    returnVal = nullptr;
   }
   else if (ferror(stream)) {
     fprintf(stderr, "mapplugin) Error reading file.\n");
-    return NULL;
+    return nullptr;
   }
   else {
     returnVal = fgets(s, n, stream);
-    if (returnVal == NULL) {
+    if (returnVal == nullptr) {
       fprintf(stderr, "mapplugin) Error reading line.\n");
     }
   }
@@ -81,29 +81,29 @@ static void *open_map_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     fprintf(stderr, "mapplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* Skip the header */
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
-    return NULL;
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
-    return NULL;
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
-    return NULL;
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+    return nullptr;
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+    return nullptr;
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+    return nullptr;
 
   /* Space between grid points */
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
-    return NULL;
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+    return nullptr;
   if (sscanf(inbuf, "SPACING %f", &spacing) != 1)
-    return NULL;
+    return nullptr;
 
   /* Grid size in grid units */
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
-    return NULL;
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+    return nullptr;
   if (sscanf(inbuf, "NELEMENTS %d %d %d", &xsize, &ysize, &zsize) != 3) {
     fprintf(stderr, "mapplugin) Cannot read NELEMENTS.\n");
-    return NULL;
+    return nullptr;
   }
 
   /* XXX - I don't know why this is necessary */
@@ -112,15 +112,15 @@ static void *open_map_read(const char *filepath, const char *filetype,
   zsize++;
 
   /* Center of the cell */
-  if (mapgets(inbuf, LINESIZE, fd) == NULL) 
-    return NULL;
+  if (mapgets(inbuf, LINESIZE, fd) == nullptr) 
+    return nullptr;
   if (sscanf(inbuf, "CENTER %f %f %f", &midX, &midY, &midZ) != 3)
-    return NULL;
+    return nullptr;
 
   /* Allocate and initialize the map structure */
   map = new gridmap_t;
   map->fd = fd;
-  map->vol = NULL;
+  map->vol = nullptr;
   *natoms = MOLFILE_NUMATOMS_NONE;
   map->nsets = 1; /* this file contains only one data set */
 
@@ -176,7 +176,7 @@ static int read_map_data(void *v, int set, float *datablock,
 
   /* Read the densities. Order for file is x fast, y medium, z slow */
   while (count < ndata) {
-    if (mapgets(inbuf, LINESIZE, fd) == NULL) {
+    if (mapgets(inbuf, LINESIZE, fd) == nullptr) {
       return MOLFILE_ERROR;
     }
 
@@ -193,7 +193,7 @@ static void close_map_read(void *v) {
   gridmap_t *map = (gridmap_t *)v;
 
   fclose(map->fd);
-  if (map->vol != NULL)
+  if (map->vol != nullptr)
     delete [] map->vol; 
   delete map;
 }

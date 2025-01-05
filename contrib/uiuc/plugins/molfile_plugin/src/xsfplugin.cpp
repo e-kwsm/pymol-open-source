@@ -77,14 +77,14 @@ static const struct {
   { "BEGIN_BLOCK_DATAGRID3D", xsf_BEG_3D_BLOCK },
   { "END_BLOCK_DATAGRID2D", xsf_END_2D_BLOCK },
   { "END_BLOCK_DATAGRID3D", xsf_END_3D_BLOCK },
-  { NULL,          xsf_UNKNOWN     }
+  { nullptr,          xsf_UNKNOWN     }
 };
 
 
 static xsf_keyword_t lookup_keyword(const char* word) {
   int i, j;
   
-  if (word == 0) return xsf_UNKNOWN;
+  if (word == nullptr) return xsf_UNKNOWN;
   
   // find start of word.
   j=0;
@@ -257,11 +257,11 @@ static void *open_xsf_read(const char *filepath, const char *filetype,
   
   fd = fopen(filepath, "rb");
   if (!fd) 
-    return NULL;
+    return nullptr;
 
   xsf = new xsf_t;
   xsf->fd = fd;
-  xsf->vol = NULL;
+  xsf->vol = nullptr;
   xsf->numvolmeta = 0;
   xsf->coord = false;
   xsf->nvolsets = 0;
@@ -290,7 +290,7 @@ static void *open_xsf_read(const char *filepath, const char *filetype,
 
   // we loop until can't read anymore.
   do {
-    if (NULL == fgets(readbuf, 256, xsf->fd)) break;
+    if (nullptr == fgets(readbuf, 256, xsf->fd)) break;
 
     again:
     kw = lookup_keyword(readbuf);
@@ -399,7 +399,7 @@ static void *open_xsf_read(const char *filepath, const char *filetype,
         // but since we have to move through the whole file to count its contents,
         // it is faster to parse it here and just pass the data later.
 
-        if (xsf->vol == NULL) { // initialize the volume set list with 32 entries
+        if (xsf->vol == nullptr) { // initialize the volume set list with 32 entries
           xsf->numvolmeta = 32;
           xsf->vol = new molfile_volumetric_t[xsf->numvolmeta];
         }
@@ -410,7 +410,7 @@ static void *open_xsf_read(const char *filepath, const char *filetype,
 
         do { // loop until we reach the end of the whole block 
              // or run out of data.
-          if (NULL == fgets(readbuf, 256, xsf->fd)) break;
+          if (nullptr == fgets(readbuf, 256, xsf->fd)) break;
           switch (lookup_keyword(readbuf)) {
             case xsf_BEG_3D_DATA: // fallthrough
             {
@@ -550,7 +550,7 @@ static int read_xsf_structure(void *v, int *optflags, molfile_atom_t *atoms) {
   // that to set the default for animations.
   char readbuf[1024]; // line buffer
   do {
-    if (NULL == fgets(readbuf, 256, xsf->fd)) break;
+    if (nullptr == fgets(readbuf, 256, xsf->fd)) break;
 
     switch (lookup_keyword(readbuf)) {
 
@@ -573,7 +573,7 @@ static int read_xsf_structure(void *v, int *optflags, molfile_atom_t *atoms) {
           k = fgets(readbuf, 1024, xsf->fd);
           atom = atoms + i;
           j=sscanf(readbuf, "%s %f %f %f", buffer, &coord, &coord, &coord);
-          if (k == NULL) {
+          if (k == nullptr) {
             fprintf(stderr, "xsfplugin) structure missing atom(s) in file '%s'\n",xsf->file_name);
             fprintf(stderr, "xsfplugin) expecting '%d' atoms, found only '%d'\n",xsf->numatoms,i+1);
             return MOLFILE_ERROR;
@@ -675,7 +675,7 @@ static int read_xsf_timestep(void *v, int natoms, molfile_timestep_t *ts) {
 
   char readbuf[1024]; // line buffer
   do {
-    if (NULL == fgets(readbuf, 256, xsf->fd)) break;
+    if (nullptr == fgets(readbuf, 256, xsf->fd)) break;
 
     switch (lookup_keyword(readbuf)) {
 
@@ -693,14 +693,14 @@ static int read_xsf_timestep(void *v, int natoms, molfile_timestep_t *ts) {
           k = fgets(readbuf, 1024, xsf->fd);
           j=sscanf(readbuf, "%s %f %f %f", buffer, &x, &y, &z);
 
-          if (k == NULL) {
+          if (k == nullptr) {
             return MOLFILE_ERROR;
           } else if (j < 4) {
             fprintf(stderr, "xsfplugin) missing type or coordinate(s) in file '%s' for atom '%d'\n",
                     xsf->file_name, i+1);
             return MOLFILE_ERROR;
           } else if (j>=3) {
-            if (ts != NULL) { 
+            if (ts != nullptr) { 
               // Only save coords if we're given a timestep pointer, 
               // otherwise assume that VMD wants us to skip past it.
               float xf, yf, zf;
@@ -777,7 +777,7 @@ static int read_xsf_timestep(void *v, int natoms, molfile_timestep_t *ts) {
           }
         }
         // (re-)set unitcell dimensions
-        if (ts != NULL) { 
+        if (ts != nullptr) { 
           ts->A = xsf->box.A;
           ts->B = xsf->box.B;
           ts->C = xsf->box.C;
@@ -861,7 +861,7 @@ static int read_xsf_data(void *v, int set, float *datablock, float *colorblock) 
   // find data set ...
   rewind(xsf->fd);
   do {
-    if (NULL == fgets(readbuf, 1024, xsf->fd)) return MOLFILE_ERROR;
+    if (nullptr == fgets(readbuf, 1024, xsf->fd)) return MOLFILE_ERROR;
   } while (strncmp(readbuf, block, 1024));
   // ... and skip five more lines to get to the beginning of the data
   eatline(xsf->fd);

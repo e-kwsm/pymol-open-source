@@ -332,13 +332,13 @@ namespace {
             throw std::runtime_error(strerror(errno));
         }
       } else {
-        VMDDIR* directory = NULL;
+        VMDDIR* directory = nullptr;
         try {
           directory = vmd_opendir(path.c_str());
           if (directory) {
             // Remove subfiles
             char * entry;
-            while( (entry=vmd_readdir(directory)) != NULL ) {
+            while( (entry=vmd_readdir(directory)) != nullptr ) {
               // Don't unlink . or ..
               if (entry[0] == '.') {
                 if (entry[1] == 0) continue;
@@ -347,7 +347,7 @@ namespace {
               recursivelyRemove(path + s_sep + entry);
             }
             vmd_closedir(directory);
-            directory = NULL;
+            directory = nullptr;
 
             // Remove the actual directory
             if (::rmdir(path.c_str()) != 0) {
@@ -581,7 +581,7 @@ namespace {
     const void *data;
     bool byteswap;
 
-    Blob() : count(0), data(0) {}
+    Blob() : count(0), data(nullptr) {}
     Blob( const std::string &type_, uint64_t count_, const void *data_,
           uint32_t frame_endianism )
     : type(type_), count(count_), data(data_), byteswap(false) {
@@ -700,7 +700,7 @@ void DDmkdir(const std::string &dirpath, mode_t mode, int ndir1, int ndir2){
         throw DDException("mkdir not_hashed subdirectory", errno);
 
     FILE *fp = fopen((dpslash + "not_hashed/.ddparams").c_str(), "w");
-    if(fp == NULL)
+    if(fp == nullptr)
 	throw DDException("fopen( .ddparams, \"w\" )", errno);
     if( fprintf(fp, "%d %d\n", ndir1, ndir2) < 0 ){
         fclose(fp);
@@ -750,10 +750,10 @@ DDgetparams(const std::string& dirpath, int *ndir1, int *ndir2) {
   // New convention - .ddparams is in not_hashed/.
   FILE *fp = fopen((dirslash + "not_hashed/.ddparams").c_str(), "r");
   // Allow the old convention of placing .ddparams in the top-level.
-  if( fp == NULL && errno == ENOENT ) {
+  if( fp == nullptr && errno == ENOENT ) {
       fp = fopen((dirslash + ".ddparams").c_str(), "r");
   }
-  if(fp != NULL) {
+  if(fp != nullptr) {
     if( fscanf(fp, "%d%d", ndir1, ndir2) != 2 ) 
       fprintf(stderr, "Failed to parse .ddparams; assuming flat structure\n");
     if( fclose(fp) ) {
@@ -862,7 +862,7 @@ static BlobMap read_frame( const void *mapping, uint64_t len ) {
       uint64_t count = assemble64(count_lo,count_hi);
       uint64_t nbytes = elementsize*count;
 
-      const char *addr=0;
+      const char *addr=nullptr;
       if (count <= 1) {
         addr=scalars;
         scalars += alignInteger(nbytes, s_alignsize);
@@ -884,13 +884,13 @@ static BlobMap read_frame( const void *mapping, uint64_t len ) {
 static void *read_file( int fd, off_t offset, ssize_t &framesize ) {
   if (fd<=0) {
     fprintf(stderr, "read_file: bad file descriptor\n");
-    return NULL;
+    return nullptr;
   }
   if (framesize==0) {
     struct stat statbuf;
     if (fstat(fd,&statbuf)!=0) {
       fprintf(stderr, "Could not stat file: %s\n", strerror(errno));
-      return NULL;
+      return nullptr;
     }
     framesize=statbuf.st_size-offset;
   }
@@ -899,23 +899,23 @@ static void *read_file( int fd, off_t offset, ssize_t &framesize ) {
   if (lseek(fd, offset, SEEK_SET)!=offset) {
       fprintf(stderr, "seek to specified offset failed: %s\n", strerror(errno));
       free(mapping);
-      return NULL;
+      return nullptr;
   }
 
   ssize_t rc = read(fd, mapping, framesize);
   if (rc==0) {
       free(mapping);
-      return NULL;
+      return nullptr;
   }
   if (rc==-1) {
       fprintf(stderr, "reading bytes from frame failed: %s\n", strerror(errno));
       free(mapping);
-      return NULL;
+      return nullptr;
   }
   if (rc != framesize) {
       fprintf(stderr, "unexpected short read\n");
       free(mapping);
-      return NULL;
+      return nullptr;
   }
   return mapping;
 }
@@ -933,11 +933,11 @@ double key_record_t::time() const {
 static metadata_t * read_meta( const std::string& metafile, unsigned natoms,
                                bool with_invmass ) {
 
-  metadata_t * meta = NULL;
+  metadata_t * meta = nullptr;
   int meta_fd = open(metafile.c_str(), O_RDONLY|O_BINARY);
   ssize_t framesize=0;
   void *meta_mapping = read_file( meta_fd, 0, framesize );
-  if (meta_mapping==NULL) {
+  if (meta_mapping==nullptr) {
     close(meta_fd);
     return meta;
   }
@@ -1039,7 +1039,7 @@ bool StkReader::init(const std::string &path, int * changed) {
         reader->with_velocity = first->with_velocity;
         reader->set_meta(first->get_meta());
       }
-      if (!reader->init(fnames[i], NULL)) {
+      if (!reader->init(fnames[i], nullptr)) {
           delete reader;
           fprintf(stderr, "Failed opening frameset at %s\n", fnames[i].c_str());
           return false;
@@ -1096,7 +1096,7 @@ const DtrReader * StkReader::component(ssize_t &n) const {
     if (n < size) return framesets[i];
     n -= size;
   }
-  return NULL;
+  return nullptr;
 }
 
 int StkReader::frame(ssize_t n, molfile_timestep_t *ts) const {
@@ -1133,7 +1133,7 @@ bool DtrReader::init(const std::string &path, int * changed) {
     ssize_t framesize=0;
     unsigned i;
     void *mapping = read_file( fd, 0, framesize );
-    if (mapping==NULL)  {
+    if (mapping==nullptr)  {
       fprintf(stderr, "Failed to find frame at %s\n", fname.c_str());
       close(fd);
       return false;
@@ -1170,7 +1170,7 @@ bool DtrReader::init(const std::string &path, int * changed) {
     close(fd);
   }
 
-  if (natoms>0 && meta==NULL && owns_meta==false) {
+  if (natoms>0 && meta==nullptr && owns_meta==false) {
     meta=read_meta( dtr + s_sep + "metadata",natoms, with_momentum );
     owns_meta = true;
   }
@@ -1711,7 +1711,7 @@ int DtrReader::frame(ssize_t iframe, molfile_timestep_t *ts) const {
     int fd = open(fname.c_str(), O_RDONLY|O_BINARY);
     if (fd<0) return MOLFILE_EOF;
     void *mapping = read_file( fd, offset, framesize );
-    if (mapping==NULL) {
+    if (mapping==nullptr) {
       close(fd);
       return MOLFILE_EOF;
     }
@@ -1737,7 +1737,7 @@ int DtrReader::frame_from_bytes(const void *buf, uint64_t len,
   }
 
   const float * rmass = meta && meta->invmass.size() ? 
-      &meta->invmass[0] : NULL;
+      &meta->invmass[0] : nullptr;
 
   // Now, dispatch to routines based on format
   std::string format = blobs["FORMAT"].str();
@@ -2114,7 +2114,7 @@ std::istream& operator>>(std::istream& in, metadata_t& meta) {
 }
 
 std::ostream& DtrReader::dump(std::ostream &out) const {
-  bool has_meta = meta!=NULL;
+  bool has_meta = meta!=nullptr;
   out << SERIALIZED_VERSION << ' '
       << dtr << ' '
       << natoms << ' '
@@ -2191,7 +2191,7 @@ std::istream& StkReader::load(std::istream &in) {
 static void *
 open_file_read( const char *filename, const char *filetype, int *natoms ) {
 
-  FrameSetReader *h = NULL;
+  FrameSetReader *h = nullptr;
   std::string fname;
 
   // check for .stk file
@@ -2211,7 +2211,7 @@ open_file_read( const char *filename, const char *filetype, int *natoms ) {
 
   if (!h->init(filename)) {
     delete h;
-    return NULL;
+    return nullptr;
   }
   *natoms = h->natoms;
   return h;
@@ -2254,7 +2254,7 @@ static void *open_file_write(const char *path, const char *type, int natoms) {
   DtrWriter *h = new DtrWriter(natoms);
   if (!h->init(path)) {
     delete h;
-    h=NULL;
+    h=nullptr;
   }
   return h;
 }

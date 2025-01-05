@@ -88,13 +88,13 @@ static char *vtkgets(char *s, int n, FILE *stream) {
 
   if (feof(stream)) {
     printf("vtkplugin) Unexpected end-of-file.\n");
-    return NULL;
+    return nullptr;
   } else if (ferror(stream)) {
     printf("vtkplugin) Error reading file.\n");
-    return NULL;
+    return nullptr;
   } else {
     returnVal = fgets(s, n, stream);
-    if (returnVal == NULL) {
+    if (returnVal == nullptr) {
       printf("vtkplugin) Error reading line.\n");
     }
   }
@@ -129,22 +129,22 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
   fd = fopen(filepath, "rb");
   if (!fd) {
     printf("vtkplugin) Error opening file.\n");
-    return NULL;
+    return nullptr;
   }
 
   // allocate and initialize the vtk structure
   vtk = new vtk_t;
   memset(vtk, 0, sizeof(vtk_t));
   vtk->fd = fd;
-  vtk->vol = NULL;
+  vtk->vol = nullptr;
   vtk->isBinary = 0;
   *natoms = MOLFILE_NUMATOMS_NONE;
   vtk->nsets = 1; /* this file contains only one data set */
 
   /* skip comments */
   do {
-    if (vtkgets(inbuf, LINESIZE, fd) == NULL) 
-      return NULL;
+    if (vtkgets(inbuf, LINESIZE, fd) == nullptr) 
+      return nullptr;
   } while (inbuf[0] == '#');
 
   // read VTK title line 
@@ -152,58 +152,58 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
   strncpy(vtk->title, inbuf, sizeof(vtk->title) - 1);
   vtk->title[256]='\0'; // force-terminate potentially truncated title string
 
-  if (vtkgetstrcmp(inbuf, LINESIZE, fd, "ASCII")) return NULL;
-  if (vtkgetstrcmp(inbuf, LINESIZE, fd, "DATASET STRUCTURED_POINTS")) return NULL;
+  if (vtkgetstrcmp(inbuf, LINESIZE, fd, "ASCII")) return nullptr;
+  if (vtkgetstrcmp(inbuf, LINESIZE, fd, "DATASET STRUCTURED_POINTS")) return nullptr;
 
   // get the grid dimensions
-  if (vtkgets(inbuf, LINESIZE, fd) == NULL) {
+  if (vtkgets(inbuf, LINESIZE, fd) == nullptr) {
     delete vtk;
-    return NULL;
+    return nullptr;
   }
   if (sscanf(inbuf, "DIMENSIONS %d %d %d", &xsize, &ysize, &zsize) != 3) {
     printf("vtkplugin) Error reading grid dimensions!\n");
     delete vtk;
-    return NULL;
+    return nullptr;
   }
 
   // get the grid spacing
-  if (vtkgets(inbuf, LINESIZE, fd) == NULL) {
+  if (vtkgets(inbuf, LINESIZE, fd) == nullptr) {
     delete vtk;
-    return NULL;
+    return nullptr;
   }
   if (sscanf(inbuf, "SPACING %e %e %e", xdelta, ydelta+1, zdelta+2) != 3) {
     printf("vtkplugin) Error reading cell dimensions!\n");
     delete vtk;
-    return NULL;
+    return nullptr;
   }
 
   // get the grid origin
-  if (vtkgets(inbuf, LINESIZE, fd) == NULL) {
+  if (vtkgets(inbuf, LINESIZE, fd) == nullptr) {
     delete vtk;
-    return NULL;
+    return nullptr;
   }
   if (sscanf(inbuf, "ORIGIN %e %e %e", orig, orig+1, orig+2) != 3) {
     printf("vtkplugin) Error reading grid origin!\n");
     delete vtk;
-    return NULL;
+    return nullptr;
   }
 
   // get number of grid points
-  if (vtkgets(inbuf, LINESIZE, fd) == NULL) {
+  if (vtkgets(inbuf, LINESIZE, fd) == nullptr) {
     delete vtk;
-    return NULL;
+    return nullptr;
   }
   int numgridpoints = 0;
   if (sscanf(inbuf, "POINT_DATA %d", &numgridpoints) != 1) {
     printf("vtkplugin) Error reading grid point counts!\n");
     delete vtk;
-    return NULL;
+    return nullptr;
   }
 
   // get field or vector list depending on file format variant we have
-  if (vtkgets(inbuf, LINESIZE, fd) == NULL) {
+  if (vtkgets(inbuf, LINESIZE, fd) == nullptr) {
     delete vtk;
-    return NULL;
+    return nullptr;
   }
 
   char tmp[256];
@@ -215,9 +215,9 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
     printf("vtkplugin) FIELD: name '%s', %d arrays\n", fieldname, numarrays);
 
     // eat the array name for field zero
-    if (vtkgets(inbuf, LINESIZE, fd) == NULL) {
+    if (vtkgets(inbuf, LINESIZE, fd) == nullptr) {
       delete vtk;
-      return NULL;
+      return nullptr;
     }
   } else if (!strcmp(tmp, "VECTORS")) {
     // prepare to eat vectors
@@ -229,7 +229,7 @@ static void *open_vtk_read(const char *filepath, const char *filetype,
     printf("vtkplugin) Unrecognized file structure, aborting!:\n");
     printf("vtkplugin) line contents: '%s'\n", inbuf);
     delete vtk;
-    return NULL;
+    return nullptr;
   } 
 
   vtk->vol = new molfile_volumetric_t[1];
@@ -408,7 +408,7 @@ static void close_vtk_read(void *v) {
   vtk_t *vtk = (vtk_t *)v;
   
   fclose(vtk->fd);
-  if (vtk->vol != NULL)
+  if (vtk->vol != nullptr)
     delete [] vtk->vol; 
   delete vtk;
 }

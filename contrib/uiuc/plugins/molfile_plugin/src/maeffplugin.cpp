@@ -197,7 +197,7 @@ namespace {
 Tokenizer::Tokenizer(std::ifstream &in)
   : m_c(0),
     m_input(in),
-    m_token(NULL),
+    m_token(nullptr),
     max_token_size(0),
     m_isfresh(false),
     m_line(1),
@@ -1135,7 +1135,7 @@ namespace {
     Array& new_array(const std::string &name) {
 
       // create array subclass based on the name
-      Array *arr=NULL;
+      Array *arr=nullptr;
       if (m_full_system) {
         arr = new Array(h, m_ct);
 
@@ -1660,7 +1660,7 @@ namespace {
   void *open_file_read( const char *fname, const char *ftype, int *vmdatoms) {
 
     std::ifstream in(fname, std::ifstream::in | std::ifstream::binary );
-    if (!in) return NULL;
+    if (!in) return nullptr;
 
     Handle *h = new Handle;
     *vmdatoms = 0;
@@ -1682,7 +1682,7 @@ namespace {
     catch (std::exception &e) {
       fprintf(stderr, "Reading mae file failed: %s\n", e.what());
       delete h;
-      return NULL;
+      return nullptr;
     }
 
     // post-processing once all arrays have been read
@@ -1700,7 +1700,7 @@ namespace {
           fprintf(stderr, "ERROR: Too many ffio_sites records in ct %d\n", 
               i->first);
           delete h;
-          return NULL;
+          return nullptr;
         }
         int nblks = nparticles / nsites;
         int Np = npseudos / nblks;
@@ -1708,7 +1708,7 @@ namespace {
         if (Np + Na != nsites) {
           fprintf(stderr, "ERROR: Number of particles in ct %d not a multiple of the number of ffio_sites\n", i->first);
           delete h;
-          return NULL;
+          return nullptr;
         }
       }
 
@@ -1830,9 +1830,9 @@ namespace {
       *order = &h->bond_order[0];
     }
 #if vmdplugin_ABIVERSION > 14
-    *bondtype = NULL;
+    *bondtype = nullptr;
     *nbondtypes = 0;
-    *bondtypename = NULL;
+    *bondtypename = nullptr;
 #endif
     return MOLFILE_SUCCESS;
   }
@@ -1887,7 +1887,7 @@ namespace {
     if (!h->output) {
       fprintf(stderr, "Could not open '%s' for writing.\n", path);
       delete h;
-      return NULL;
+      return nullptr;
     }
     h->nparticles = natoms;
     h->particles.resize(natoms);

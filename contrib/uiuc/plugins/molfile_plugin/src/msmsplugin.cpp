@@ -39,9 +39,9 @@ static char *msmsgets(char *s, int n, FILE *stream) {
   char *returnVal;
 
   if (feof(stream)) {
-    return NULL;
+    return nullptr;
   } else if (ferror(stream)) {
-    return NULL;
+    return nullptr;
   } else {
     returnVal = fgets(s, n, stream);
   }
@@ -70,27 +70,27 @@ static void *open_file_read(const char *filepath, const char *filetype,
   // be able to cope either way by assigning the right filenames to the
   // right strings and getting the right files opened accordingly.
   cp = strstr(facefilepath, ".face");
-  if (cp == NULL) {
+  if (cp == nullptr) {
     cp = strstr(facefilepath, ".vert");
-    if (cp != NULL) {
+    if (cp != nullptr) {
        strcpy(cp, ".face");
     } else {
       printf("msmsplugin) file names don't match expected MSMS output\n");
       free(facefilepath);
       free(vertfilepath);
-      return NULL;
+      return nullptr;
     } 
   }
   cp = strstr(vertfilepath, ".vert");
-  if (cp == NULL) {
+  if (cp == nullptr) {
     cp = strstr(vertfilepath, ".face");
-    if (cp != NULL) {
+    if (cp != nullptr) {
        strcpy(cp, ".vert");
     } else {
       printf("msmsplugin) file names don't match expected MSMS output\n");
       free(facefilepath);
       free(vertfilepath);
-      return NULL;
+      return nullptr;
     } 
   }
  
@@ -102,12 +102,12 @@ static void *open_file_read(const char *filepath, const char *filetype,
     if (vfd) fclose(vfd);
     free(facefilepath);
     free(vertfilepath);
-    return NULL;
+    return nullptr;
   }
   msms = new msms_t;
   msms->ffd = ffd;
   msms->vfd = vfd;
-  msms->graphics = NULL;
+  msms->graphics = nullptr;
   *natoms = 0;
   free(facefilepath);
   free(vertfilepath);
@@ -127,7 +127,7 @@ static int read_rawgraphics(void *v, int *nelem,
   //
   // count number of faces
   //
-  while (msmsgets(inbuf, LINESIZE, msms->ffd) != NULL) {
+  while (msmsgets(inbuf, LINESIZE, msms->ffd) != nullptr) {
     if (sscanf(inbuf, "%d %d %d %d %d", &t, &t, &t, &t, &t) == 5) 
       facecount++;
   }
@@ -136,7 +136,7 @@ static int read_rawgraphics(void *v, int *nelem,
   //
   // count number of vertices
   //
-  while (msmsgets(inbuf, LINESIZE, msms->vfd) != NULL) {
+  while (msmsgets(inbuf, LINESIZE, msms->vfd) != nullptr) {
     if (sscanf(inbuf, "%f %f %f %f %f %f %d %d %d", 
         &tf, &tf, &tf, &tf, &tf, &tf, &t, &t, &t) == 9)
       vertexcount++;
@@ -155,7 +155,7 @@ static int read_rawgraphics(void *v, int *nelem,
   // read in the vertex data
   //
   i=0;
-  while (msmsgets(inbuf, LINESIZE, msms->vfd) != NULL) {
+  while (msmsgets(inbuf, LINESIZE, msms->vfd) != nullptr) {
     int addr = i * 3;
     int atomid, l0fa, l;
     
@@ -176,7 +176,7 @@ static int read_rawgraphics(void *v, int *nelem,
   // read in the facet data
   //
   i=0;
-  while (msmsgets(inbuf, LINESIZE, msms->ffd) != NULL) {
+  while (msmsgets(inbuf, LINESIZE, msms->ffd) != nullptr) {
     int v0, v1, v2, surftype, ana;
 
     if (inbuf[0] != '#') { 

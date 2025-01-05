@@ -83,10 +83,10 @@ static void *open_file_read(const char *filepath, const char *filetype,
   printf("plyplugin) Opening PLY file '%s'\n", filepath);
   fd = fopen(filepath, "rb");
   if (!fd) 
-    return NULL;
+    return nullptr;
   ply = new ply_t;
   ply->fd = fd;
-  ply->graphics = NULL;
+  ply->graphics = nullptr;
   *natoms = 0;
   return ply;
 }
@@ -101,11 +101,11 @@ static int read_rawgraphics(void *v, int *nelem,
   int i=0;
   int nverts=0;
   int nfaces=0;
-  char *elem_name=NULL;
-  Vertex **vlist=NULL;
-  Face **flist=NULL;
-  PlyOtherProp *vert_other=NULL;
-  PlyOtherProp *face_other=NULL;
+  char *elem_name=nullptr;
+  Vertex **vlist=nullptr;
+  Face **flist=nullptr;
+  PlyOtherProp *vert_other=nullptr;
+  PlyOtherProp *face_other=nullptr;
 
   printf("plyplugin) Reading PLY file header...\n");
   PlyFile *in_ply = read_ply(ply->fd);
@@ -209,7 +209,7 @@ static int read_rawgraphics(void *v, int *nelem,
 
   printf("plyplugin) freeing PLY structures\n");
   free_ply(in_ply);
-  in_ply = NULL;
+  in_ply = nullptr;
 
   printf("plyplugin) generating %d graphics primitives...\n", nfaces); 
   ply->graphics = new molfile_graphics_t[2*nfaces];
@@ -252,7 +252,7 @@ static int read_rawgraphics(void *v, int *nelem,
   }
   memset(flist, 0, sizeof(Face *)*nfaces);
   free(flist);
-  flist = NULL;
+  flist = nullptr;
 
   printf("plyplugin) freeing ply vertex list\n");
   for (i=0; i<nverts; i++) {
@@ -260,7 +260,7 @@ static int read_rawgraphics(void *v, int *nelem,
   }
   memset(vlist, 0, sizeof(float *)*nverts);
   free(vlist);
-  vlist=NULL;
+  vlist=nullptr;
 
   return MOLFILE_SUCCESS;
 }
