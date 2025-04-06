@@ -63,13 +63,13 @@ static void PrepareViewPortForStereo2nd(PyMOLGlobals* G, CScene* I,
     const std::optional<Rect2D>& viewportOverride);
 
 static void InitializeViewPortToScreenBlock(PyMOLGlobals* G, CScene* I,
-    const Offset2D& pos, const std::optional<Rect2D>& viewportOverride, int* stereo_mode,
-    float* width_scale);
+    const Offset2D& pos, const std::optional<Rect2D>& viewportOverride,
+    int* stereo_mode, float* width_scale);
 
 static void SceneSetPrepareViewPortForStereo(PyMOLGlobals* G,
     PrepareViewportForStereoFuncT prepareViewportForStereo, int times,
-    const Offset2D& pos, const std::optional<Rect2D>& viewportOverride, int stereo_mode,
-    float width_scale);
+    const Offset2D& pos, const std::optional<Rect2D>& viewportOverride,
+    int stereo_mode, float width_scale);
 
 static CGO* GenerateUnitScreenCGO(PyMOLGlobals* G);
 
@@ -494,9 +494,10 @@ void SceneRender(PyMOLGlobals* G, const SceneRenderInfo& renderInfo)
       bool onlySelections{false};
       SceneRenderStereoLoop(G, times, must_render_stereo, stereo_mode,
           render_to_texture_for_pp, renderInfo.mousePos,
-          renderInfo.viewportOverride, stereo_double_pump_mono, curState, normal,
-          &context, width_scale, fog_active, onlySelections, postprocessOnce,
-          renderInfo.excludeSelections, renderInfo.renderWhich);
+          renderInfo.viewportOverride, stereo_double_pump_mono, curState,
+          normal, &context, width_scale, fog_active, onlySelections,
+          postprocessOnce, renderInfo.excludeSelections,
+          renderInfo.renderWhich);
 
       if (render_to_texture_for_pp) {
         /* BEGIN rendering the selection markers, should we put all of this into
@@ -1331,8 +1332,8 @@ void SceneRenderStereoLoop(PyMOLGlobals* G, int timesArg,
       if (Feedback(G, FB_OpenGL, FB_Debugging))
         PyMOLCheckOpenGLErr("Before mono rendering");
       SceneSetPrepareViewPortForStereo(G,
-          PrepareViewPortForMonoInitializeViewPort, times, pos, viewportOverride,
-          stereo_mode, width_scale);
+          PrepareViewPortForMonoInitializeViewPort, times, pos,
+          viewportOverride, stereo_mode, width_scale);
       DoRendering(G, I, &I->grid, times, curState, normal, context, width_scale,
           onlySelections, render_to_texture || excludeSelections,
           which_objects);
@@ -1368,8 +1369,8 @@ void PrepareViewPortForStereo2nd(PyMOLGlobals* G, CScene* I, int stereo_mode,
 }
 
 void InitializeViewPortToScreenBlock(PyMOLGlobals* G, CScene* I,
-    const Offset2D& pos, const std::optional<Rect2D>& viewportOverride, int* stereo_mode,
-    float* width_scale)
+    const Offset2D& pos, const std::optional<Rect2D>& viewportOverride,
+    int* stereo_mode, float* width_scale)
 {
   if (viewportOverride) {
     Rect2D want_view = *viewportOverride;

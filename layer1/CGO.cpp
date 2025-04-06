@@ -28,6 +28,7 @@ Z* -------------------------------------------------------------------
 #include "Err.h"
 #include "Feedback.h"
 #include "GadgetSet.h"
+#include "GraphicsUtil.h"
 #include "Matrix.h"
 #include "ObjectGadgetRamp.h"
 #include "P.h"
@@ -46,7 +47,6 @@ Z* -------------------------------------------------------------------
 #include "Util.h"
 #include "VFont.h"
 #include "Vector.h"
-#include "GraphicsUtil.h"
 
 #include "pymol/algorithm.h"
 
@@ -4107,8 +4107,8 @@ static OptimizeSphereData GetOptimizeSphereData(
       break;
     case CGO_SPHERE:
       for (int vv = 0; vv < VerticesPerSphere();
-           vv++) { // generate eight vertices of a bounding box for each
-                   // cylinder
+          vv++) { // generate eight vertices of a bounding box for each
+                  // cylinder
         vertVals[0] = *(pc);
         vertVals[1] = *(pc + 1);
         vertVals[2] = *(pc + 2);
@@ -6013,7 +6013,7 @@ int CGORenderRay(CGO* I, CRay* ray, RenderInfo* info, const float* color,
       }
       vc = 0;
       for (int v = 0, pl = 0, plc = 0; ok && v < nverts;
-           v++, pl += 3, plc += 4) {
+          v++, pl += 3, plc += 4) {
         if (normalVals) {
           n0 = &normalVals[pl];
         }
@@ -8760,7 +8760,7 @@ static void CheckAttributesForUsage(const CGO* I, AttribDataDesc& attrData,
     auto attrOps = &attrDesc.attrOps;
     attrDesc.order = attrIdx++;
     for (auto attrOpIt = attrOps->begin(); attrOpIt != attrOps->end();
-         ++attrOpIt) {
+        ++attrOpIt) {
       auto attrOp = &(*attrOpIt);
       if (opToAttrUsed.find(attrOp->op) == opToAttrUsed.end())
         opToAttrUsed[attrOp->op] = 1 << attrDesc.order;
@@ -8771,12 +8771,12 @@ static void CheckAttributesForUsage(const CGO* I, AttribDataDesc& attrData,
   // add picking ops (1 << attrIdx) i.e., any pick op is the last bit
   int pidx = 0;
   for (auto pickDataIt = pickData.begin(); pickDataIt != pickData.end();
-       ++pickDataIt) {
+      ++pickDataIt) {
     auto pickDesc = &(*pickDataIt);
     auto pickOps = &pickDesc->attrOps;
     pickDesc->order = pidx++;
     for (auto pickOpIt = pickOps->begin(); pickOpIt != pickOps->end();
-         ++pickOpIt) {
+        ++pickOpIt) {
       auto pickOp = &(*pickOpIt);
       pickOp->desc = pickDesc;
       if (opToAttrUsed.find(pickOp->op) == opToAttrUsed.end())
@@ -8895,7 +8895,7 @@ static void PopulateOpsIntoStructuresForConversion(
     auto attrOps = &attrDesc.attrOps;
     attrDesc.order = attrIdx++;
     for (auto attrOpIt = attrOps->begin(); attrOpIt != attrOps->end();
-         ++attrOpIt) {
+        ++attrOpIt) {
       auto attrOp = &(*attrOpIt);
       attrOp->desc = &attrDesc;
       if (attrOp->copyFromAttr >= 0) {
@@ -8925,11 +8925,11 @@ static void PopulateOpsIntoStructuresForConversion(
   }
   if (has_picking) {
     for (auto pickDataIt = pickData.begin(); pickDataIt != pickData.end();
-         ++pickDataIt) {
+        ++pickDataIt) {
       auto pickDesc = &(*pickDataIt);
       auto pickOps = &pickDesc->attrOps;
       for (auto pickOpIt = pickOps->begin(); pickOpIt != pickOps->end();
-           ++pickOpIt) {
+          ++pickOpIt) {
         auto pickOp = &(*pickOpIt);
         if (pickOp->copyFromAttr >= 0) {
           pickOp->copyAttribDesc = &pickData[pickOp->copyFromAttr];
@@ -9140,7 +9140,7 @@ CGO* CGOConvertToShader(const CGO* I, AttribDataDesc& attrData,
     auto attrDataIt = attrData.begin();
     auto attrOffsetIt = attrOffset.begin();
     for (; attrDataIt != attrData.end() && attrOffsetIt != attrOffset.end();
-         ++attrDataIt, ++attrOffsetIt) {
+        ++attrDataIt, ++attrOffsetIt) {
       auto attrDesc = &(*attrDataIt);
       if (attrDesc->repeat_value) {
         repeat_attr_idx.push_back(pl);
@@ -9283,7 +9283,7 @@ CGO* CGOConvertToShader(const CGO* I, AttribDataDesc& attrData,
                   auto attrDataIt = attrData.begin();
                   for (; attrDataIt != attrData.end() &&
                          dataPtrIt != dataPtrs.end();
-                       ++attrDataIt, ++dataPtrIt) {
+                      ++attrDataIt, ++dataPtrIt) {
                     auto attrDesc = &(*attrDataIt);
                     auto dataPtr = *dataPtrIt;
                     auto attrSize = GetSizeOfVertexFormat(attrDesc->m_format);
@@ -9296,7 +9296,7 @@ CGO* CGOConvertToShader(const CGO* I, AttribDataDesc& attrData,
               // always copy repeat attributes
               if (!repeat_attr_idx.empty()) {
                 for (auto ridx = repeat_attr_idx.begin();
-                     ridx != repeat_attr_idx.end(); ++ridx) {
+                    ridx != repeat_attr_idx.end(); ++ridx) {
                   copyAttributeForVertex(isInterleaved, nvert, attrData[*ridx],
                       vertexDataSize, dataPtrs, attrOffset);
                 }
@@ -9353,7 +9353,7 @@ CGO* CGOConvertToShader(const CGO* I, AttribDataDesc& attrData,
     auto attrSizeIt = attrSizes.begin();
     for (; attrDataIt != attrData.end() && dataPtrIt != dataPtrs.end() &&
            attrSizeIt != attrSizes.end();
-         ++attrDataIt, ++dataPtrIt, ++attrSizeIt) {
+        ++attrDataIt, ++dataPtrIt, ++attrSizeIt) {
       auto attrDesc = &(*attrDataIt);
       auto dataPtr = *dataPtrIt;
       auto attrSize = *attrSizeIt;
@@ -9367,7 +9367,7 @@ CGO* CGOConvertToShader(const CGO* I, AttribDataDesc& attrData,
     auto attrDataIt = attrData.begin();
     auto attrOffsetIt = attrOffset.begin();
     for (; attrDataIt != attrData.end() && attrOffsetIt != attrOffset.end();
-         ++attrDataIt, ++attrOffsetIt) {
+        ++attrDataIt, ++attrOffsetIt) {
       auto attrDesc = &(*attrDataIt);
       auto offset = *attrOffsetIt;
       bufferData.push_back(BufferDesc{attrDesc->attr_name, attrDesc->m_format,

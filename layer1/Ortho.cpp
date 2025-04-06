@@ -2983,7 +2983,7 @@ bool COrtho::fastDraw(CGO* orthoCGO)
 Block* COrtho::findBlock(int x, int y)
 {
   for (auto blockIter = Blocks.rbegin(); blockIter != Blocks.rend();
-       ++blockIter) {
+      ++blockIter) {
     auto blockFound = (*blockIter)->recursiveFind(x, y);
     if (blockFound != nullptr) {
       return blockFound;
